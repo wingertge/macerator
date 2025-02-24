@@ -1,0 +1,13 @@
+[package]
+edition = "2021"
+name = "macerator"
+version = "0.1.0"
+
+[features]
+default = ["std"]
+
+std = []
+
+[dependencies]
+paste = "1"
+pulp = { git = "https://github.com/wingertge/pulp.git", rev = "d8ad45976c0c130ea92a790c852d430566efbf61", default-features = false }

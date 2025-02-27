@@ -10,5 +10,5 @@ std = []
 
 [dependencies]
 paste = "1"
-# pulp = { git = "https://github.com/wingertge/pulp.git", rev = "d8ad45976c0c130ea92a790c852d430566efbf61", default-features = false }
-pulp = { path = "../pulp/pulp" }
+pulp = { git = "https://github.com/wingertge/pulp.git", rev = "63ba3c45b4c860d0ea2dc61c0bcde49fcf20a98b", default-features = false }
+# pulp = { path = "../pulp/pulp" }

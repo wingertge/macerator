@@ -62,6 +62,7 @@ checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
 [[package]]
 name = "pulp"
 version = "0.21.4"
+source = "git+https://github.com/wingertge/pulp.git?rev=63ba3c45b4c860d0ea2dc61c0bcde49fcf20a98b#63ba3c45b4c860d0ea2dc61c0bcde49fcf20a98b"
 dependencies = [
  "bytemuck",
  "cfg-if",

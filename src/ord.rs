@@ -3,7 +3,7 @@ use pulp::Simd;
 
 use crate::Vectorizable;
 
-pub trait VEq: Vectorizable {
+pub trait VEq: Vectorizable + PartialEq {
     /// Compare two vectors for elementwise equality
     fn veq<S: Simd>(simd: S, a: Self::Vector<S>, b: Self::Vector<S>) -> Self::Mask<S>;
 }

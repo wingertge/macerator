@@ -6,9 +6,9 @@ version = "0.1.0"
 [features]
 default = ["std"]
 
-std = []
+std = ["pulp/std"]
 
 [dependencies]
 paste = "1"
-pulp = { git = "https://github.com/wingertge/pulp.git", rev = "b162d37dd53b6209fc038829cd416736ebfba53b", default-features = false }
+pulp = { git = "https://github.com/wingertge/pulp.git", rev = "c550ba4eda98dcd964dc374fa4d508bfff9f03c8", default-features = false }
 # pulp = { path = "../pulp/pulp" }

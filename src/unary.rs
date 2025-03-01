@@ -9,6 +9,7 @@ pub trait VRecip: Vectorizable {
     fn vrecip<S: Simd>(simd: S, input: Self::Vector<S>) -> Self::Vector<S>;
 }
 
+#[cfg(feature = "std")]
 pub trait VSqrt: Vectorizable {
     fn vsqrt<S: Simd>(simd: S, input: Self::Vector<S>) -> Self::Vector<S>;
 }
@@ -37,6 +38,7 @@ macro_rules! impl_unop {
 }
 
 impl_unop!(VRecip, recip, f32);
+#[cfg(feature = "std")]
 impl_unop!(VSqrt, sqrt, f32, f64);
 impl_unop!(VAbs, abs, i8, i16, i32, f32, f64);
 impl_unop!(VBitNot, not, i8, u8, i16, u16, i32, u32, i64, u64);

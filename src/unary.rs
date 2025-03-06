@@ -1,44 +1,42 @@
-use core::ops::Not;
-
+use half::f16;
 use paste::paste;
-use pulp::Simd;
 
-use crate::Vectorizable;
+use crate::{Scalar, Simd, Vector};
 
-pub trait VRecip: Vectorizable {
-    fn vrecip<S: Simd>(simd: S, input: Self::Vector<S>) -> Self::Vector<S>;
+pub trait VRecip: Scalar {
+    fn vrecip<S: Simd>(input: Vector<S, Self>) -> Vector<S, Self>;
 }
 
-#[cfg(feature = "std")]
-pub trait VSqrt: Vectorizable {
-    fn vsqrt<S: Simd>(simd: S, input: Self::Vector<S>) -> Self::Vector<S>;
-}
-
-pub trait VAbs: Vectorizable {
-    fn vabs<S: Simd>(simd: S, input: Self::Vector<S>) -> Self::Vector<S>;
-}
-
-pub trait VBitNot: Vectorizable + Not<Output = Self> {
-    fn vbitnot<S: Simd>(simd: S, input: Self::Vector<S>) -> Self::Vector<S>;
-}
-
-macro_rules! impl_unop {
-    ($trait: ident, $name: ident, $ty: ty) => {
-        paste! {
-            impl $trait for $ty {
-                fn [<$trait:lower>]<S: Simd>(simd: S, input: Self::Vector<S>) -> Self::Vector<S> {
-                    simd.[<$name _ $ty s>](input)
-                }
-            }
-        }
-    };
-    ($trait: ident, $name: ident, $($ty: ty),*) => {
-        $(impl_unop!($trait, $name, $ty);)*
+impl<S: Simd, T: VRecip> Vector<S, T> {
+    #[inline(always)]
+    pub fn recip(self) -> Self {
+        T::vrecip(self)
     }
 }
 
-impl_unop!(VRecip, recip, f32);
-#[cfg(feature = "std")]
-impl_unop!(VSqrt, sqrt, f32, f64);
+pub trait VAbs: Scalar {
+    fn vabs<S: Simd>(input: Vector<S, Self>) -> Vector<S, Self>;
+}
+
+impl<S: Simd, T: VAbs> Vector<S, T> {
+    #[inline(always)]
+    pub fn abs(self) -> Self {
+        T::vabs(self)
+    }
+}
+
+macro_rules! impl_unop {
+    ($trait: ident, $name: ident, $($ty: ty),*) => {
+        $(paste! {
+            impl $trait for $ty {
+                #[inline(always)]
+                fn [<$trait:lower>]<S: Simd>(input: Vector<S, Self>) -> Vector<S, Self> {
+                    S::typed(S::[<$name _ $ty>](*input))
+                }
+            }
+        })*
+    };
+}
+
+impl_unop!(VRecip, recip, f16, f32, f64);
 impl_unop!(VAbs, abs, i8, i16, i32, f32, f64);
-impl_unop!(VBitNot, not, i8, u8, i16, u16, i32, u32, i64, u64);

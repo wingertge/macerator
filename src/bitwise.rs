@@ -1,43 +1,67 @@
-use core::ops::{BitAnd, BitOr, BitXor};
+use core::ops::{BitAnd, BitOr, BitXor, Not};
 
 use paste::paste;
-use pulp::Simd;
 
-use crate::Vectorizable;
+use crate::{Scalar, Simd, Vector};
 
-pub trait VBitXor: Vectorizable + BitXor<Output = Self> {
-    fn vbitxor<S: Simd>(simd: S, lhs: Self::Vector<S>, rhs: Self::Vector<S>) -> Self::Vector<S>;
-}
-pub trait VBitAnd: Vectorizable + BitAnd<Output = Self> {
-    fn vbitand<S: Simd>(simd: S, lhs: Self::Vector<S>, rhs: Self::Vector<S>) -> Self::Vector<S>;
-}
-pub trait VBitOr: Vectorizable + BitOr<Output = Self> {
-    fn vbitor<S: Simd>(simd: S, lhs: Self::Vector<S>, rhs: Self::Vector<S>) -> Self::Vector<S>;
-}
-
-macro_rules! impl_bitwise_binop {
-    ($ty: ty) => {
-        paste! {
-            impl VBitXor for $ty {
-                fn vbitxor<S: Simd>(simd: S, lhs: Self::Vector<S>, rhs: Self::Vector<S>) -> Self::Vector<S> {
-                    simd.[<xor_ $ty s>](lhs, rhs)
+macro_rules! impl_bitwise {
+    ($trait: ident, $std_trait: path, $name: ident) => {
+        paste!{
+            pub trait $trait: Scalar + $std_trait<Output = Self> {
+                fn [<$trait:lower>]<S: Simd>(lhs: Vector<S, Self>, rhs: Vector<S, Self>) -> Vector<S, Self> {
+                    S::typed(S::$name(*lhs, *rhs))
+                }
+                fn is_accelerated<S: Simd>() -> bool {
+                    S::[<$name _supported>]()
                 }
             }
-            impl VBitAnd for $ty {
-                fn vbitand<S: Simd>(simd: S, lhs: Self::Vector<S>, rhs: Self::Vector<S>) -> Self::Vector<S> {
-                    simd.[<and_ $ty s>](lhs, rhs)
+            impl<T: $std_trait<Output = Self> + Scalar> $trait for T {}
+            impl<S: Simd, T: $trait> $std_trait<Self> for Vector<S, T> {
+                type Output = Self;
+
+                #[inline(always)]
+                fn $name(self, rhs: Self) -> Self::Output {
+                    T::[<$trait:lower>](self, rhs)
                 }
             }
-            impl VBitOr for $ty {
-                fn vbitor<S: Simd>(simd: S, lhs: Self::Vector<S>, rhs: Self::Vector<S>) -> Self::Vector<S> {
-                    simd.[<or_ $ty s>](lhs, rhs)
+            impl<S: Simd, T: $trait> ::core::ops::[<$std_trait Assign>]<Self> for Vector<S, T> {
+                #[inline(always)]
+                fn [<$name _assign>](&mut self, rhs: Self) {
+                    *self = T::[<$trait:lower>](*self, rhs)
                 }
             }
         }
     };
-    ($($ty: ty),*) => {
-        $(impl_bitwise_binop!($ty);)*
-    }
 }
 
-impl_bitwise_binop!(u8, i8, u16, i16, u32, i32, u64, i64);
+impl_bitwise!(VBitAnd, BitAnd, bitand);
+impl_bitwise!(VBitOr, BitOr, bitor);
+impl_bitwise!(VBitXor, BitXor, bitxor);
+
+macro_rules! impl_bitwise_unary {
+    ($trait: ident, $std_trait: path, $name: ident) => {
+        paste! {
+            pub trait $trait: Scalar + $std_trait<Output = Self> {
+                #[inline(always)]
+                fn [<$trait:lower>]<S: Simd>(a: Vector<S, Self>) -> Vector<S, Self> {
+                    S::typed(S::$name(*a))
+                }
+                #[inline(always)]
+                fn is_accelerated<S: Simd>() -> bool {
+                    S::[<$name _supported>]()
+                }
+            }
+            impl<T: $std_trait<Output = Self> + Scalar> $trait for T {}
+            impl<S: Simd, T: $trait> $std_trait for Vector<S, T> {
+                type Output = Self;
+
+                #[inline(always)]
+                fn [<$std_trait:lower>](self) -> Self::Output {
+                    T::[<$trait:lower>](self)
+                }
+            }
+        }
+    };
+}
+
+impl_bitwise_unary!(VBitNot, Not, bitnot);

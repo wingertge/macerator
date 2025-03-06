@@ -1,5 +1,5 @@
 [package]
-edition = "2024"
+edition = "2021"
 name = "macerator"
 version = "0.1.0"
 

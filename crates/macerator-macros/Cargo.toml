@@ -1,6 +1,13 @@
 [package]
-edition = "2021"
+authors.workspace = true
+categories.workspace = true
+description = "proc-macros for macerator"
+edition.workspace = true
+keywords.workspace = true
+license.workspace = true
 name = "macerator-macros"
+readme.workspace = true
+repository.workspace = true
 version = "0.1.0"
 
 [lib]

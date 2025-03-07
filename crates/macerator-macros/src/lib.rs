@@ -1,9 +1,9 @@
 use darling::FromMeta;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use syn::Expr;
 use syn::parse_quote;
-use syn::{FnArg, GenericParam, ItemFn, Pat, spanned::Spanned};
+use syn::Expr;
+use syn::{spanned::Spanned, FnArg, GenericParam, ItemFn, Pat};
 
 #[derive(FromMeta, Default)]
 #[darling(default)]
@@ -32,7 +32,7 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
         }
     };
 
-    let arch = opts.arch.unwrap_or(parse_quote!(::macerator::Arch::new()));
+    let arch = opts.arch.unwrap_or(parse_quote!(macerator::Arch::new()));
     let func = syn::parse2::<syn::ItemFn>(item)?;
 
     let ItemFn {
@@ -97,11 +97,11 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
                 #(#field_decl,)*
             };
 
-            impl #impl_generics ::macerator::WithSimd for #struct_name #type_generics #where_clause {
+            impl #impl_generics macerator::WithSimd for #struct_name #type_generics #where_clause {
                 type Output = #output_ty;
 
                 #[inline(always)]
-                fn with_simd<#simd_generic_name: ::macerator::Simd>(self) -> <Self as ::macerator::WithSimd>::Output {
+                fn with_simd<#simd_generic_name: macerator::Simd>(self) -> <Self as macerator::WithSimd>::Output {
                     let Self {
                         #(#field_names,)*
                     } = self;

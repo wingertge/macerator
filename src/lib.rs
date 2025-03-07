@@ -7,6 +7,9 @@ mod bitwise;
 mod ord;
 mod unary;
 
+#[cfg(test)]
+mod tests;
+
 pub use arithmetic::*;
 pub use backend::*;
 pub use base::*;

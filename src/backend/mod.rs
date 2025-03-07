@@ -11,14 +11,14 @@ use half::{bf16, f16};
 use paste::paste;
 
 mod arch;
-mod scalar;
+pub(crate) mod scalar;
 pub use arch::{Arch, WithSimd};
 #[cfg(target_arch = "aarch64")]
-mod aarch64;
+pub(crate) mod aarch64;
 #[cfg(target_arch = "wasm32")]
-mod wasm32;
+pub(crate) mod wasm32;
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-mod x86;
+pub(crate) mod x86;
 
 use crate::{Scalar, VAdd};
 
@@ -270,9 +270,8 @@ mod test_inference {
     use core::ptr::null;
 
     use crate::{
-        Scalar, VAdd,
         backend::{Simd, Vector},
-        vload,
+        vload, Scalar, VAdd,
     };
 
     #[allow(unused)]

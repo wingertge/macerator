@@ -4,8 +4,8 @@ use half::f16;
 use paste::paste;
 
 use crate::{
-    Scalar,
     backend::{Simd, Vector},
+    Scalar,
 };
 
 macro_rules! impl_arith {
@@ -43,14 +43,10 @@ macro_rules! impl_arith {
     };
 }
 
-impl_arith!(
-    VAdd, Add, add, u8, i8, u16, i16, u32, i32, u64, i64, f16, f32, f64
-);
-impl_arith!(
-    VSub, Sub, sub, u8, i8, u16, i16, u32, i32, u64, i64, f16, f32, f64
-);
+impl_arith!(VAdd, Add, add, u8, i8, u16, i16, u32, i32, u64, i64, f16, f32, f64);
+impl_arith!(VSub, Sub, sub, u8, i8, u16, i16, u32, i32, u64, i64, f16, f32, f64);
 impl_arith!(VDiv, Div, div, f16, f32, f64);
-impl_arith!(VMul, Mul, mul, u16, i16, f16, u32, i32, f32, f64);
+impl_arith!(VMul, Mul, mul, u8, i8, u16, i16, f16, u32, i32, f32, f64);
 
 pub trait VMulAdd: Scalar + Mul<Output = Self> + Add<Output = Self> {
     fn vmul_add<S: Simd>(
@@ -100,4 +96,4 @@ macro_rules! impl_mul_add {
 }
 
 impl_mul_add!(intrinsic f16, f32, f64);
-impl_mul_add!(fallback u16, i16, u32, i32, u64, i64);
+impl_mul_add!(fallback u8, i8, u16, i16, u32, i32, u64, i64);

@@ -10,9 +10,9 @@ use half::f16;
 use num_traits::Float;
 use paste::paste;
 
-use crate::{Scalar, WithSimd, backend::arch::NullaryFnOnce};
+use crate::{backend::arch::NullaryFnOnce, Scalar, WithSimd};
 
-use crate::backend::{Simd, VRegister, Vector, arch::impl_simd, cast};
+use crate::backend::{arch::impl_simd, cast, Simd, VRegister, Vector};
 
 use super::*;
 
@@ -127,12 +127,8 @@ impl Simd for V3 {
 
     lanes!(8, 16, 32, 64);
 
-    impl_binop_signless!(
-        add, _mm256_add, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64
-    );
-    impl_binop_signless!(
-        sub, _mm256_sub, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64
-    );
+    impl_binop_signless!(add, _mm256_add, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64);
+    impl_binop_signless!(sub, _mm256_sub, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64);
     impl_binop!(div, _mm256_div, f32, f64);
     impl_binop!(mul, _mm256_mul, f32, f64);
     impl_binop_signless!(mul, _mm256_mullo, u16, i16, u32, i32);

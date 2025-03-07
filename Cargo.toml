@@ -22,6 +22,12 @@ macerator-macros = { version = "0.1.0", path = "crates/macerator-macros" }
 num-traits = "0.2.0"
 paste = "1"
 
+[dev-dependencies]
+approx = "0.5"
+half = { version = "2.4", features = ["bytemuck", "num-traits", "rand_distr"] }
+pretty_assertions = "1.4.0"
+rand = "0.8.5"
+
 [workspace]
 members = ["crates/macerator-macros"]
 

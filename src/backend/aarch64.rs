@@ -7,9 +7,9 @@ use half::f16;
 use num_traits::real::Real;
 use paste::paste;
 
-use crate::{Scalar, backend::arch::NullaryFnOnce, cast};
+use crate::{backend::arch::NullaryFnOnce, cast, Scalar};
 
-use super::{Simd, VRegister, Vector, WithSimd, arch::impl_simd};
+use super::{arch::impl_simd, Simd, VRegister, Vector, WithSimd};
 
 impl VRegister for int8x16_t {}
 
@@ -131,12 +131,8 @@ impl Simd for NeonFma {
     impl_unop!(recip, vrecpeq, f32, f64);
     impl_unop!(abs, vabsq, i8, i16, i32, i64, f32, f64);
 
-    impl_cmp!(
-        equals, vceqq, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64
-    );
-    impl_cmp!(
-        less_than, vcltq, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64
-    );
+    impl_cmp!(equals, vceqq, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64);
+    impl_cmp!(less_than, vcltq, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64);
     impl_cmp!(
         less_than_or_equal,
         vcleq,
@@ -310,7 +306,7 @@ impl Simd for NeonFma {
     }
     #[inline(always)]
     fn mul_add_f32(a: Self::Register, b: Self::Register, c: Self::Register) -> Self::Register {
-        cast!(vfmaq_f32(cast!(a), cast!(b), cast!(c)))
+        cast!(vfmaq_f32(cast!(c), cast!(a), cast!(b)))
     }
     #[inline(always)]
     fn mul_add_f32_supported() -> bool {
@@ -318,7 +314,7 @@ impl Simd for NeonFma {
     }
     #[inline(always)]
     fn mul_add_f64(a: Self::Register, b: Self::Register, c: Self::Register) -> Self::Register {
-        cast!(vfmaq_f64(cast!(a), cast!(b), cast!(c)))
+        cast!(vfmaq_f64(cast!(c), cast!(a), cast!(b)))
     }
     #[inline(always)]
     fn mul_add_f64_supported() -> bool {

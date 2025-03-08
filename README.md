@@ -15,9 +15,9 @@ binary must be built with `target_feature=+simd128`.
 ## Example
 
 ```rust
-fn clamp<S: Simd, T: VOrd>(simd: S, value: Vector<S, T>, min: T, max: T) -> Vector<S, T> {
-    let min = simd.splat(min);
-    let max = simd.splat(max);
+fn clamp<S: Simd, T: VOrd>(value: Vector<S, T>, min: T, max: T) -> Vector<S, T> {
+    let min = min.splat();
+    let max = max.splat();
     value.min(max).max(min)
 }
 ```

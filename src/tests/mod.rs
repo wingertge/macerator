@@ -9,6 +9,8 @@ use crate::{vload_unaligned, vstore_unaligned, Scalar, Simd, Vector};
 mod arithmetic;
 mod bitwise;
 
+wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
+
 const SIZE: usize = 1024;
 fn random<T: SampleUniform>(lo: T, hi: T) -> Vec<T> {
     let distribution = Uniform::new(lo, hi);
@@ -21,7 +23,7 @@ fn random<T: SampleUniform>(lo: T, hi: T) -> Vec<T> {
 macro_rules! testgen_binop {
     ($test_fn: ident, $reference: expr, $($ty: ty),*) => {
         $(::paste::paste! {
-            #[test]
+            #[::wasm_bindgen_test::wasm_bindgen_test(unsupported = test)]
             fn [<$test_fn _ $ty>]() {
                 use num_traits::NumCast;
 
@@ -51,6 +53,12 @@ macro_rules! testgen_binop {
                         let out = NeonFma::run_vectorized(|| [<$test_fn _impl>]::<NeonFma, $ty>(&lhs, &rhs));
                         assert_eq!(out_ref, out);
                     }
+                }
+                #[cfg(target_arch = "wasm32")]
+                {
+                    use crate::backend::wasm32::Simd128;
+                    let out = Simd128::run_vectorized(|| [<$test_fn _impl>]::<Simd128, $ty>(&lhs, &rhs));
+                    assert_eq!(&out_ref, &out);
                 }
                 let out = [<$test_fn _impl>]::<$crate::backend::scalar::Fallback, $ty>(&lhs, &rhs);
                 assert_eq!(out_ref, out);

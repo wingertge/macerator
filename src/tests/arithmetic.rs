@@ -104,7 +104,7 @@ fn assert_approx_eq<T: RelativeEq + Debug>(lhs: &[T], rhs: &[T]) {
 macro_rules! testgen_fma {
     ($test_fn: ident, $reference: expr, $($ty: ty),*) => {
         $(paste! {
-            #[test]
+            #[::wasm_bindgen_test::wasm_bindgen_test(unsupported = test)]
             fn [<$test_fn _ $ty>]() {
                 let a = super::random(NumCast::from(0).unwrap(), NumCast::from(8).unwrap());
                 let b = super::random(NumCast::from(0).unwrap(), NumCast::from(8).unwrap());
@@ -133,6 +133,12 @@ macro_rules! testgen_fma {
                         let out = NeonFma::run_vectorized(|| [<$test_fn _impl>]::<NeonFma, $ty>(&a, &b, &c));
                         assert_approx_eq(&out_ref, &out);
                     }
+                }
+                #[cfg(target_arch = "wasm32")]
+                {
+                    use crate::backend::wasm32::Simd128;
+                    let out = Simd128::run_vectorized(|| [<$test_fn _impl>]::<Simd128, $ty>(&a, &b, &c));
+                    assert_approx_eq(&out_ref, &out);
                 }
                 let out = [<$test_fn _impl>]::<Fallback, $ty>(&a, &b, &c);
                 assert_approx_eq(&out_ref, &out);

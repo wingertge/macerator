@@ -1,0 +1,21 @@
+name: WASM
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    env:
+      RUSTFLAGS: -Ctarget-feature=+simd128
+    steps:
+        - uses: actions/checkout@v4
+        - name: Install
+          run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+        - name: Run Chrome tests
+          run: wasm-pack test --headless --chrome
+        - name: Run Firefox tests
+          run: wasm-pack test --headless --firefox
+        

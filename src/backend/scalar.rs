@@ -184,7 +184,7 @@ impl Simd for Fallback {
     impl_unop_scalar!(recip, recip, f16, f32, f64);
     impl_unop_scalar!(abs, abs, i8, i16, f16, i32, f32, i64, f64);
 
-    impl_cmp_scalar!(equals, eq, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64);
+    impl_cmp_scalar!(equals, eq, u8, i8, u16, i16, f16, u32, i32, f32, u64, i64, f64);
     impl_cmp_scalar!(
         greater_than,
         gt,
@@ -192,6 +192,7 @@ impl Simd for Fallback {
         i8,
         u16,
         i16,
+        f16,
         u32,
         i32,
         f32,
@@ -206,6 +207,7 @@ impl Simd for Fallback {
         i8,
         u16,
         i16,
+        f16,
         u32,
         i32,
         f32,
@@ -213,7 +215,7 @@ impl Simd for Fallback {
         i64,
         f64
     );
-    impl_cmp_scalar!(less_than, lt, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64);
+    impl_cmp_scalar!(less_than, lt, u8, i8, u16, i16, f16, u32, i32, f32, u64, i64, f64);
     impl_cmp_scalar!(
         less_than_or_equal,
         le,
@@ -221,6 +223,7 @@ impl Simd for Fallback {
         i8,
         u16,
         i16,
+        f16,
         u32,
         i32,
         f32,

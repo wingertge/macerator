@@ -32,10 +32,10 @@ fn test_div_impl<S: Simd, T: VDiv>(lhs: &[T], rhs: &[T]) -> Vec<T> {
 #[inline(always)]
 fn test_fma_impl<S: Simd, T: VMulAdd>(a: &[T], b: &[T], c: &[T]) -> Vec<T> {
     let lanes = T::lanes::<S>();
+    let mut output = vec![Zeroable::zeroed(); a.len()];
     let a = a.chunks_exact(lanes);
     let b = b.chunks_exact(lanes);
     let c = c.chunks_exact(lanes);
-    let mut output = vec![Zeroable::zeroed(); a.len()];
     let out = output.chunks_exact_mut(lanes);
     for (((a, b), c), out) in a.zip(b).zip(c).zip(out) {
         let a = unsafe { vload_unaligned::<S, _>(a.as_ptr()) };
@@ -107,7 +107,17 @@ macro_rules! testgen_fma {
                     .collect::<Vec<_>>();
                 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
                 {
-                    use crate::backend::x86::{v2::V2, v3::V3};
+                    use crate::backend::x86::*;
+                    #[cfg(all(feature = "nightly", feature = "fp16"))]
+                    if V4FP16::is_available() {
+                        let out = V4FP16::run_vectorized(|| [<$test_fn _impl>]::<V4FP16, $ty>(&a, &b, &c));
+                        assert_approx_eq(&out_ref, &out);
+                    }
+                    #[cfg(feature = "nightly")]
+                    if V4::is_available() {
+                        let out = V4::run_vectorized(|| [<$test_fn _impl>]::<V4, $ty>(&a, &b, &c));
+                        assert_approx_eq(&out_ref, &out);
+                    }
                     if V3::is_available() {
                         let out = V3::run_vectorized(|| [<$test_fn _impl>]::<V3, $ty>(&a, &b, &c));
                         assert_approx_eq(&out_ref, &out);

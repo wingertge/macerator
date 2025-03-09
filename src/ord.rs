@@ -1,3 +1,4 @@
+use half::f16;
 use paste::paste;
 
 use crate::{Scalar, Simd, Vector};
@@ -32,7 +33,7 @@ impl<S: Simd, T: VEq> Vector<S, T> {
     }
 }
 
-impl_veq!(u8, i8, u16, i16, u32, i32, f32, u64, i64, f64);
+impl_veq!(u8, i8, u16, f16, i16, u32, i32, f32, u64, i64, f64);
 
 pub trait VOrd: VEq {
     /// Apply elementwise [`PartialOrd::lt`] on two vectors
@@ -125,4 +126,4 @@ macro_rules! impl_vord {
     };
 }
 
-impl_vord!(u8, i8, u16, i16, u32, i32, f32, u64, i64, f64);
+impl_vord!(u8, i8, u16, i16, f16, u32, i32, f32, u64, i64, f64);

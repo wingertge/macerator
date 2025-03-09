@@ -13,10 +13,16 @@ version = "0.2.1"
 [features]
 default = ["std"]
 
+fp16 = ["nightly"]
+nightly = []
 std = []
 
 [dependencies]
-bytemuck = { version = "1.22.0", features = ["aarch64_simd", "wasm_simd"] }
+bytemuck = { version = "1.22.0", features = [
+    "aarch64_simd",
+    "wasm_simd",
+    "avx512_simd",
+] }
 half = { version = "2.4", features = ["bytemuck", "num-traits"] }
 macerator-macros = { version = "0.1.0", path = "crates/macerator-macros" }
 num-traits = "0.2.0"

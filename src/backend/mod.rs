@@ -250,8 +250,8 @@ pub trait Simd: Sized + seal::Sealed + 'static {
         T::vadd::<Self>(a, b)
     }
 
-    declare_binop!(add, i8, u8, i16, u16, i32, u32, i64, u64, f16, f32, f64);
-    declare_binop!(sub, i8, u8, i16, u16, f16, i32, u32, i64, u64, f32, f64);
+    declare_binop!(add, i8, u8, i16, u16, f16, i32, u32, f32, i64, u64, f64);
+    declare_binop!(sub, i8, u8, i16, u16, f16, i32, u32, f32, i64, u64, f64);
     declare_binop!(div, f16, f32, f64);
     declare_binop!(mul, i8, u8, i16, u16, f16, i32, u32, f32, u64, i64, f64);
     declare_binop!(min, u8, i8, u16, i16, f16, u32, i32, f32, u64, i64, f64);
@@ -266,14 +266,15 @@ pub trait Simd: Sized + seal::Sealed + 'static {
     fn bitnot(a: Self::Register) -> Self::Register;
     fn bitnot_supported() -> bool;
 
-    declare_cmp!(equals, i8, u8, i16, u16, i32, u32, f32, i64, u64, f64);
-    declare_cmp!(less_than, i8, u8, i16, u16, i32, u32, f32, i64, u64, f64);
+    declare_cmp!(equals, i8, u8, i16, u16, f16, i32, u32, f32, i64, u64, f64);
+    declare_cmp!(less_than, i8, u8, i16, u16, f16, i32, u32, f32, i64, u64, f64);
     declare_cmp!(
         less_than_or_equal,
         i8,
         u8,
         i16,
         u16,
+        f16,
         i32,
         u32,
         f32,
@@ -281,13 +282,27 @@ pub trait Simd: Sized + seal::Sealed + 'static {
         u64,
         f64
     );
-    declare_cmp!(greater_than, i8, u8, i16, u16, i32, u32, f32, i64, u64, f64);
+    declare_cmp!(
+        greater_than,
+        i8,
+        u8,
+        i16,
+        u16,
+        f16,
+        i32,
+        u32,
+        f32,
+        i64,
+        u64,
+        f64
+    );
     declare_cmp!(
         greater_than_or_equal,
         i8,
         u8,
         i16,
         u16,
+        f16,
         i32,
         u32,
         f32,

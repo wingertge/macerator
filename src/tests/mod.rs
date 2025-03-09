@@ -51,7 +51,17 @@ macro_rules! testgen_binop {
                     .collect::<Vec<_>>();
                 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
                 {
-                    use $crate::backend::x86::{v2::V2, v3::V3};
+                    use $crate::backend::x86::*;
+                    #[cfg(all(feature = "nightly", feature = "fp16"))]
+                    if V4FP16::is_available() {
+                        let out = V4FP16::run_vectorized(|| [<$test_fn _impl>]::<V4FP16, $ty>(&lhs, &rhs));
+                        assert_eq!(out_ref, out);
+                    }
+                    #[cfg(feature = "nightly")]
+                    if V4::is_available() {
+                        let out = V4::run_vectorized(|| [<$test_fn _impl>]::<V4, $ty>(&lhs, &rhs));
+                        assert_eq!(out_ref, out);
+                    }
                     if V3::is_available() {
                         let out = V3::run_vectorized(|| [<$test_fn _impl>]::<V3, $ty>(&lhs, &rhs));
                         assert_eq!(out_ref, out);
@@ -160,7 +170,17 @@ macro_rules! testgen_unop {
                 let out_ref = a.iter().map(|a| $ty::$reference(*a)).collect::<Vec<_>>();
                 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
                 {
-                    use $crate::backend::x86::{v2::V2, v3::V3};
+                    use $crate::backend::x86::*;
+                    #[cfg(all(feature = "nightly", feature = "fp16"))]
+                    if V4FP16::is_available() {
+                        let out = V4FP16::run_vectorized(|| [<$test_fn _impl>]::<V4FP16, $ty>(&a));
+                        $assert(&out_ref, &out);
+                    }
+                    #[cfg(feature = "nightly")]
+                    if V4::is_available() {
+                        let out = V4::run_vectorized(|| [<$test_fn _impl>]::<V4, $ty>(&a));
+                        $assert(&out_ref, &out);
+                    }
                     if V3::is_available() {
                         let out = V3::run_vectorized(|| [<$test_fn _impl>]::<V3, $ty>(&a));
                         $assert(&out_ref, &out);

@@ -39,4 +39,4 @@ macro_rules! impl_unop {
 }
 
 impl_unop!(VRecip, recip, f16, f32, f64);
-impl_unop!(VAbs, abs, i8, i16, i32, f32, f64);
+impl_unop!(VAbs, abs, i8, i16, f16, i32, f32, f64);

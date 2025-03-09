@@ -1,0 +1,21 @@
+name: Rust
+
+on: [push, pull_request]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, ubuntu-24.04-arm]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install Nightly
+      run: rustup install nightly
+    - name: Build
+      run: cargo +nightly build --verbose --features fp16
+    - name: Run tests
+      run: cargo +nightly test --verbose --features fp16

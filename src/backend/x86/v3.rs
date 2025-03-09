@@ -18,65 +18,11 @@ use super::*;
 
 impl VRegister for __m256 {}
 
-macro_rules! lanes {
-    ($($bits: literal),*) => {
-        $(paste! {
-            #[inline(always)]
-            fn [<lanes $bits>]() -> usize {
-                256 / $bits
-            }
-        })*
-    };
-}
+const WIDTH: usize = size_of::<<V3 as Simd>::Register>() * 8;
 
 pub struct V3;
 
 impl Sealed for V3 {}
-
-macro_rules! impl_binop_scalar {
-    ($func: ident, $intrinsic: path, $($ty: ty),*) => {
-        $(paste! {
-            #[inline(always)]
-            fn [<$func _ $ty>](a: Self::Register, b: Self::Register) -> Self::Register {
-                const LANES: usize = 32 / size_of::<$ty>();
-                let a: [$ty; LANES] = cast!(a);
-                let b: [$ty; LANES] = cast!(b);
-                let mut out = [$ty::default(); LANES];
-
-                for i in 0..LANES {
-                    out[i] = $intrinsic(a[i], b[i]);
-                }
-                cast!(out)
-            }
-            #[inline(always)]
-            fn [<$func _ $ty _supported>]() -> bool {
-                false
-            }
-        })*
-    };
-}
-
-macro_rules! impl_unop_scalar {
-    ($func: ident, $intrinsic: path, $($ty: ty),*) => {
-        $(paste! {
-            #[inline(always)]
-            fn [<$func _ $ty>](a: Self::Register) -> Self::Register {
-                const LANES: usize = 32 / size_of::<$ty>();
-                let a: [$ty; LANES] = cast!(a);
-                let mut out = [$ty::default(); LANES];
-
-                for i in 0..LANES {
-                    out[i] = a[i].$intrinsic();
-                }
-                cast!(out)
-            }
-            #[inline(always)]
-            fn [<$func _ $ty _supported>]() -> bool {
-                false
-            }
-        })*
-    };
-}
 
 macro_rules! cmp_int {
     ($($ty: ty),*) => {
@@ -156,6 +102,12 @@ impl Simd for V3 {
     impl_cmp!(equals, _mm256_cmpeq, u8, i8, u16, i16, u32, i32, u64, i64);
     impl_cmp!(greater_than, _mm256_cmpgt, i8, i16, i32, i64);
     cmp_int!(u8, i8, u16, i16, u32, i32, u64, i64);
+
+    impl_cmp_scalar!(equals, eq, f16: i16);
+    impl_cmp_scalar!(greater_than, gt, f16: i16);
+    impl_cmp_scalar!(greater_than_or_equal, ge, f16: i16);
+    impl_cmp_scalar!(less_than, lt, f16: i16);
+    impl_cmp_scalar!(less_than_or_equal, le, f16: i16);
 
     fn vectorize<Op: WithSimd>(op: Op) -> Op::Output {
         struct Impl<Op> {

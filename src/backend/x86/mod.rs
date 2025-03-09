@@ -7,6 +7,98 @@
 
 pub mod v2;
 pub mod v3;
+#[cfg(feature = "nightly")]
+pub mod v4;
+
+pub use v2::V2;
+pub use v3::V3;
+#[cfg(feature = "nightly")]
+pub use v4::V4;
+#[cfg(all(feature = "nightly", feature = "fp16"))]
+pub use v4::V4FP16;
+
+macro_rules! lanes {
+    ($($bits: literal),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<lanes $bits>]() -> usize {
+                WIDTH / $bits
+            }
+        })*
+    };
+}
+pub(crate) use lanes;
+
+macro_rules! impl_binop_scalar {
+    ($func: ident, $intrinsic: path, $($ty: ty),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<$func _ $ty>](a: Self::Register, b: Self::Register) -> Self::Register {
+                const LANES: usize = WIDTH / (8 * size_of::<$ty>());
+                let a: [$ty; LANES] = cast!(a);
+                let b: [$ty; LANES] = cast!(b);
+                let mut out = [$ty::default(); LANES];
+
+                for i in 0..LANES {
+                    out[i] = $intrinsic(a[i], b[i]);
+                }
+                cast!(out)
+            }
+            #[inline(always)]
+            fn [<$func _ $ty _supported>]() -> bool {
+                false
+            }
+        })*
+    };
+}
+pub(crate) use impl_binop_scalar;
+
+macro_rules! impl_unop_scalar {
+    ($func: ident, $intrinsic: path, $($ty: ty),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<$func _ $ty>](a: Self::Register) -> Self::Register {
+                const LANES: usize = WIDTH / (8 * size_of::<$ty>());
+                let a: [$ty; LANES] = cast!(a);
+                let mut out = [$ty::default(); LANES];
+
+                for i in 0..LANES {
+                    out[i] = a[i].$intrinsic();
+                }
+                cast!(out)
+            }
+            #[inline(always)]
+            fn [<$func _ $ty _supported>]() -> bool {
+                false
+            }
+        })*
+    };
+}
+pub(crate) use impl_unop_scalar;
+
+macro_rules! impl_cmp_scalar {
+    ($func: ident, $intrinsic: path, $($ty: ty: $mask_ty: ty),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<$func _ $ty>](a: Self::Register, b: Self::Register) -> <$ty as Scalar>::Mask<Self> {
+                const LANES: usize = WIDTH / (8 * size_of::<$ty>());
+                let a: [$ty; LANES] = cast!(a);
+                let b: [$ty; LANES] = cast!(b);
+                let mut out = [0; LANES];
+
+                for i in 0..LANES {
+                    out[i] = a[i].$intrinsic(&b[i]) as $mask_ty;
+                }
+                cast!(out)
+            }
+            #[inline(always)]
+            fn [<$func _ $ty _supported>]() -> bool {
+                false
+            }
+        })*
+    };
+}
+pub(crate) use impl_cmp_scalar;
 
 macro_rules! with_ty {
     ($func: ident, f16) => {

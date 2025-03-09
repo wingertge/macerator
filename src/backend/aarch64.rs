@@ -15,7 +15,7 @@ impl VRegister for int8x16_t {}
 
 pub struct NeonFma;
 
-impl super::seal::Sealed for Simd128 {}
+impl super::seal::Sealed for NeonFma {}
 
 macro_rules! with_ty {
     ($func: ident, i8) => {

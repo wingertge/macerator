@@ -5,6 +5,7 @@ use crate::{Scalar, Simd, Vector};
 
 pub trait VRecip: Scalar {
     fn vrecip<S: Simd>(input: Vector<S, Self>) -> Vector<S, Self>;
+    fn is_accelerated<S: Simd>() -> bool;
 }
 
 impl<S: Simd, T: VRecip> Vector<S, T> {
@@ -16,6 +17,7 @@ impl<S: Simd, T: VRecip> Vector<S, T> {
 
 pub trait VAbs: Scalar {
     fn vabs<S: Simd>(input: Vector<S, Self>) -> Vector<S, Self>;
+    fn is_accelerated<S: Simd>() -> bool;
 }
 
 impl<S: Simd, T: VAbs> Vector<S, T> {
@@ -32,6 +34,10 @@ macro_rules! impl_unop {
                 #[inline(always)]
                 fn [<$trait:lower>]<S: Simd>(input: Vector<S, Self>) -> Vector<S, Self> {
                     S::typed(S::[<$name _ $ty>](*input))
+                }
+                #[inline(always)]
+                fn is_accelerated<S: Simd>() -> bool {
+                    S::[<$name _ $ty _supported>]()
                 }
             }
         })*

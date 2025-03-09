@@ -502,6 +502,7 @@ impl V4Run for V4 {
     }
 }
 
+#[cfg(feature = "fp16")]
 impl V4Run for V4FP16 {
     #[inline(always)]
     fn run_vectorized<F: NullaryFnOnce>(f: F) -> F::Output {

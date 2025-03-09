@@ -9,7 +9,7 @@ use half::f16;
 use num_traits::Float;
 use paste::paste;
 
-use crate::{backend::arch::NullaryFnOnce, Scalar, WithSimd};
+use crate::{backend::arch::NullaryFnOnce, impl_cmp_scalar, Scalar, WithSimd};
 
 use crate::backend::{arch::impl_simd, cast, seal::Sealed, Simd, VRegister, Vector};
 

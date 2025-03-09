@@ -11,13 +11,15 @@ use paste::paste;
 
 use crate::{backend::arch::NullaryFnOnce, Scalar, WithSimd};
 
-use crate::backend::{arch::impl_simd, cast, Simd, VRegister, Vector};
+use crate::backend::{arch::impl_simd, cast, seal::Sealed, Simd, VRegister, Vector};
 
 use super::*;
 
 impl VRegister for __m128 {}
 
 pub struct V2;
+
+impl Sealed for V2 {}
 
 macro_rules! impl_binop_scalar {
     ($func: ident, $intrinsic: path, $($ty: ty),*) => {

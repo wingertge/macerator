@@ -105,7 +105,11 @@ macro_rules! splat {
     };
 }
 
-pub trait Simd: Sized + 'static {
+pub(crate) mod seal {
+    pub trait Sealed {}
+}
+
+pub trait Simd: Sized + seal::Sealed + 'static {
     type Register: VRegister;
     type Mask8: Debug + Copy + Send + Sync + Zeroable + NoUninit + CheckedBitPattern + 'static;
     type Mask16: Debug + Copy + Send + Sync + Zeroable + NoUninit + CheckedBitPattern + 'static;

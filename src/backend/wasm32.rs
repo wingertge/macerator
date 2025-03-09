@@ -19,6 +19,8 @@ impl VRegister for v128 {}
 
 pub struct Simd128;
 
+impl super::seal::Sealed for Simd128 {}
+
 macro_rules! impl_binop {
     ($name: ident, $intrinsic: ident, $($ty: ident x $lanes: literal),*) => {
         $(paste! {

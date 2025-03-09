@@ -17,6 +17,8 @@ impl VRegister for u64 {}
 
 pub struct Fallback;
 
+impl super::seal::Sealed for Fallback {}
+
 macro_rules! impl_binop_scalar {
     ($func: ident, $intrinsic: path, $($ty: ty),*) => {
         $(paste! {

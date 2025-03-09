@@ -12,7 +12,7 @@ use paste::paste;
 
 use crate::{backend::arch::NullaryFnOnce, Scalar, WithSimd};
 
-use crate::backend::{arch::impl_simd, cast, Simd, VRegister, Vector};
+use crate::backend::{arch::impl_simd, cast, seal::Sealed, Simd, VRegister, Vector};
 
 use super::*;
 
@@ -30,6 +30,8 @@ macro_rules! lanes {
 }
 
 pub struct V3;
+
+impl Sealed for V3 {}
 
 macro_rules! impl_binop_scalar {
     ($func: ident, $intrinsic: path, $($ty: ty),*) => {

@@ -1,3 +1,6 @@
+use core::fmt::Debug;
+
+use approx::{assert_relative_eq, RelativeEq};
 use bytemuck::Zeroable;
 use rand::{
     distributions::{uniform::SampleUniform, Uniform},
@@ -8,6 +11,8 @@ use crate::{vload_unaligned, vstore_unaligned, Scalar, Simd, Vector};
 
 mod arithmetic;
 mod bitwise;
+mod ord;
+mod unary;
 
 wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
@@ -18,6 +23,16 @@ fn random<T: SampleUniform>(lo: T, hi: T) -> Vec<T> {
         .sample_iter(&distribution)
         .take(SIZE)
         .collect()
+}
+
+fn assert_approx_eq<T: RelativeEq + Debug>(lhs: &[T], rhs: &[T]) {
+    for (a, b) in lhs.iter().zip(rhs) {
+        assert_relative_eq!(*a, *b);
+    }
+}
+
+fn assert_eq<T: PartialEq + Debug>(lhs: &[T], rhs: &[T]) {
+    assert_eq!(lhs, rhs);
 }
 
 macro_rules! testgen_binop {
@@ -91,9 +106,9 @@ macro_rules! binop {
     ($trait: ident, $impl: expr) => {
         ::paste::paste! {
             struct [<$trait Op>]<T>(::core::marker::PhantomData<T>);
-            impl<T: $trait> Binop<T> for [<$trait Op>]<T> {
+            impl<T: $trait> $crate::tests::Binop<T> for [<$trait Op>]<T> {
                 #[inline(always)]
-                fn call<S: Simd>(lhs: Vector<S, T>, rhs: Vector<S, T>) -> Vector<S, T> {
+                fn call<S: Simd>(lhs: $crate::Vector<S, T>, rhs: $crate::Vector<S, T>) -> $crate::Vector<S, T> {
                     $impl(lhs, rhs)
                 }
             }
@@ -101,3 +116,78 @@ macro_rules! binop {
     };
 }
 pub(crate) use binop;
+
+pub(crate) trait Unop<T: Scalar> {
+    fn call<S: Simd>(lhs: Vector<S, T>) -> Vector<S, T>;
+}
+
+#[inline(always)]
+fn test_unop<S: Simd, T: Scalar, Op: Unop<T>>(a: &[T]) -> Vec<T> {
+    let lanes = T::lanes::<S>();
+    let mut output = vec![Zeroable::zeroed(); a.len()];
+    let a = a.chunks_exact(lanes);
+    let out = output.chunks_exact_mut(lanes);
+    for (a, out) in a.zip(out) {
+        let a = unsafe { vload_unaligned(a.as_ptr()) };
+        unsafe { vstore_unaligned(out.as_mut_ptr(), Op::call::<S>(a)) };
+    }
+    output
+}
+
+macro_rules! unop {
+    ($trait: ident, $impl: expr) => {
+        ::paste::paste! {
+            struct [<$trait Op>]<T>(::core::marker::PhantomData<T>);
+            impl<T: $trait> Unop<T> for [<$trait Op>]<T> {
+                #[inline(always)]
+                fn call<S: Simd>(lhs: Vector<S, T>) -> Vector<S, T> {
+                    $impl(lhs)
+                }
+            }
+        }
+    };
+}
+pub(crate) use unop;
+
+macro_rules! testgen_unop {
+    ($test_fn: ident, $reference: expr, $lo: expr, $hi: expr, $assert: ident, $($ty: ty),*) => {
+        $(::paste::paste! {
+            #[::wasm_bindgen_test::wasm_bindgen_test(unsupported = test)]
+            fn [<$test_fn _ $ty>]() {
+                use num_traits::NumCast;
+
+                let a = $crate::tests::random::<$ty>(NumCast::from($lo).unwrap(), NumCast::from($hi).unwrap());
+                let out_ref = a.iter().map(|a| $ty::$reference(*a)).collect::<Vec<_>>();
+                #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+                {
+                    use $crate::backend::x86::{v2::V2, v3::V3};
+                    if V3::is_available() {
+                        let out = V3::run_vectorized(|| [<$test_fn _impl>]::<V3, $ty>(&a));
+                        $assert(&out_ref, &out);
+                    }
+                    if V2::is_available() {
+                        let out = V2::run_vectorized(|| [<$test_fn _impl>]::<V2, $ty>(&a));
+                        $assert(&out_ref, &out);
+                    }
+                }
+                #[cfg(target_arch = "aarch64")]
+                {
+                    use $crate::backend::aarch64::NeonFma;
+                    if NeonFma::is_available() {
+                        let out = NeonFma::run_vectorized(|| [<$test_fn _impl>]::<NeonFma, $ty>(&a));
+                        $assert(&out_ref, &out);
+                    }
+                }
+                #[cfg(target_arch = "wasm32")]
+                {
+                    use crate::backend::wasm32::Simd128;
+                    let out = Simd128::run_vectorized(|| [<$test_fn _impl>]::<Simd128, $ty>(&a));
+                    $assert(&out_ref, &out);
+                }
+                let out = [<$test_fn _impl>]::<$crate::backend::scalar::Fallback, $ty>(&a);
+                $assert(&out_ref, &out);
+            }
+        })*
+    };
+}
+pub(crate) use testgen_unop;

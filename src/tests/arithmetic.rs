@@ -1,16 +1,13 @@
 use crate::scalar::Fallback;
 
-use core::fmt::Debug;
-
-use approx::{assert_relative_eq, RelativeEq};
 use bytemuck::Zeroable;
 use half::f16;
 use num_traits::NumCast;
 use paste::paste;
 
-use crate::{vload_unaligned, vstore_unaligned, Simd, VAdd, VDiv, VMul, VMulAdd, VSub, Vector};
+use crate::{vload_unaligned, vstore_unaligned, Simd, VAdd, VDiv, VMul, VMulAdd, VSub};
 
-use super::{binop, test_binop, testgen_binop, Binop};
+use super::{assert_approx_eq, binop, test_binop, testgen_binop};
 
 #[inline(always)]
 fn test_add_impl<S: Simd, T: VAdd>(lhs: &[T], rhs: &[T]) -> Vec<T> {
@@ -95,14 +92,8 @@ testgen_binop!(
     f64
 );
 
-fn assert_approx_eq<T: RelativeEq + Debug>(lhs: &[T], rhs: &[T]) {
-    for (a, b) in lhs.iter().zip(rhs) {
-        assert_relative_eq!(*a, *b);
-    }
-}
-
 macro_rules! testgen_fma {
-    ($test_fn: ident, $reference: expr, $($ty: ty),*) => {
+    ($test_fn: ident, $($ty: ty),*) => {
         $(paste! {
             #[::wasm_bindgen_test::wasm_bindgen_test(unsupported = test)]
             fn [<$test_fn _ $ty>]() {
@@ -147,4 +138,4 @@ macro_rules! testgen_fma {
     };
 }
 
-testgen_fma!(test_fma, f16, f32, f64);
+testgen_fma!(test_fma, f32, f64);

@@ -1,4 +1,6 @@
-use crate::{Simd, VBitAnd, VBitOr, VBitXor};
+use core::ops::Not;
+
+use crate::{Simd, VBitAnd, VBitNot, VBitOr, VBitXor};
 
 use super::*;
 
@@ -18,6 +20,12 @@ fn test_bitor_impl<S: Simd, T: VBitOr>(lhs: &[T], rhs: &[T]) -> Vec<T> {
 fn test_bitxor_impl<S: Simd, T: VBitXor>(lhs: &[T], rhs: &[T]) -> Vec<T> {
     binop!(VBitXor, |a, b| a ^ b);
     test_binop::<S, T, VBitXorOp<T>>(lhs, rhs)
+}
+
+#[inline(always)]
+fn test_not_impl<S: Simd, T: VBitNot>(a: &[T]) -> Vec<T> {
+    unop!(VBitNot, |a: Vector<S, T>| a.not());
+    test_unop::<S, T, VBitNotOp<T>>(a)
 }
 
 testgen_binop!(
@@ -56,3 +64,5 @@ testgen_binop!(
     u64,
     i64
 );
+
+testgen_unop!(test_not, not, 0, 100, assert_eq, u8, i8, u16, i16, u32, i32, u64, i64);

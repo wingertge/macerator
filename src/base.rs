@@ -95,6 +95,15 @@ pub trait Scalar: Sized + Copy + Pod + NoUninit + Default {
     /// the element at `ptr`.
     unsafe fn vstore_high<S: Simd>(ptr: *mut Self, value: Vector<S, Self>);
 
+    /// Store a `Mask` as a set of booleans of `lanes` width, converting as
+    /// necessary.
+    ///
+    /// # SAFETY
+    /// `out` must be valid for `lanes` contiguous values.
+    unsafe fn mask_store_as_bool<S: Simd>(out: *mut bool, mask: Self::Mask<S>);
+    /// Converts a slice of booleans to a mask. Slice length must be equal to
+    /// `lanes`.
+    fn mask_from_bools<S: Simd>(bools: &[bool]) -> Self::Mask<S>;
     /// Create a vector with the scalar `value` in each element.
     fn splat<S: Simd>(self) -> Vector<S, Self>;
 }
@@ -140,6 +149,14 @@ macro_rules! impl_vectorizable {
                 #[inline(always)]
                 unsafe fn vstore_high<S: Simd>(ptr: *mut Self, value: Vector<S, Self>) {
                     unsafe { S::store_high(ptr, value) }
+                }
+                #[inline(always)]
+                unsafe fn mask_store_as_bool<S: Simd>(out: *mut bool, mask: Self::Mask<S>) {
+                    S::[<mask_store_as_bool_ $bits>](out, mask);
+                }
+                #[inline(always)]
+                fn mask_from_bools<S: Simd>(bools: &[bool]) -> Self::Mask<S> {
+                    S::[<mask_from_bools_ $bits>](bools)
                 }
                 #[inline(always)]
                 fn splat<S: Simd>(self) -> Vector<S, Self> {

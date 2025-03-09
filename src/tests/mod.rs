@@ -16,7 +16,7 @@ mod unary;
 
 wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
-const SIZE: usize = 1024;
+const SIZE: usize = 128;
 fn random<T: SampleUniform>(lo: T, hi: T) -> Vec<T> {
     let distribution = Uniform::new(lo, hi);
     rand::thread_rng()

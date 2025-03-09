@@ -201,6 +201,76 @@ impl Simd for NeonFma {
     }
 
     #[inline(always)]
+    unsafe fn mask_store_as_bool_8(out: *mut bool, mask: Self::Mask8) {
+        let bools = Self::bitand(cast!(mask), Self::splat_i8(1));
+        Self::store_unaligned(out as *mut u8, cast!(bools));
+    }
+    #[inline(always)]
+    unsafe fn mask_store_as_bool_16(out: *mut bool, mask: Self::Mask16) {
+        const LANES: usize = 128 / 16;
+        let mask: [i16; LANES] = cast!(mask);
+        for i in 0..LANES {
+            *out.add(i) = mask[i] != 0;
+        }
+    }
+    #[inline(always)]
+    unsafe fn mask_store_as_bool_32(out: *mut bool, mask: Self::Mask32) {
+        const LANES: usize = 128 / 32;
+        let mask: [i32; LANES] = cast!(mask);
+        for i in 0..LANES {
+            *out.add(i) = mask[i] != 0;
+        }
+    }
+    #[inline(always)]
+    unsafe fn mask_store_as_bool_64(out: *mut bool, mask: Self::Mask64) {
+        const LANES: usize = 128 / 64;
+        let mask: [i64; LANES] = cast!(mask);
+        for i in 0..LANES {
+            *out.add(i) = mask[i] != 0;
+        }
+    }
+    #[inline(always)]
+    fn mask_from_bools_8(bools: &[bool]) -> Self::Mask8 {
+        debug_assert_eq!(bools.len(), Self::lanes8());
+        const LANES: usize = 128 / 8;
+        let mut out = [0i8; LANES];
+        for i in 0..LANES {
+            out[i] = if bools[i] { -1 } else { 0 };
+        }
+        cast!(out)
+    }
+    #[inline(always)]
+    fn mask_from_bools_16(bools: &[bool]) -> Self::Mask16 {
+        debug_assert_eq!(bools.len(), Self::lanes16());
+        const LANES: usize = 128 / 16;
+        let mut out = [0i16; LANES];
+        for i in 0..LANES {
+            out[i] = if bools[i] { -1 } else { 0 };
+        }
+        cast!(out)
+    }
+    #[inline(always)]
+    fn mask_from_bools_32(bools: &[bool]) -> Self::Mask32 {
+        debug_assert_eq!(bools.len(), Self::lanes32());
+        const LANES: usize = 128 / 32;
+        let mut out = [0i32; LANES];
+        for i in 0..LANES {
+            out[i] = if bools[i] { -1 } else { 0 };
+        }
+        cast!(out)
+    }
+    #[inline(always)]
+    fn mask_from_bools_64(bools: &[bool]) -> Self::Mask64 {
+        debug_assert_eq!(bools.len(), Self::lanes64());
+        const LANES: usize = 128 / 64;
+        let mut out = [0i64; LANES];
+        for i in 0..LANES {
+            out[i] = if bools[i] { -1 } else { 0 };
+        }
+        cast!(out)
+    }
+
+    #[inline(always)]
     unsafe fn load<T: Scalar>(ptr: *const T) -> super::Vector<Self, T> {
         cast!(vld1q_s8(ptr as _))
     }

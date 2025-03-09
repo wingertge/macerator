@@ -2,7 +2,8 @@
     clippy::transmute_float_to_int,
     unused_unsafe,
     clippy::useless_transmute,
-    clippy::missing_transmute_annotations
+    clippy::missing_transmute_annotations,
+    clippy::needless_range_loop
 )]
 
 use bytemuck::{CheckedBitPattern, NoUninit, Pod, Zeroable};
@@ -123,6 +124,44 @@ pub trait Simd: Sized + 'static {
         }
     }
     fn vectorize<Op: WithSimd>(op: Op) -> Op::Output;
+
+    /// Store a `Mask8` as a set of booleans of `lanes8` width, converting as
+    /// necessary.
+    ///
+    /// # SAFETY
+    /// `out` must be valid for `lanes8` contiguous values.
+    unsafe fn mask_store_as_bool_8(out: *mut bool, mask: Self::Mask8);
+    /// Store a `Mask16` as a set of booleans of `lanes16` width, converting as
+    /// necessary.
+    ///
+    /// # SAFETY
+    /// `out` must be valid for `lanes16` contiguous values.
+    unsafe fn mask_store_as_bool_16(out: *mut bool, mask: Self::Mask16);
+    /// Store a `Mask32` as a set of booleans of `lanes32` width, converting as
+    /// necessary.
+    ///
+    /// # SAFETY
+    /// `out` must be valid for `lanes32` contiguous values.
+    unsafe fn mask_store_as_bool_32(out: *mut bool, mask: Self::Mask32);
+    /// Store a `Mask64` as a set of booleans of `lanes64` width, converting as
+    /// necessary.
+    ///
+    /// # SAFETY
+    /// `out` must be valid for `lanes64` contiguous values.
+    unsafe fn mask_store_as_bool_64(out: *mut bool, mask: Self::Mask64);
+
+    /// Converts a slice of booleans to a mask. Slice length must be equal to
+    /// `lanes8`.
+    fn mask_from_bools_8(bools: &[bool]) -> Self::Mask8;
+    /// Converts a slice of booleans to a mask. Slice length must be equal to
+    /// `lanes16`.
+    fn mask_from_bools_16(bools: &[bool]) -> Self::Mask16;
+    /// Converts a slice of booleans to a mask. Slice length must be equal to
+    /// `lanes32`.
+    fn mask_from_bools_32(bools: &[bool]) -> Self::Mask32;
+    /// Converts a slice of booleans to a mask. Slice length must be equal to
+    /// `lanes64`.
+    fn mask_from_bools_64(bools: &[bool]) -> Self::Mask64;
 
     /// Load a vector from an aligned element pointer. Must be aligned to the
     /// whole vector.

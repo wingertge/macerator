@@ -11,7 +11,7 @@ use paste::paste;
 
 use crate::Scalar;
 
-use super::{Simd, VRegister, WithSimd, cast};
+use super::{cast, Simd, VRegister, WithSimd};
 
 impl VRegister for u64 {}
 
@@ -211,9 +211,7 @@ impl Simd for Fallback {
         i64,
         f64
     );
-    impl_cmp_scalar!(
-        less_than, lt, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64
-    );
+    impl_cmp_scalar!(less_than, lt, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64);
     impl_cmp_scalar!(
         less_than_or_equal,
         le,
@@ -231,6 +229,43 @@ impl Simd for Fallback {
 
     fn vectorize<Op: WithSimd>(op: Op) -> Op::Output {
         op.with_simd::<Self>()
+    }
+
+    #[inline(always)]
+    unsafe fn mask_store_as_bool_8(out: *mut bool, mask: Self::Mask8) {
+        write(out as _, mask);
+    }
+    #[inline(always)]
+    unsafe fn mask_store_as_bool_16(out: *mut bool, mask: Self::Mask16) {
+        write(out as _, mask);
+    }
+    #[inline(always)]
+    unsafe fn mask_store_as_bool_32(out: *mut bool, mask: Self::Mask32) {
+        write(out as _, mask);
+    }
+    #[inline(always)]
+    unsafe fn mask_store_as_bool_64(out: *mut bool, mask: Self::Mask64) {
+        write(out as _, mask);
+    }
+    #[inline(always)]
+    fn mask_from_bools_8(bools: &[bool]) -> Self::Mask8 {
+        let mask: [bool; 8] = bools.try_into().expect("Slice must be `lanes8` length");
+        cast!(mask)
+    }
+    #[inline(always)]
+    fn mask_from_bools_16(bools: &[bool]) -> Self::Mask16 {
+        let mask: [bool; 4] = bools.try_into().expect("Slice must be `lanes16` length");
+        cast!(mask)
+    }
+    #[inline(always)]
+    fn mask_from_bools_32(bools: &[bool]) -> Self::Mask32 {
+        let mask: [bool; 2] = bools.try_into().expect("Slice must be `lanes32` length");
+        cast!(mask)
+    }
+    #[inline(always)]
+    fn mask_from_bools_64(bools: &[bool]) -> Self::Mask64 {
+        let mask: [bool; 1] = bools.try_into().expect("Slice must be `lanes64` length");
+        cast!(mask)
     }
 
     #[inline(always)]

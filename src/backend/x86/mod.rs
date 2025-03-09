@@ -76,30 +76,6 @@ macro_rules! impl_unop_scalar {
 }
 pub(crate) use impl_unop_scalar;
 
-macro_rules! impl_cmp_scalar {
-    ($func: ident, $intrinsic: path, $($ty: ty: $mask_ty: ty),*) => {
-        $(paste! {
-            #[inline(always)]
-            fn [<$func _ $ty>](a: Self::Register, b: Self::Register) -> <$ty as Scalar>::Mask<Self> {
-                const LANES: usize = WIDTH / (8 * size_of::<$ty>());
-                let a: [$ty; LANES] = cast!(a);
-                let b: [$ty; LANES] = cast!(b);
-                let mut out = [0; LANES];
-
-                for i in 0..LANES {
-                    out[i] = a[i].$intrinsic(&b[i]) as $mask_ty;
-                }
-                cast!(out)
-            }
-            #[inline(always)]
-            fn [<$func _ $ty _supported>]() -> bool {
-                false
-            }
-        })*
-    };
-}
-pub(crate) use impl_cmp_scalar;
-
 macro_rules! with_ty {
     ($func: ident, f16) => {
         paste!([<$func _ph>])

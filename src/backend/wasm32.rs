@@ -12,10 +12,12 @@ use crate::{Scalar, WithSimd};
 
 use super::{
     arch::{impl_simd, NullaryFnOnce},
-    cast, Simd, VRegister, Vector,
+    cast, impl_cmp_scalar, Simd, VRegister, Vector,
 };
 
 impl VRegister for v128 {}
+
+const WIDTH: usize = size_of::<<Simd128 as Simd>::Register>() * 8;
 
 pub struct Simd128;
 
@@ -148,6 +150,12 @@ impl Simd for Simd128 {
     impl_binop_scalar!(min, f16::min, f16);
     impl_binop_scalar!(max, Ord::max, u64, i64);
     impl_binop_scalar!(max, f16::max, f16);
+
+    impl_cmp_scalar!(equals, eq, f16: i16);
+    impl_cmp_scalar!(greater_than, gt, f16: i16);
+    impl_cmp_scalar!(greater_than_or_equal, ge, f16: i16);
+    impl_cmp_scalar!(less_than_or_equal, le, f16: i16);
+    impl_cmp_scalar!(less_than, lt, f16: i16);
 
     impl_unop_scalar!(abs, abs, f16);
     impl_unop_scalar!(recip, recip, f16, f32, f64);

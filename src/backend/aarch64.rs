@@ -9,9 +9,11 @@ use paste::paste;
 
 use crate::{backend::arch::NullaryFnOnce, cast, Scalar};
 
-use super::{arch::impl_simd, Simd, VRegister, Vector, WithSimd};
+use super::{arch::impl_simd, impl_cmp_scalar, Simd, VRegister, Vector, WithSimd};
 
 impl VRegister for int8x16_t {}
+
+const WIDTH: usize = size_of::<<NeonFma as Simd>::Register>() * 8;
 
 pub struct NeonFma;
 
@@ -177,6 +179,12 @@ impl Simd for NeonFma {
         i64,
         f64
     );
+
+    impl_cmp_scalar!(equals, eq, f16: i16);
+    impl_cmp_scalar!(greater_than, gt, f16: i16);
+    impl_cmp_scalar!(greater_than_or_equal, ge, f16: i16);
+    impl_cmp_scalar!(less_than_or_equal, le, f16: i16);
+    impl_cmp_scalar!(less_than, lt, f16: i16);
 
     impl_binop_scalar!(add, Add::add, f16);
     impl_binop_scalar!(sub, Sub::sub, f16);

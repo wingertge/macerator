@@ -9,7 +9,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
     env:
-      RUSTFLAGS: -Ctarget-feature=+simd128
+      RUSTFLAGS: -Ctarget-feature=+simd128 --cfg getrandom_backend="wasm_js"
     steps:
         - uses: actions/checkout@v4
         - name: Install

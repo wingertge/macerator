@@ -3,7 +3,7 @@ use core::fmt::Debug;
 use approx::{assert_relative_eq, RelativeEq};
 use bytemuck::Zeroable;
 use rand::{
-    distributions::{uniform::SampleUniform, Uniform},
+    distr::{uniform::SampleUniform, Uniform},
     Rng,
 };
 
@@ -18,11 +18,8 @@ wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
 const SIZE: usize = 128;
 fn random<T: SampleUniform>(lo: T, hi: T) -> Vec<T> {
-    let distribution = Uniform::new(lo, hi);
-    rand::thread_rng()
-        .sample_iter(&distribution)
-        .take(SIZE)
-        .collect()
+    let distribution = Uniform::new(lo, hi).unwrap();
+    rand::rng().sample_iter(&distribution).take(SIZE).collect()
 }
 
 fn assert_approx_eq<T: RelativeEq + Debug>(lhs: &[T], rhs: &[T]) {

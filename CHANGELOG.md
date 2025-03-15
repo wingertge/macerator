@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.6](https://github.com/wingertge/macerator/compare/macerator-v0.2.5...macerator-v0.2.6) - 2025-03-15
+
+### Added
+
+- Enable F16C for V3+ so the compiler can use native conversion
+
 ## [0.2.5](https://github.com/wingertge/macerator/compare/macerator-v0.2.4...macerator-v0.2.5) - 2025-03-14
 
 ### Other

@@ -462,6 +462,6 @@ impl Simd for V3 {
 impl V3 {
     impl_simd!(
         "sse", "sse2", "fxsr", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt", "avx", "avx2",
-        "bmi1", "bmi2", "fma", "lzcnt"
+        "bmi1", "bmi2", "fma", "lzcnt", "f16c"
     );
 }

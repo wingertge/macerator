@@ -513,7 +513,8 @@ impl V4Run for V4FP16 {
 impl V4 {
     impl_simd!(
         "sse", "sse2", "fxsr", "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt", "avx", "avx2",
-        "bmi1", "bmi2", "fma", "lzcnt", "avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl"
+        "f16c", "bmi1", "bmi2", "fma", "lzcnt", "avx512f", "avx512bw", "avx512cd", "avx512dq",
+        "avx512vl"
     );
 }
 

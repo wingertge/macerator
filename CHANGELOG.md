@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.7](https://github.com/wingertge/macerator/compare/macerator-v0.2.6...macerator-v0.2.7) - 2025-05-14
+
+### Other
+
+- Fix compile issues on targets without SIMD support
+
 ## [0.2.6](https://github.com/wingertge/macerator/compare/macerator-v0.2.5...macerator-v0.2.6) - 2025-03-15
 
 ### Added

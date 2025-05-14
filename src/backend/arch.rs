@@ -39,7 +39,7 @@ impl Arch {
 
     pub fn dispatch<Op: WithSimd>(self, op: Op) -> Op::Output {
         match self {
-            Arch::Scalar => <Fallback as Simd>::vectorize(op),
+            Arch::Scalar => <crate::scalar::Fallback as Simd>::vectorize(op),
         }
     }
 }
@@ -85,6 +85,12 @@ macro_rules! feature_detected {
 #[allow(unused)]
 pub(crate) use feature_detected;
 
+#[cfg(any(
+    target_arch = "x86",
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
 macro_rules! impl_simd {
     ($($feature: tt),*) => {
         #[inline(always)]
@@ -171,6 +177,13 @@ macro_rules! impl_simd {
     }
     };
 }
+
+#[cfg(any(
+    target_arch = "x86",
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
 pub(crate) use impl_simd;
 
 use super::Simd;

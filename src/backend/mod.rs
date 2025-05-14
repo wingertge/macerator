@@ -322,6 +322,12 @@ pub trait Simd: Sized + seal::Sealed + 'static {
     declare_unop!(abs, i8, i16, i32, i64, f16, f32, f64);
 }
 
+#[cfg(any(
+    target_arch = "x86",
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
 macro_rules! impl_cmp_scalar {
     ($func: ident, $intrinsic: path, $($ty: ty: $mask_ty: ty),*) => {
         $(paste! {
@@ -344,6 +350,13 @@ macro_rules! impl_cmp_scalar {
         })*
     };
 }
+
+#[cfg(any(
+    target_arch = "x86",
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
 pub(crate) use impl_cmp_scalar;
 
 /// Tests that type inference works properly

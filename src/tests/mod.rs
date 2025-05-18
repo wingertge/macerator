@@ -46,7 +46,7 @@ macro_rules! testgen_binop {
                     .zip(rhs.iter())
                     .map(|(a, b)| $reference(a, b))
                     .collect::<Vec<_>>();
-                #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+                #[cfg(x86)]
                 {
                     use $crate::backend::x86::*;
                     #[cfg(all(feature = "nightly", feature = "fp16"))]
@@ -68,7 +68,7 @@ macro_rules! testgen_binop {
                         assert_eq!(out_ref, out);
                     }
                 }
-                #[cfg(target_arch = "aarch64")]
+                #[cfg(aarch64)]
                 {
                     use $crate::backend::aarch64::NeonFma;
                     if NeonFma::is_available() {
@@ -76,7 +76,7 @@ macro_rules! testgen_binop {
                         assert_eq!(out_ref, out);
                     }
                 }
-                #[cfg(target_arch = "wasm32")]
+                #[cfg(wasm32)]
                 {
                     use crate::backend::wasm32::Simd128;
                     let out = Simd128::run_vectorized(|| [<$test_fn _impl>]::<Simd128, $ty>(&lhs, &rhs));
@@ -165,7 +165,7 @@ macro_rules! testgen_unop {
 
                 let a = $crate::tests::random::<$ty>(NumCast::from($lo).unwrap(), NumCast::from($hi).unwrap());
                 let out_ref = a.iter().map(|a| $ty::$reference(*a)).collect::<Vec<_>>();
-                #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+                #[cfg(x86)]
                 {
                     use $crate::backend::x86::*;
                     #[cfg(all(feature = "nightly", feature = "fp16"))]
@@ -187,7 +187,7 @@ macro_rules! testgen_unop {
                         $assert(&out_ref, &out);
                     }
                 }
-                #[cfg(target_arch = "aarch64")]
+                #[cfg(aarch64)]
                 {
                     use $crate::backend::aarch64::NeonFma;
                     if NeonFma::is_available() {
@@ -195,7 +195,7 @@ macro_rules! testgen_unop {
                         $assert(&out_ref, &out);
                     }
                 }
-                #[cfg(target_arch = "wasm32")]
+                #[cfg(wasm32)]
                 {
                     use crate::backend::wasm32::Simd128;
                     let out = Simd128::run_vectorized(|| [<$test_fn _impl>]::<Simd128, $ty>(&a));

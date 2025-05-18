@@ -105,7 +105,7 @@ macro_rules! testgen_fma {
                     .zip(b.iter()).zip(c.iter())
                     .map(|((a, b), c)| a * b + c)
                     .collect::<Vec<_>>();
-                #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+                #[cfg(x86)]
                 {
                     use crate::backend::x86::*;
                     #[cfg(all(feature = "nightly", feature = "fp16"))]
@@ -127,7 +127,7 @@ macro_rules! testgen_fma {
                         assert_approx_eq(&out_ref, &out);
                     }
                 }
-                #[cfg(target_arch = "aarch64")]
+                #[cfg(aarch64)]
                 {
                     use crate::backend::aarch64::NeonFma;
                     if NeonFma::is_available() {
@@ -135,7 +135,7 @@ macro_rules! testgen_fma {
                         assert_approx_eq(&out_ref, &out);
                     }
                 }
-                #[cfg(target_arch = "wasm32")]
+                #[cfg(wasm32)]
                 {
                     use crate::backend::wasm32::Simd128;
                     let out = Simd128::run_vectorized(|| [<$test_fn _impl>]::<Simd128, $ty>(&a, &b, &c));

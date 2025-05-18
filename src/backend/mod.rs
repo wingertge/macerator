@@ -3,7 +3,9 @@
     unused_unsafe,
     clippy::useless_transmute,
     clippy::missing_transmute_annotations,
-    clippy::needless_range_loop
+    clippy::needless_range_loop,
+    unknown_lints,
+    unnecessary_transmutes, // for Rust nightly
 )]
 
 use bytemuck::{CheckedBitPattern, NoUninit, Pod, Zeroable};
@@ -12,14 +14,16 @@ use half::{bf16, f16};
 use paste::paste;
 
 mod arch;
-pub(crate) mod scalar;
 pub use arch::{Arch, WithSimd};
-#[cfg(target_arch = "aarch64")]
-pub(crate) mod aarch64;
-#[cfg(target_arch = "wasm32")]
-pub(crate) mod wasm32;
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-pub(crate) mod x86;
+
+moddef::moddef!(
+    pub(crate) mod {
+        x86 for cfg(x86),
+        aarch64 for cfg(aarch64),
+        wasm32 for cfg(wasm32),
+        scalar
+    }
+);
 
 use crate::{Scalar, VAdd};
 
@@ -322,12 +326,7 @@ pub trait Simd: Sized + seal::Sealed + 'static {
     declare_unop!(abs, i8, i16, i32, i64, f16, f32, f64);
 }
 
-#[cfg(any(
-    target_arch = "x86",
-    target_arch = "x86_64",
-    target_arch = "aarch64",
-    target_arch = "wasm32"
-))]
+#[cfg(any(x86, aarch64, wasm32))]
 macro_rules! impl_cmp_scalar {
     ($func: ident, $intrinsic: path, $($ty: ty: $mask_ty: ty),*) => {
         $(paste! {
@@ -351,12 +350,7 @@ macro_rules! impl_cmp_scalar {
     };
 }
 
-#[cfg(any(
-    target_arch = "x86",
-    target_arch = "x86_64",
-    target_arch = "aarch64",
-    target_arch = "wasm32"
-))]
+#[cfg(any(x86, aarch64, wasm32))]
 pub(crate) use impl_cmp_scalar;
 
 /// Tests that type inference works properly

@@ -1,62 +1,13 @@
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-mod x86;
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-pub use x86::*;
-
-#[cfg(target_arch = "aarch64")]
-mod aarch64;
-#[cfg(target_arch = "aarch64")]
-pub use aarch64::*;
-
-#[cfg(target_arch = "wasm32")]
-mod wasm32;
-#[cfg(target_arch = "wasm32")]
-pub use wasm32::*;
-
-#[cfg(not(any(
-    target_arch = "x86",
-    target_arch = "x86_64",
-    target_arch = "aarch64",
-    target_arch = "wasm32"
-)))]
-#[derive(Debug, Clone, Copy)]
-#[non_exhaustive]
-#[repr(u8)]
-pub enum Arch {
-    Scalar,
-}
-
-#[cfg(not(any(
-    target_arch = "x86",
-    target_arch = "x86_64",
-    target_arch = "aarch64",
-    target_arch = "wasm32"
-)))]
-impl Arch {
-    pub fn new() -> Self {
-        Self::Scalar
+moddef::moddef!(
+    flat(pub) mod {
+        x86 for cfg(x86),
+        aarch64 for cfg(aarch64),
+        wasm32 for cfg(wasm32),
+        scalar for cfg(not(any(x86, aarch64, wasm32)))
     }
+);
 
-    pub fn dispatch<Op: WithSimd>(self, op: Op) -> Op::Output {
-        match self {
-            Arch::Scalar => <crate::scalar::Fallback as Simd>::vectorize(op),
-        }
-    }
-}
-
-#[cfg(not(any(
-    target_arch = "x86",
-    target_arch = "x86_64",
-    target_arch = "aarch64",
-    target_arch = "wasm32"
-)))]
-impl Default for Arch {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-#[cfg(all(feature = "std", any(target_arch = "x86", target_arch = "x86_64")))]
+#[cfg(all(feature = "std", x86))]
 #[macro_export]
 macro_rules! feature_detected {
     ($feature: tt) => {
@@ -64,7 +15,7 @@ macro_rules! feature_detected {
     };
 }
 
-#[cfg(all(feature = "std", target_arch = "aarch64"))]
+#[cfg(all(feature = "std", aarch64))]
 #[macro_export]
 macro_rules! feature_detected {
     ($feature: tt) => {
@@ -72,10 +23,7 @@ macro_rules! feature_detected {
     };
 }
 
-#[cfg(any(
-    not(feature = "std"),
-    not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))
-))]
+#[cfg(any(not(feature = "std"), not(any(x86, aarch64))))]
 #[macro_export]
 macro_rules! feature_detected {
     ($feature: tt) => {
@@ -85,12 +33,7 @@ macro_rules! feature_detected {
 #[allow(unused)]
 pub(crate) use feature_detected;
 
-#[cfg(any(
-    target_arch = "x86",
-    target_arch = "x86_64",
-    target_arch = "aarch64",
-    target_arch = "wasm32"
-))]
+#[cfg(any(x86, aarch64, wasm32))]
 macro_rules! impl_simd {
     ($($feature: tt),*) => {
         #[inline(always)]
@@ -178,12 +121,7 @@ macro_rules! impl_simd {
     };
 }
 
-#[cfg(any(
-    target_arch = "x86",
-    target_arch = "x86_64",
-    target_arch = "aarch64",
-    target_arch = "wasm32"
-))]
+#[cfg(any(x86, aarch64, wasm32))]
 pub(crate) use impl_simd;
 
 use super::Simd;

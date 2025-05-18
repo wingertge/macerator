@@ -1,11 +1,12 @@
 #![allow(
+    unknown_lints,
+    unnecessary_transmutes, // for Rust nightly
+    renamed_and_removed_lints,
     clippy::transmute_float_to_int,
     unused_unsafe,
     clippy::useless_transmute,
     clippy::missing_transmute_annotations,
     clippy::needless_range_loop,
-    unknown_lints,
-    unnecessary_transmutes, // for Rust nightly
 )]
 
 use bytemuck::{CheckedBitPattern, NoUninit, Pod, Zeroable};

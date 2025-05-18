@@ -49,12 +49,12 @@ macro_rules! testgen_binop {
                 #[cfg(x86)]
                 {
                     use $crate::backend::x86::*;
-                    #[cfg(all(feature = "nightly", feature = "fp16"))]
+                    #[cfg(fp16)]
                     if V4FP16::is_available() {
                         let out = V4FP16::run_vectorized(|| [<$test_fn _impl>]::<V4FP16, $ty>(&lhs, &rhs));
                         assert_eq!(out_ref, out);
                     }
-                    #[cfg(feature = "nightly")]
+                    #[cfg(avx512)]
                     if V4::is_available() {
                         let out = V4::run_vectorized(|| [<$test_fn _impl>]::<V4, $ty>(&lhs, &rhs));
                         assert_eq!(out_ref, out);
@@ -168,12 +168,12 @@ macro_rules! testgen_unop {
                 #[cfg(x86)]
                 {
                     use $crate::backend::x86::*;
-                    #[cfg(all(feature = "nightly", feature = "fp16"))]
+                    #[cfg(fp16)]
                     if V4FP16::is_available() {
                         let out = V4FP16::run_vectorized(|| [<$test_fn _impl>]::<V4FP16, $ty>(&a));
                         $assert(&out_ref, &out);
                     }
-                    #[cfg(feature = "nightly")]
+                    #[cfg(avx512)]
                     if V4::is_available() {
                         let out = V4::run_vectorized(|| [<$test_fn _impl>]::<V4, $ty>(&a));
                         $assert(&out_ref, &out);

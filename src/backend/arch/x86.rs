@@ -9,19 +9,19 @@ pub enum Arch {
     Scalar,
     V2,
     V3,
-    #[cfg(feature = "nightly")]
+    #[cfg(avx512)]
     V4,
-    #[cfg(all(feature = "nightly", feature = "fp16"))]
+    #[cfg(fp16)]
     V4FP16,
 }
 
 impl Arch {
     pub fn new() -> Self {
-        #[cfg(all(feature = "nightly", feature = "fp16"))]
+        #[cfg(fp16)]
         if x86::V4FP16::is_available() {
             return Self::V4FP16;
         }
-        #[cfg(feature = "nightly")]
+        #[cfg(avx512)]
         if x86::V4::is_available() {
             return Self::V4;
         }
@@ -40,9 +40,9 @@ impl Arch {
             Arch::Scalar => <Fallback as Simd>::vectorize(op),
             Arch::V2 => <x86::V2 as Simd>::vectorize(op),
             Arch::V3 => <x86::V3 as Simd>::vectorize(op),
-            #[cfg(feature = "nightly")]
+            #[cfg(avx512)]
             Arch::V4 => <x86::V4 as Simd>::vectorize(op),
-            #[cfg(all(feature = "nightly", feature = "fp16"))]
+            #[cfg(fp16)]
             Arch::V4FP16 => <x86::V4FP16 as Simd>::vectorize(op),
         }
     }

@@ -7,14 +7,14 @@
 
 pub mod v2;
 pub mod v3;
-#[cfg(feature = "nightly")]
+#[cfg(avx512)]
 pub mod v4;
 
 pub use v2::V2;
 pub use v3::V3;
-#[cfg(feature = "nightly")]
+#[cfg(avx512)]
 pub use v4::V4;
-#[cfg(all(feature = "nightly", feature = "fp16"))]
+#[cfg(fp16)]
 pub use v4::V4FP16;
 
 macro_rules! lanes {

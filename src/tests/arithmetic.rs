@@ -108,12 +108,12 @@ macro_rules! testgen_fma {
                 #[cfg(x86)]
                 {
                     use crate::backend::x86::*;
-                    #[cfg(all(feature = "nightly", feature = "fp16"))]
+                    #[cfg(fp16)]
                     if V4FP16::is_available() {
                         let out = V4FP16::run_vectorized(|| [<$test_fn _impl>]::<V4FP16, $ty>(&a, &b, &c));
                         assert_approx_eq(&out_ref, &out);
                     }
-                    #[cfg(feature = "nightly")]
+                    #[cfg(avx512)]
                     if V4::is_available() {
                         let out = V4::run_vectorized(|| [<$test_fn _impl>]::<V4, $ty>(&a, &b, &c));
                         assert_approx_eq(&out_ref, &out);

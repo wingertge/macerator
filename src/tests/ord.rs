@@ -138,7 +138,7 @@ macro_rules! testgen_min_max {
                         assert_eq!(out_ref, out);
                     }
                 }
-                #[cfg(aarch64)]
+                #[cfg(wasm32)]
                 {
                     use crate::backend::wasm32::Simd128;
                     let out = Simd128::run_vectorized(|| [<$test_fn _impl>]::<Simd128, $ty>(&lhs, &rhs));

@@ -71,7 +71,7 @@ impl Simd for Lasx {
     impl_binop_signless!(add, lasx_xvadd, u8, i8, u16, i16, u32, i32, u64, i64);
     impl_binop_signless!(add, lasx_xvfadd, f32, f64);
     impl_binop_signless!(sub, lasx_xvsub, u8, i8, u16, i16, u32, i32, u64, i64);
-    impl_binop_signless!(sub, lasx_xvfadd, f32, f64);
+    impl_binop_signless!(sub, lasx_xvfsub, f32, f64);
     impl_binop!(div, lasx_xvfdiv, f32, f64);
     impl_binop_signless!(mul, lasx_xvmul, u8, i8, u16, i16, u32, i32, u64, i64);
     impl_binop_signless!(mul, lasx_xvfmul, f32, f64);

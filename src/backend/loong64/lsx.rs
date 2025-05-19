@@ -74,7 +74,7 @@ impl Simd for Lsx {
     impl_binop_signless!(add, lsx_vadd, u8, i8, u16, i16, u32, i32, u64, i64);
     impl_binop_signless!(add, lsx_vfadd, f32, f64);
     impl_binop_signless!(sub, lsx_vsub, u8, i8, u16, i16, u32, i32, u64, i64);
-    impl_binop_signless!(sub, lsx_vfadd, f32, f64);
+    impl_binop_signless!(sub, lsx_vfsub, f32, f64);
     impl_binop!(div, lsx_vfdiv, f32, f64);
     impl_binop_signless!(mul, lsx_vmul, u8, i8, u16, i16, u32, i32, u64, i64);
     impl_binop_signless!(mul, lsx_vfmul, f32, f64);

@@ -24,8 +24,8 @@ jobs:
       run: |
         apt-get update
         apt-get install -y curl build-essential
-        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-        source \$HOME/.cargo/env
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain nightly
+        . "$HOME/.cargo/env"
     - name: Install Nightly
       shell: run-in-container.sh {0}
       run: rustup install nightly

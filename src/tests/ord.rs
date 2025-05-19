@@ -81,6 +81,18 @@ macro_rules! testgen_cmp {
                         assert_eq!(out_ref, out);
                     }
                 }
+                #[cfg(loong64)]
+                {
+                    use $crate::backend::loong64::*;
+                    if Lasx::is_available() {
+                        let out = Lasx::run_vectorized(|| [<$test_fn _impl>]::<Lasx, $ty>(&lhs, &rhs));
+                        assert_eq!(&out_ref, &out);
+                    }
+                    if Lsx::is_available() {
+                        let out = Lsx::run_vectorized(|| [<$test_fn _impl>]::<Lsx, $ty>(&lhs, &rhs));
+                        assert_eq!(&out_ref, &out);
+                    }
+                }
                 #[cfg(wasm32)]
                 {
                     use crate::backend::wasm32::Simd128;
@@ -136,6 +148,18 @@ macro_rules! testgen_min_max {
                     if NeonFma::is_available() {
                         let out = NeonFma::run_vectorized(|| [<$test_fn _impl>]::<NeonFma, $ty>(&lhs, &rhs));
                         assert_eq!(out_ref, out);
+                    }
+                }
+                #[cfg(loong64)]
+                {
+                    use $crate::backend::loong64::*;
+                    if Lasx::is_available() {
+                        let out = Lasx::run_vectorized(|| [<$test_fn _impl>]::<Lasx, $ty>(&lhs, &rhs));
+                        assert_eq!(&out_ref, &out);
+                    }
+                    if Lsx::is_available() {
+                        let out = Lsx::run_vectorized(|| [<$test_fn _impl>]::<Lsx, $ty>(&lhs, &rhs));
+                        assert_eq!(&out_ref, &out);
                     }
                 }
                 #[cfg(wasm32)]

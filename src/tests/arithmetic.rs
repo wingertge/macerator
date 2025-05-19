@@ -135,6 +135,18 @@ macro_rules! testgen_fma {
                         assert_approx_eq(&out_ref, &out);
                     }
                 }
+                #[cfg(loong64)]
+                {
+                    use crate::backend::loong64::*;
+                    if Lasx::is_available() {
+                        let out = Lasx::run_vectorized(|| [<$test_fn _impl>]::<Lasx, $ty>(&a, &b, &c));
+                        assert_approx_eq(&out_ref, &out);
+                    }
+                    if Lsx::is_available() {
+                        let out = Lsx::run_vectorized(|| [<$test_fn _impl>]::<Lsx, $ty>(&a, &b, &c));
+                        assert_approx_eq(&out_ref, &out);
+                    }
+                }
                 #[cfg(wasm32)]
                 {
                     use crate::backend::wasm32::Simd128;

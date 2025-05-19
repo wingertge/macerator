@@ -14,7 +14,7 @@ jobs:
       uses: sandervocke/setup-qemu-container@v1
       with:
         container: cr.loongnix.cn/library/debian:buster
-        arch: loongarch64
+        arch: loong64
     - name: Check arch
       shell: run-in-container.sh {0}
       run: |

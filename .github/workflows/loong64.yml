@@ -28,7 +28,7 @@ jobs:
         . "$HOME/.cargo/env"
     - name: Build
       shell: run-in-container.sh {0}
-      run: cargo +nightly build --verbose --features nightly
+      run: $HOME/.cargo/bin/cargo +nightly build --verbose --features nightly
     - name: Run tests
       shell: run-in-container.sh {0}
-      run: cargo +nightly test --verbose --features nightly
+      run: $HOME/.cargo/bin/cargo +nightly test --verbose --features nightly

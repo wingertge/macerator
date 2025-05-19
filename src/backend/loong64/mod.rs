@@ -1,21 +1,7 @@
-#![allow(
-    clippy::missing_transmute_annotations,
-    clippy::useless_transmute,
-    clippy::transmute_int_to_float,
-    unused_unsafe
-)]
-
-pub mod v2;
-pub mod v3;
-#[cfg(avx512)]
-pub mod v4;
-
-pub use v2::V2;
-pub use v3::V3;
-#[cfg(avx512)]
-pub use v4::V4;
-#[cfg(fp16)]
-pub use v4::V4FP16;
+moddef::moddef!(flat(pub) mod {
+    lsx,
+    lasx
+});
 
 macro_rules! lanes {
     ($($bits: literal),*) => {
@@ -76,19 +62,53 @@ macro_rules! impl_unop_scalar {
 }
 pub(crate) use impl_unop_scalar;
 
+macro_rules! impl_binop_untyped {
+    ($func: ident, $intrinsic: ident) => {
+        paste! {
+            #[inline(always)]
+            fn $func(a: Self::Register, b: Self::Register) -> Self::Register {
+                cast!($intrinsic(cast!(a), cast!(b)))
+            }
+            #[inline(always)]
+            fn [<$func _supported>]() -> bool {
+                true
+            }
+        }
+    };
+}
+pub(crate) use impl_binop_untyped;
+
 macro_rules! with_ty {
-    ($func: ident, f16) => {
-        paste!([<$func _ph>])
+    ($func: ident, i8) => {
+        paste!([<$func _b>])
+    };
+    ($func: ident, u8) => {
+        paste!([<$func _bu>])
+    };
+        ($func: ident, i16) => {
+        paste!([<$func _h>])
+    };
+    ($func: ident, u16) => {
+        paste!([<$func _hu>])
+    };
+    ($func: ident, i32) => {
+        paste!([<$func _w>])
+    };
+    ($func: ident, u32) => {
+        paste!([<$func _wu>])
+    };
+    ($func: ident, i64) => {
+        paste!([<$func _d>])
+    };
+    ($func: ident, u64) => {
+        paste!([<$func _du>])
     };
     ($func: ident, f32) => {
-        paste!([<$func _ps>])
+        paste!([<$func _s>])
     };
     ($func: ident, f64) => {
-        paste!([<$func _pd>])
+        paste!([<$func _d>])
     };
-    ($func: ident, $ty: ident) => {
-        paste!([<$func _ep $ty>])
-    }
 }
 pub(crate) use with_ty;
 
@@ -143,22 +163,6 @@ macro_rules! impl_binop {
 }
 pub(crate) use impl_binop;
 
-macro_rules! impl_binop_untyped {
-    ($func: ident, $intrinsic: ident) => {
-        paste! {
-            #[inline(always)]
-            fn $func(a: Self::Register, b: Self::Register) -> Self::Register {
-                cast!($intrinsic(cast!(a), cast!(b)))
-            }
-            #[inline(always)]
-            fn [<$func _supported>]() -> bool {
-                true
-            }
-        }
-    };
-}
-pub(crate) use impl_binop_untyped;
-
 macro_rules! impl_unop {
     ($func: ident, $intrinsic: ident, $($ty: ty),*) => {
         $(paste! {
@@ -180,7 +184,7 @@ macro_rules! impl_cmp {
         $(paste! {
             #[inline(always)]
             fn [<$func _ $ty>](a: Self::Register, b: Self::Register) -> <$ty as Scalar>::Mask<Self> {
-                cast!(with_ty_signless!($intrinsic, $ty)(cast!(a), cast!(b)))
+                cast!(with_ty!($intrinsic, $ty)(cast!(a), cast!(b)))
             }
             #[inline(always)]
             fn [<$func _ $ty _supported>]() -> bool {
@@ -190,3 +194,19 @@ macro_rules! impl_cmp {
     };
 }
 pub(crate) use impl_cmp;
+
+macro_rules! impl_cmp_signless {
+    ($func: ident, $intrinsic: ident, $($ty: ty),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<$func _ $ty>](a: Self::Register, b: Self::Register) -> <$ty as Scalar>::Mask<Self> {
+                cast!(with_ty_signless!($intrinsic, $ty)(cast!(a), cast!(b)))
+            }
+            #[inline(always)]
+            fn [<$func _ $ty _supported>]() -> bool {
+                true
+            }
+        })*
+    };
+}
+pub(crate) use impl_cmp_signless;

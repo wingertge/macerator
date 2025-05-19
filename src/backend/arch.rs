@@ -2,8 +2,9 @@ moddef::moddef!(
     flat(pub) mod {
         x86 for cfg(x86),
         aarch64 for cfg(aarch64),
+        loong64 for cfg(loong64),
         wasm32 for cfg(wasm32),
-        scalar for cfg(not(any(x86, aarch64, wasm32)))
+        scalar for cfg(not(any(x86, aarch64, loong64, wasm32)))
     }
 );
 
@@ -23,17 +24,26 @@ macro_rules! feature_detected {
     };
 }
 
-#[cfg(any(not(feature = "std"), not(any(x86, aarch64))))]
+#[cfg(all(feature = "std", loong64))]
+#[macro_export]
+macro_rules! feature_detected {
+    ($feature: tt) => {
+        ::std::arch::is_loongarch_feature_detected!($feature)
+    };
+}
+
+#[cfg(any(not(feature = "std"), not(any(x86, aarch64, loong64))))]
 #[macro_export]
 macro_rules! feature_detected {
     ($feature: tt) => {
         cfg!(target_feature = $feature)
     };
 }
+
 #[allow(unused)]
 pub(crate) use feature_detected;
 
-#[cfg(any(x86, aarch64, wasm32))]
+#[cfg(any(x86, aarch64, loong64, wasm32))]
 macro_rules! impl_simd {
     ($($feature: tt),*) => {
         #[inline(always)]
@@ -121,7 +131,7 @@ macro_rules! impl_simd {
     };
 }
 
-#[cfg(any(x86, aarch64, wasm32))]
+#[cfg(any(x86, aarch64, loong64, wasm32))]
 pub(crate) use impl_simd;
 
 use super::Simd;

@@ -49,12 +49,12 @@ macro_rules! testgen_binop {
                 #[cfg(x86)]
                 {
                     use $crate::backend::x86::*;
-                    #[cfg(all(feature = "nightly", feature = "fp16"))]
+                    #[cfg(fp16)]
                     if V4FP16::is_available() {
                         let out = V4FP16::run_vectorized(|| [<$test_fn _impl>]::<V4FP16, $ty>(&lhs, &rhs));
                         assert_eq!(out_ref, out);
                     }
-                    #[cfg(feature = "nightly")]
+                    #[cfg(avx512)]
                     if V4::is_available() {
                         let out = V4::run_vectorized(|| [<$test_fn _impl>]::<V4, $ty>(&lhs, &rhs));
                         assert_eq!(out_ref, out);
@@ -74,6 +74,18 @@ macro_rules! testgen_binop {
                     if NeonFma::is_available() {
                         let out = NeonFma::run_vectorized(|| [<$test_fn _impl>]::<NeonFma, $ty>(&lhs, &rhs));
                         assert_eq!(out_ref, out);
+                    }
+                }
+                #[cfg(loong64)]
+                {
+                    use $crate::backend::loong64::*;
+                    if Lasx::is_available() {
+                        let out = Lasx::run_vectorized(|| [<$test_fn _impl>]::<Lasx, $ty>(&lhs, &rhs));
+                        assert_eq!(&out_ref, &out);
+                    }
+                    if Lsx::is_available() {
+                        let out = Lsx::run_vectorized(|| [<$test_fn _impl>]::<Lsx, $ty>(&lhs, &rhs));
+                        assert_eq!(&out_ref, &out);
                     }
                 }
                 #[cfg(wasm32)]
@@ -168,12 +180,12 @@ macro_rules! testgen_unop {
                 #[cfg(x86)]
                 {
                     use $crate::backend::x86::*;
-                    #[cfg(all(feature = "nightly", feature = "fp16"))]
+                    #[cfg(fp16)]
                     if V4FP16::is_available() {
                         let out = V4FP16::run_vectorized(|| [<$test_fn _impl>]::<V4FP16, $ty>(&a));
                         $assert(&out_ref, &out);
                     }
-                    #[cfg(feature = "nightly")]
+                    #[cfg(avx512)]
                     if V4::is_available() {
                         let out = V4::run_vectorized(|| [<$test_fn _impl>]::<V4, $ty>(&a));
                         $assert(&out_ref, &out);
@@ -192,6 +204,18 @@ macro_rules! testgen_unop {
                     use $crate::backend::aarch64::NeonFma;
                     if NeonFma::is_available() {
                         let out = NeonFma::run_vectorized(|| [<$test_fn _impl>]::<NeonFma, $ty>(&a));
+                        $assert(&out_ref, &out);
+                    }
+                }
+                #[cfg(loong64)]
+                {
+                    use $crate::backend::loong64::*;
+                    if Lasx::is_available() {
+                        let out = Lasx::run_vectorized(|| [<$test_fn _impl>]::<Lasx, $ty>(&a));
+                        $assert(&out_ref, &out);
+                    }
+                    if Lsx::is_available() {
+                        let out = Lsx::run_vectorized(|| [<$test_fn _impl>]::<Lsx, $ty>(&a));
                         $assert(&out_ref, &out);
                     }
                 }

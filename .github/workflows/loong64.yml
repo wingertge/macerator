@@ -19,6 +19,9 @@ jobs:
       shell: run-in-container.sh {0}
       run: |
         echo "Arch in container: $(uname -m)"
+    - name: Set up Rust
+      shell: run-in-container.sh {0}
+      run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
     - name: Install Nightly
       shell: run-in-container.sh {0}
       run: rustup install nightly

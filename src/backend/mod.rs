@@ -22,6 +22,7 @@ moddef::moddef!(
         x86 for cfg(x86),
         aarch64 for cfg(aarch64),
         wasm32 for cfg(wasm32),
+        loong64 for cfg(loong64),
         scalar
     }
 );
@@ -327,7 +328,7 @@ pub trait Simd: Sized + seal::Sealed + 'static {
     declare_unop!(abs, i8, i16, i32, i64, f16, f32, f64);
 }
 
-#[cfg(any(x86, aarch64, wasm32))]
+#[cfg(any(x86, aarch64, loong64, wasm32))]
 macro_rules! impl_cmp_scalar {
     ($func: ident, $intrinsic: path, $($ty: ty: $mask_ty: ty),*) => {
         $(paste! {
@@ -351,7 +352,7 @@ macro_rules! impl_cmp_scalar {
     };
 }
 
-#[cfg(any(x86, aarch64, wasm32))]
+#[cfg(any(x86, aarch64, loong64, wasm32))]
 pub(crate) use impl_cmp_scalar;
 
 /// Tests that type inference works properly

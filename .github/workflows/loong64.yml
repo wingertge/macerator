@@ -1,4 +1,4 @@
-name: Rust Nightly
+name: Rust loongarch64 QEMU
 
 on: [push, pull_request]
 

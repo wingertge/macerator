@@ -9,7 +9,7 @@ name = "macerator"
 readme.workspace = true
 repository.workspace = true
 rust-version = "1.81"
-version = "0.2.7"
+version = "0.2.8"
 
 [features]
 default = ["std"]
@@ -25,7 +25,7 @@ bytemuck = { version = "1.22.0", features = [
     "avx512_simd",
 ] }
 half = { version = "2.5.0", features = ["bytemuck", "num-traits"] }
-macerator-macros = { version = "0.1.1", path = "crates/macerator-macros" }
+macerator-macros = { version = "0.1.2", path = "crates/macerator-macros" }
 moddef = "0.2"
 num-traits = "0.2.0"
 paste = "1"

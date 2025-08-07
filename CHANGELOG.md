@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.9](https://github.com/wingertge/macerator/compare/macerator-v0.2.8...macerator-v0.2.9) - 2025-08-07
+
+### Added
+
+- Allow using AVX-512 on stable if rustc is at version 1.89 or higher ([#12](https://github.com/wingertge/macerator/pull/12))
+
+### Other
+
+- Update README
+- Add commitlint
+
 ## [0.2.8](https://github.com/wingertge/macerator/compare/macerator-v0.2.7...macerator-v0.2.8) - 2025-05-19
 
 ### Added

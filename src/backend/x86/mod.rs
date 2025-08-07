@@ -4,6 +4,8 @@
     clippy::transmute_int_to_float,
     unused_unsafe
 )]
+// Lint can't detect the build script version check
+#![cfg_attr(all(avx512, not(avx512_nightly)), allow(incompatible_msrv))]
 
 pub mod v2;
 pub mod v3;

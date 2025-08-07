@@ -6,13 +6,18 @@ type inference behaviour and wider backend support. As backends are stabilized i
 be increased and nightly requirements will be removed. For crates with a lower MSRV, older versions
 should be automatically used by cargo.
 
+## AVX-512 on Stable
+
+To avoid a major MSRV bump, AVX-512 currently checks the rustc version and enables AVX-512 on stable
+if it's 1.89 or greater. This will eventually be removed and replaced by an MSRV bump.
+
 ## Backends
 
 | Feature set          | Tested on | Requires Nightly |
 | -------------------- | --------- | ---------------- |
 | x86_64-v2 (sse4.1)   | Hardware  | ❌                |
 | x86_64-v3 (avx2)     | Hardware  | ❌                |
-| x86_64-v4 (avx512)   | Hardware  | ✅                |
+| x86_64-v4 (avx512)   | Hardware  | <1.89: ✅, >= 1.89: ❌ |
 | aarch64 (Neon)       | Hardware  | ❌                |
 | loongarch64 (lsx)    | QEMU      | ✅                |
 | loongarch64 (lasx)   | QEMU      | ✅                |

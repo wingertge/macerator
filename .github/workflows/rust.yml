@@ -13,6 +13,8 @@ jobs:
         os: [ubuntu-latest, macos-latest, ubuntu-24.04-arm]
     steps:
     - uses: actions/checkout@v4
+    - name: Update
+      run: rustup update
     - name: Build
       run: cargo build --verbose
     - name: Run tests

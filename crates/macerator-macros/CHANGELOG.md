@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3](https://github.com/wingertge/macerator/compare/macerator-macros-v0.1.2...macerator-macros-v0.1.3) - 2025-08-07
+
+### Other
+
+- Update README
+
 ## [0.1.2](https://github.com/wingertge/macerator/compare/macerator-macros-v0.1.1...macerator-macros-v0.1.2) - 2025-05-19
 
 ### Other

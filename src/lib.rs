@@ -1,5 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
-#![cfg_attr(avx512, feature(avx512_target_feature, stdarch_x86_avx512))]
+#![cfg_attr(avx512_nightly, feature(avx512_target_feature, stdarch_x86_avx512))]
 #![cfg_attr(fp16, feature(stdarch_x86_avx512_f16))]
 #![cfg_attr(
     loong64,

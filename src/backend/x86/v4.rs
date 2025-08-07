@@ -35,6 +35,7 @@ macro_rules! with_ty_cmp {
     }
 }
 
+#[cfg(fp16)]
 macro_rules! impl_cmp_fp16 {
     ($func: ident, $op: expr, $($ty: ty),*) => {
         $(paste! {
@@ -152,9 +153,9 @@ impl FP16Ext for FP16Fallback {
     }
 }
 
-#[cfg(feature = "fp16")]
+#[cfg(fp16)]
 impl Sealed for FP16Intrinsic {}
-#[cfg(feature = "fp16")]
+#[cfg(fp16)]
 impl FP16Ext for FP16Intrinsic {
     type Register = __m512;
 

@@ -6,7 +6,7 @@ use core::{
 };
 
 use half::f16;
-use num_traits::Float;
+use num_traits::{Bounded, Float, Zero};
 use paste::paste;
 
 use crate::Scalar;
@@ -93,6 +93,28 @@ macro_rules! impl_cmp_scalar {
                     out[i] = a[i].$intrinsic(&b[i]) as u8;
                 }
                 cast!(out)
+            }
+            #[inline(always)]
+            fn [<$func _ $ty _supported>]() -> bool {
+                false
+            }
+        })*
+    };
+}
+
+macro_rules! impl_reduce_scalar {
+    ($func: ident, $intrinsic: path, $default: expr, $($ty: ty),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<$func _ $ty>](a: Self::Register) -> $ty {
+                const LANES: usize = 8 / size_of::<$ty>();
+                let a: [$ty; LANES] = cast!(a);
+                let mut out: $ty = $default;
+
+                for i in 0..LANES {
+                    out = out.$intrinsic(a[i]);
+                }
+                out
             }
             #[inline(always)]
             fn [<$func _ $ty _supported>]() -> bool {
@@ -229,6 +251,53 @@ impl Simd for Fallback {
         f32,
         u64,
         i64,
+        f64
+    );
+
+    impl_reduce_scalar!(
+        reduce_add,
+        wrapping_add,
+        Zero::zero(),
+        u8,
+        i8,
+        u16,
+        i16,
+        u32,
+        i32,
+        u64,
+        i64
+    );
+    impl_reduce_scalar!(reduce_add, add, Zero::zero(), f16, f32, f64);
+    impl_reduce_scalar!(
+        reduce_min,
+        min,
+        Bounded::max_value(),
+        u8,
+        i8,
+        u16,
+        i16,
+        u32,
+        i32,
+        u64,
+        i64,
+        f16,
+        f32,
+        f64
+    );
+    impl_reduce_scalar!(
+        reduce_max,
+        max,
+        Bounded::min_value(),
+        u8,
+        i8,
+        u16,
+        i16,
+        u32,
+        i32,
+        u64,
+        i64,
+        f16,
+        f32,
         f64
     );
 

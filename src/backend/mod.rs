@@ -85,6 +85,15 @@ macro_rules! declare_unop {
     };
 }
 
+macro_rules! declare_reduction {
+    ($name: ident, $($ty: ty),*) => {
+        $(paste! {
+            fn [<$name _ $ty>](a: Self::Register) -> $ty;
+            fn [<$name _ $ty _supported>]() -> bool;
+        })*
+    };
+}
+
 macro_rules! declare_cmp {
     ($name: ident, $($ty: ty),*) => {
         $(paste! {
@@ -326,6 +335,10 @@ pub trait Simd: Sized + seal::Sealed + 'static {
 
     declare_unop!(recip, f16, f32, f64);
     declare_unop!(abs, i8, i16, i32, i64, f16, f32, f64);
+
+    declare_reduction!(reduce_add, i8, i16, i32, i64, u8, u16, u32, u64, f16, f32, f64);
+    declare_reduction!(reduce_min, i8, i16, i32, i64, u8, u16, u32, u64, f16, f32, f64);
+    declare_reduction!(reduce_max, i8, i16, i32, i64, u8, u16, u32, u64, f16, f32, f64);
 }
 
 #[cfg(any(x86, aarch64, loong64, wasm32))]

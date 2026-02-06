@@ -11,6 +11,7 @@ pub(crate) mod backend;
 mod base;
 mod bitwise;
 mod ord;
+mod reduce;
 mod unary;
 
 #[cfg(test)]
@@ -21,6 +22,7 @@ pub use backend::*;
 pub use base::*;
 pub use bitwise::*;
 pub use ord::*;
+pub use reduce::*;
 pub use unary::*;
 
 pub use macerator_macros::*;

@@ -12,6 +12,7 @@ use crate::{vload_unaligned, vstore_unaligned, Scalar, Simd, Vector};
 mod arithmetic;
 mod bitwise;
 mod ord;
+mod reduce;
 mod unary;
 
 wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
@@ -20,6 +21,11 @@ const SIZE: usize = 128;
 fn random<T: SampleUniform>(lo: T, hi: T) -> Vec<T> {
     let distribution = Uniform::new(lo, hi).unwrap();
     rand::rng().sample_iter(&distribution).take(SIZE).collect()
+}
+
+fn random_of_size<T: SampleUniform>(lo: T, hi: T, size: usize) -> Vec<T> {
+    let distribution = Uniform::new(lo, hi).unwrap();
+    rand::rng().sample_iter(&distribution).take(size).collect()
 }
 
 fn assert_approx_eq<T: RelativeEq + Debug>(lhs: &[T], rhs: &[T]) {

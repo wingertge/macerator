@@ -5,7 +5,7 @@ use core::{
 };
 
 use half::f16;
-use num_traits::real::Real;
+use num_traits::{real::Real, Bounded, Zero};
 use paste::paste;
 
 use crate::{backend::arch::*, cast, seal::Sealed, Scalar, Simd, VRegister, Vector};
@@ -108,6 +108,13 @@ pub trait FP16Ext: Sealed + 'static {
     fn abs_f16_supported() -> bool;
     fn recip_f16(a: __m512) -> __m512;
     fn recip_f16_supported() -> bool;
+
+    fn reduce_add_f16(a: __m512) -> f16;
+    fn reduce_add_f16_supported() -> bool;
+    fn reduce_min_f16(a: __m512) -> f16;
+    fn reduce_min_f16_supported() -> bool;
+    fn reduce_max_f16(a: __m512) -> f16;
+    fn reduce_max_f16_supported() -> bool;
 }
 
 pub struct FP16Fallback;
@@ -133,6 +140,10 @@ impl FP16Ext for FP16Fallback {
 
     impl_unop_scalar!(abs, abs, f16);
     impl_unop_scalar!(recip, recip, f16);
+
+    impl_reduce_scalar!(reduce_add, add, Zero::zero(), f16);
+    impl_reduce_scalar!(reduce_min, min, Bounded::max_value(), f16);
+    impl_reduce_scalar!(reduce_max, max, Bounded::min_value(), f16);
 
     #[inline(always)]
     fn mul_add_f16(a: __m512, b: __m512, c: __m512) -> __m512 {
@@ -175,6 +186,10 @@ impl FP16Ext for FP16Intrinsic {
     impl_unop!(abs, _mm512_abs, f16);
     impl_unop!(recip, _mm512_rcp, f16);
 
+    impl_reduce!(reduce_add, _mm512_reduce_add, f16);
+    impl_reduce!(reduce_min, _mm512_reduce_min, f16);
+    impl_reduce!(reduce_max, _mm512_reduce_max, f16);
+
     #[inline(always)]
     fn mul_add_f16(a: __m512, b: __m512, c: __m512) -> __m512 {
         cast!(_mm512_fmadd_ph(cast!(a), cast!(b), cast!(c)))
@@ -195,6 +210,18 @@ macro_rules! delegate_fp16 {
             #[inline(always)]
             fn [<$func _f16>](a: Self::Register, b: Self::Register) -> __mmask32 {
                 FP16::[<$func _f16>](a, b)
+            }
+            #[inline(always)]
+            fn [<$func _f16_supported>]() -> bool {
+                FP16::[<$func _f16_supported>]()
+            }
+        })*
+    };
+    (reduce $($func: ident),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<$func _f16>](a: Self::Register) -> f16 {
+                FP16::[<$func _f16>](a)
             }
             #[inline(always)]
             fn [<$func _f16_supported>]() -> bool {
@@ -314,7 +341,12 @@ where
     impl_unop!(recip, _mm512_rcp14, f32, f64);
     impl_unop!(abs, _mm512_abs, i8, i16, i32, i64, f32, f64);
 
+    impl_reduce_signless!(reduce_add, _mm512_reduce_add, u32, i32, u64, i64, f32, f64);
+    impl_reduce!(reduce_min, _mm512_reduce_min, u32, i32, u64, i64, f32, f64);
+    impl_reduce!(reduce_max, _mm512_reduce_max, u32, i32, u64, i64, f32, f64);
+
     delegate_fp16!(add, sub, mul, div, min, max);
+    delegate_fp16!(reduce reduce_add, reduce_min, reduce_max);
     delegate_fp16!(cmp equals, less_than, less_than_or_equal, greater_than_or_equal, greater_than);
 
     fn vectorize<Op: WithSimd>(op: Op) -> Op::Output {
@@ -489,6 +521,142 @@ where
     #[inline(always)]
     fn abs_f16_supported() -> bool {
         FP16::abs_f16_supported()
+    }
+
+    fn reduce_add_i8(a: Self::Register) -> i8 {
+        unsafe {
+            let lo = _mm512_castsi512_si256(cast!(a));
+            let hi = _mm512_extracti64x4_epi64::<1>(cast!(a));
+            _mm256_reduce_add_epi8(lo) + _mm256_reduce_add_epi8(hi)
+        }
+    }
+
+    fn reduce_add_i8_supported() -> bool {
+        true
+    }
+
+    fn reduce_add_i16(a: Self::Register) -> i16 {
+        unsafe {
+            let lo = _mm512_castsi512_si256(cast!(a));
+            let hi = _mm512_extracti64x4_epi64::<1>(cast!(a));
+            _mm256_reduce_add_epi16(lo) + _mm256_reduce_add_epi16(hi)
+        }
+    }
+
+    fn reduce_add_i16_supported() -> bool {
+        true
+    }
+
+    fn reduce_add_u8(a: Self::Register) -> u8 {
+        Self::reduce_add_i8(a) as u8
+    }
+
+    fn reduce_add_u8_supported() -> bool {
+        Self::reduce_add_i8_supported()
+    }
+
+    fn reduce_add_u16(a: Self::Register) -> u16 {
+        Self::reduce_add_i16(a) as u16
+    }
+
+    fn reduce_add_u16_supported() -> bool {
+        Self::reduce_add_i16_supported()
+    }
+
+    fn reduce_min_i8(a: Self::Register) -> i8 {
+        unsafe {
+            let lo = _mm512_castsi512_si256(cast!(a));
+            let hi = _mm512_extracti64x4_epi64::<1>(cast!(a));
+            _mm256_reduce_min_epi8(lo).min(_mm256_reduce_min_epi8(hi))
+        }
+    }
+
+    fn reduce_min_i8_supported() -> bool {
+        true
+    }
+
+    fn reduce_min_i16(a: Self::Register) -> i16 {
+        unsafe {
+            let lo = _mm512_castsi512_si256(cast!(a));
+            let hi = _mm512_extracti64x4_epi64::<1>(cast!(a));
+            _mm256_reduce_min_epi16(lo).min(_mm256_reduce_min_epi16(hi))
+        }
+    }
+
+    fn reduce_min_i16_supported() -> bool {
+        true
+    }
+
+    fn reduce_min_u8(a: Self::Register) -> u8 {
+        unsafe {
+            let lo = _mm512_castsi512_si256(cast!(a));
+            let hi = _mm512_extracti64x4_epi64::<1>(cast!(a));
+            _mm256_reduce_min_epu8(lo).min(_mm256_reduce_min_epu8(hi))
+        }
+    }
+
+    fn reduce_min_u8_supported() -> bool {
+        true
+    }
+
+    fn reduce_min_u16(a: Self::Register) -> u16 {
+        unsafe {
+            let lo = _mm512_castsi512_si256(cast!(a));
+            let hi = _mm512_extracti64x4_epi64::<1>(cast!(a));
+            _mm256_reduce_min_epu16(lo).min(_mm256_reduce_min_epu16(hi))
+        }
+    }
+
+    fn reduce_min_u16_supported() -> bool {
+        true
+    }
+
+    fn reduce_max_i8(a: Self::Register) -> i8 {
+        unsafe {
+            let lo = _mm512_castsi512_si256(cast!(a));
+            let hi = _mm512_extracti64x4_epi64::<1>(cast!(a));
+            _mm256_reduce_max_epi8(lo).max(_mm256_reduce_max_epi8(hi))
+        }
+    }
+
+    fn reduce_max_i8_supported() -> bool {
+        true
+    }
+
+    fn reduce_max_i16(a: Self::Register) -> i16 {
+        unsafe {
+            let lo = _mm512_castsi512_si256(cast!(a));
+            let hi = _mm512_extracti64x4_epi64::<1>(cast!(a));
+            _mm256_reduce_max_epi16(lo).max(_mm256_reduce_max_epi16(hi))
+        }
+    }
+
+    fn reduce_max_i16_supported() -> bool {
+        true
+    }
+
+    fn reduce_max_u8(a: Self::Register) -> u8 {
+        unsafe {
+            let lo = _mm512_castsi512_si256(cast!(a));
+            let hi = _mm512_extracti64x4_epi64::<1>(cast!(a));
+            _mm256_reduce_max_epu8(lo).max(_mm256_reduce_max_epu8(hi))
+        }
+    }
+
+    fn reduce_max_u8_supported() -> bool {
+        true
+    }
+
+    fn reduce_max_u16(a: Self::Register) -> u16 {
+        unsafe {
+            let lo = _mm512_castsi512_si256(cast!(a));
+            let hi = _mm512_extracti64x4_epi64::<1>(cast!(a));
+            _mm256_reduce_max_epu16(lo).max(_mm256_reduce_max_epu16(hi))
+        }
+    }
+
+    fn reduce_max_u16_supported() -> bool {
+        true
     }
 }
 

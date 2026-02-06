@@ -3,7 +3,7 @@ use core::ops::{Add, Div, Mul, Sub};
 use core::{arch::loongarch64::*, ptr::read_unaligned};
 
 use half::f16;
-use num_traits::Float;
+use num_traits::{Bounded, Float, Zero};
 use paste::paste;
 
 use crate::{backend::arch::NullaryFnOnce, impl_cmp_scalar, Scalar, WithSimd};
@@ -118,6 +118,53 @@ impl Simd for Lasx {
     impl_cmp_scalar!(greater_than_or_equal, ge, f16: i16);
     impl_cmp_scalar!(less_than, lt, f16: i16);
     impl_cmp_scalar!(less_than_or_equal, le, f16: i16);
+
+    impl_reduce_scalar!(
+        reduce_add,
+        wrapping_add,
+        Zero::zero(),
+        u8,
+        i8,
+        u16,
+        i16,
+        u32,
+        i32,
+        u64,
+        i64
+    );
+    impl_reduce_scalar!(reduce_add, add, Zero::zero(), f16, f32, f64);
+    impl_reduce_scalar!(
+        reduce_min,
+        min,
+        Bounded::max_value(),
+        u8,
+        i8,
+        u16,
+        i16,
+        u32,
+        i32,
+        u64,
+        i64,
+        f16,
+        f32,
+        f64
+    );
+    impl_reduce_scalar!(
+        reduce_max,
+        max,
+        Bounded::min_value(),
+        u8,
+        i8,
+        u16,
+        i16,
+        u32,
+        i32,
+        u64,
+        i64,
+        f16,
+        f32,
+        f64
+    );
 
     fn vectorize<Op: WithSimd>(op: Op) -> Op::Output {
         struct Impl<Op> {

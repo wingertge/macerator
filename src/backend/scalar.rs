@@ -6,7 +6,7 @@ use core::{
 };
 
 use half::f16;
-use num_traits::{Bounded, Float, Zero};
+use num_traits::Float;
 use paste::paste;
 
 use crate::Scalar;
@@ -103,15 +103,16 @@ macro_rules! impl_cmp_scalar {
 }
 
 macro_rules! impl_reduce_scalar {
-    ($func: ident, $intrinsic: path, $default: expr, $($ty: ty),*) => {
+    ($func: ident, $intrinsic: path, $($ty: ty),*) => {
         $(paste! {
             #[inline(always)]
             fn [<$func _ $ty>](a: Self::Register) -> $ty {
                 const LANES: usize = 8 / size_of::<$ty>();
                 let a: [$ty; LANES] = cast!(a);
-                let mut out: $ty = $default;
+                let mut out: $ty = a[0];
 
-                for i in 0..LANES {
+                #[allow(clippy::reversed_empty_ranges)]
+                for i in 1..LANES {
                     out = out.$intrinsic(a[i]);
                 }
                 out
@@ -257,7 +258,6 @@ impl Simd for Fallback {
     impl_reduce_scalar!(
         reduce_add,
         wrapping_add,
-        Zero::zero(),
         u8,
         i8,
         u16,
@@ -267,39 +267,9 @@ impl Simd for Fallback {
         u64,
         i64
     );
-    impl_reduce_scalar!(reduce_add, add, Zero::zero(), f16, f32, f64);
-    impl_reduce_scalar!(
-        reduce_min,
-        min,
-        Bounded::max_value(),
-        u8,
-        i8,
-        u16,
-        i16,
-        u32,
-        i32,
-        u64,
-        i64,
-        f16,
-        f32,
-        f64
-    );
-    impl_reduce_scalar!(
-        reduce_max,
-        max,
-        Bounded::min_value(),
-        u8,
-        i8,
-        u16,
-        i16,
-        u32,
-        i32,
-        u64,
-        i64,
-        f16,
-        f32,
-        f64
-    );
+    impl_reduce_scalar!(reduce_add, add, f16, f32, f64);
+    impl_reduce_scalar!(reduce_min, min, u8, i8, u16, i16, u32, i32, u64, i64, f16, f32, f64);
+    impl_reduce_scalar!(reduce_max, max, u8, i8, u16, i16, u32, i32, u64, i64, f16, f32, f64);
 
     fn vectorize<Op: WithSimd>(op: Op) -> Op::Output {
         op.with_simd::<Self>()

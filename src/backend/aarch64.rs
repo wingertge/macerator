@@ -4,7 +4,7 @@ use core::{
 };
 
 use half::f16;
-use num_traits::{real::Real, Bounded, Zero};
+use num_traits::real::Real;
 use paste::paste;
 
 use crate::{backend::arch::NullaryFnOnce, cast, Scalar};
@@ -121,15 +121,15 @@ macro_rules! impl_binop_scalar {
 }
 
 macro_rules! impl_reduce_scalar {
-    ($func: ident, $intrinsic: path, $default: expr, $($ty: ty),*) => {
+    ($func: ident, $intrinsic: path, $($ty: ty),*) => {
         $(paste! {
             #[inline(always)]
             fn [<$func _ $ty>](a: Self::Register) -> $ty {
                 const LANES: usize = 16 / size_of::<$ty>();
                 let a: [$ty; LANES] = cast!(a);
-                let mut out: $ty = $default;
+                let mut out: $ty = a[0];
 
-                for i in 0..LANES {
+                for i in 1..LANES {
                     out = out.$intrinsic(a[i]);
                 }
                 out
@@ -236,9 +236,9 @@ impl Simd for NeonFma {
     impl_reduce!(reduce_min, vminvq, u8, i8, u16, i16, u32, i32, f32, f64);
     impl_reduce!(reduce_max, vmaxvq, u8, i8, u16, i16, u32, i32, f32, f64);
 
-    impl_reduce_scalar!(reduce_add, add, Zero::zero(), f16);
-    impl_reduce_scalar!(reduce_min, min, Bounded::max_value(), f16, u64, i64);
-    impl_reduce_scalar!(reduce_max, max, Bounded::min_value(), f16, u64, i64);
+    impl_reduce_scalar!(reduce_add, add, f16);
+    impl_reduce_scalar!(reduce_min, min, f16, u64, i64);
+    impl_reduce_scalar!(reduce_max, max, f16, u64, i64);
 
     fn vectorize<Op: WithSimd>(op: Op) -> Op::Output {
         struct Impl<Op> {

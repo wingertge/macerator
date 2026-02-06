@@ -7,7 +7,7 @@ use core::arch::x86_64 as arch;
 use core::ops::{Add, Div, Mul, Sub};
 
 use half::f16;
-use num_traits::{Bounded, Float, Zero};
+use num_traits::Float;
 use paste::paste;
 
 use crate::{backend::arch::NullaryFnOnce, impl_cmp_scalar, Scalar, WithSimd};
@@ -112,7 +112,6 @@ impl Simd for V3 {
     impl_reduce_scalar!(
         reduce_add,
         wrapping_add,
-        Zero::zero(),
         u8,
         i8,
         u16,
@@ -122,39 +121,9 @@ impl Simd for V3 {
         u64,
         i64
     );
-    impl_reduce_scalar!(reduce_add, add, Zero::zero(), f16, f32, f64);
-    impl_reduce_scalar!(
-        reduce_min,
-        min,
-        Bounded::max_value(),
-        u8,
-        i8,
-        u16,
-        i16,
-        u32,
-        i32,
-        u64,
-        i64,
-        f16,
-        f32,
-        f64
-    );
-    impl_reduce_scalar!(
-        reduce_max,
-        max,
-        Bounded::min_value(),
-        u8,
-        i8,
-        u16,
-        i16,
-        u32,
-        i32,
-        u64,
-        i64,
-        f16,
-        f32,
-        f64
-    );
+    impl_reduce_scalar!(reduce_add, add, f16, f32, f64);
+    impl_reduce_scalar!(reduce_min, min, u8, i8, u16, i16, u32, i32, u64, i64, f16, f32, f64);
+    impl_reduce_scalar!(reduce_max, max, u8, i8, u16, i16, u32, i32, u64, i64, f16, f32, f64);
 
     fn vectorize<Op: WithSimd>(op: Op) -> Op::Output {
         struct Impl<Op> {

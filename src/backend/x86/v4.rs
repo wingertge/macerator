@@ -5,7 +5,7 @@ use core::{
 };
 
 use half::f16;
-use num_traits::{real::Real, Bounded, Zero};
+use num_traits::real::Real;
 use paste::paste;
 
 use crate::{backend::arch::*, cast, seal::Sealed, Scalar, Simd, VRegister, Vector};
@@ -141,9 +141,9 @@ impl FP16Ext for FP16Fallback {
     impl_unop_scalar!(abs, abs, f16);
     impl_unop_scalar!(recip, recip, f16);
 
-    impl_reduce_scalar!(reduce_add, add, Zero::zero(), f16);
-    impl_reduce_scalar!(reduce_min, min, Bounded::max_value(), f16);
-    impl_reduce_scalar!(reduce_max, max, Bounded::min_value(), f16);
+    impl_reduce_scalar!(reduce_add, add, f16);
+    impl_reduce_scalar!(reduce_min, min, f16);
+    impl_reduce_scalar!(reduce_max, max, f16);
 
     #[inline(always)]
     fn mul_add_f16(a: __m512, b: __m512, c: __m512) -> __m512 {

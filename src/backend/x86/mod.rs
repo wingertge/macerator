@@ -79,15 +79,15 @@ macro_rules! impl_unop_scalar {
 pub(crate) use impl_unop_scalar;
 
 macro_rules! impl_reduce_scalar {
-    ($func: ident, $intrinsic: path, $default: expr, $($ty: ty),*) => {
+    ($func: ident, $intrinsic: path, $($ty: ty),*) => {
         $(paste! {
             #[inline(always)]
             fn [<$func _ $ty>](a: Self::Register) -> $ty {
                 const LANES: usize = WIDTH / (8 * size_of::<$ty>());
                 let a: [$ty; LANES] = cast!(a);
-                let mut out: $ty = $default;
+                let mut out: $ty = a[0];
 
-                for i in 0..LANES {
+                for i in 1..LANES {
                     out = out.$intrinsic(a[i]);
                 }
                 out

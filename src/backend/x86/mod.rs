@@ -205,7 +205,7 @@ macro_rules! impl_reduce {
         $(paste! {
             #[inline(always)]
             fn [<$func _ $ty>](a: Self::Register) -> $ty {
-                unsafe { with_ty!($intrinsic, $ty)(cast!(a)) }
+                unsafe { cast!(with_ty!($intrinsic, $ty)(cast!(a))) }
             }
             #[inline(always)]
             fn [<$func _ $ty _supported>]() -> bool {

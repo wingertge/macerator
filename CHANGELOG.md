@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.10](https://github.com/wingertge/macerator/compare/macerator-v0.2.9...macerator-v0.2.10) - 2026-02-07
+
+### Added
+
+- Implement add, min and max reductions ([#13](https://github.com/wingertge/macerator/pull/13))
+
 ## [0.2.9](https://github.com/wingertge/macerator/compare/macerator-v0.2.8...macerator-v0.2.9) - 2025-08-07
 
 ### Added

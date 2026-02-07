@@ -1,7 +1,29 @@
+use approx::{assert_relative_eq, RelativeEq};
+use num_traits::{Bounded, Float, NumCast, Zero};
+
 use crate::{
     tests::assert_eq, vload_unaligned, ReduceAdd, ReduceMax, ReduceMin, Scalar, Simd, Vector,
 };
 use core::fmt::Debug;
+use core::ops::Add;
+
+macro_rules! reduce_op {
+    ($trait: ident, $scalar_trait: path, $impl: expr, $impl_scalar: expr) => {
+        ::paste::paste! {
+            struct [<$trait Op>]<T>(::core::marker::PhantomData<T>);
+            impl<T: $trait + $scalar_trait> ReduceOp<T> for [<$trait Op>]<T> {
+                #[inline(always)]
+                fn call<S: Simd>(lhs: Vector<S, T>) -> T {
+                    $impl(lhs)
+                }
+                #[inline(always)]
+                fn call_scalar(lhs: T, rhs: T) -> T {
+                    $impl_scalar(lhs, rhs)
+                }
+            }
+        }
+    };
+}
 
 #[inline(always)]
 fn test_reduce_add_impl<S: Simd, T: ReduceAdd + Add + Zero + Debug>(a: &[T]) -> T {
@@ -65,29 +87,6 @@ fn test_reduce_op<S: Simd, T: Scalar + Debug, Op: ReduceOp<T>>(a: &[T], default:
     }
     output
 }
-
-macro_rules! reduce_op {
-    ($trait: ident, $scalar_trait: path, $impl: expr, $impl_scalar: expr) => {
-        ::paste::paste! {
-            struct [<$trait Op>]<T>(::core::marker::PhantomData<T>);
-            impl<T: $trait + $scalar_trait> ReduceOp<T> for [<$trait Op>]<T> {
-                #[inline(always)]
-                fn call<S: Simd>(lhs: Vector<S, T>) -> T {
-                    $impl(lhs)
-                }
-                #[inline(always)]
-                fn call_scalar(lhs: T, rhs: T) -> T {
-                    $impl_scalar(lhs, rhs)
-                }
-            }
-        }
-    };
-}
-use std::ops::Add;
-
-use approx::{assert_relative_eq, RelativeEq};
-use num_traits::{Bounded, Float, NumCast, Zero};
-pub(crate) use reduce_op;
 
 macro_rules! testgen_reduce {
     ($test_fn: ident, $reference: expr, $default: expr, $lo: expr, $hi: expr, $size: expr, $assert: ident, $($ty: ty),*) => {

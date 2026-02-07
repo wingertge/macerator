@@ -74,6 +74,25 @@ macro_rules! impl_cmp_scalar {
     };
 }
 
+macro_rules! impl_reduce_split {
+    ($func: ident, $intrinsic: expr, $op: ident, $($ty: ty),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<$func _ $ty>](a: Self::Register) -> $ty {
+                unsafe {
+                    let lo = _mm512_castsi512_si256(cast!(a));
+                    let hi = _mm512_extracti64x4_epi64::<1>(cast!(a));
+                    with_ty!($intrinsic, $ty)(lo).$op(with_ty!($intrinsic, $ty)(hi))
+                }
+            }
+            #[inline(always)]
+            fn [<$func _ $ty _supported>]() -> bool {
+                true
+            }
+        })*
+    };
+}
+
 pub trait FP16Ext: Sealed + 'static {
     type Register: VRegister;
 
@@ -345,6 +364,10 @@ where
     impl_reduce!(reduce_min, _mm512_reduce_min, u32, i32, u64, i64, f32, f64);
     impl_reduce!(reduce_max, _mm512_reduce_max, u32, i32, u64, i64, f32, f64);
 
+    impl_reduce_split!(reduce_add, _mm256_reduce_add, wrapping_add, i8, i16);
+    impl_reduce_split!(reduce_min, _mm256_reduce_min, min, u8, i8, u16, i16);
+    impl_reduce_split!(reduce_max, _mm256_reduce_max, max, u8, i8, u16, i16);
+
     delegate_fp16!(add, sub, mul, div, min, max);
     delegate_fp16!(reduce reduce_add, reduce_min, reduce_max);
     delegate_fp16!(cmp equals, less_than, less_than_or_equal, greater_than_or_equal, greater_than);
@@ -523,30 +546,6 @@ where
         FP16::abs_f16_supported()
     }
 
-    fn reduce_add_i8(a: Self::Register) -> i8 {
-        unsafe {
-            let lo = _mm512_castsi512_si256(cast!(a));
-            let hi = _mm512_extracti64x4_epi64::<1>(cast!(a));
-            _mm256_reduce_add_epi8(lo) + _mm256_reduce_add_epi8(hi)
-        }
-    }
-
-    fn reduce_add_i8_supported() -> bool {
-        true
-    }
-
-    fn reduce_add_i16(a: Self::Register) -> i16 {
-        unsafe {
-            let lo = _mm512_castsi512_si256(cast!(a));
-            let hi = _mm512_extracti64x4_epi64::<1>(cast!(a));
-            _mm256_reduce_add_epi16(lo) + _mm256_reduce_add_epi16(hi)
-        }
-    }
-
-    fn reduce_add_i16_supported() -> bool {
-        true
-    }
-
     fn reduce_add_u8(a: Self::Register) -> u8 {
         Self::reduce_add_i8(a) as u8
     }
@@ -561,102 +560,6 @@ where
 
     fn reduce_add_u16_supported() -> bool {
         Self::reduce_add_i16_supported()
-    }
-
-    fn reduce_min_i8(a: Self::Register) -> i8 {
-        unsafe {
-            let lo = _mm512_castsi512_si256(cast!(a));
-            let hi = _mm512_extracti64x4_epi64::<1>(cast!(a));
-            _mm256_reduce_min_epi8(lo).min(_mm256_reduce_min_epi8(hi))
-        }
-    }
-
-    fn reduce_min_i8_supported() -> bool {
-        true
-    }
-
-    fn reduce_min_i16(a: Self::Register) -> i16 {
-        unsafe {
-            let lo = _mm512_castsi512_si256(cast!(a));
-            let hi = _mm512_extracti64x4_epi64::<1>(cast!(a));
-            _mm256_reduce_min_epi16(lo).min(_mm256_reduce_min_epi16(hi))
-        }
-    }
-
-    fn reduce_min_i16_supported() -> bool {
-        true
-    }
-
-    fn reduce_min_u8(a: Self::Register) -> u8 {
-        unsafe {
-            let lo = _mm512_castsi512_si256(cast!(a));
-            let hi = _mm512_extracti64x4_epi64::<1>(cast!(a));
-            _mm256_reduce_min_epu8(lo).min(_mm256_reduce_min_epu8(hi))
-        }
-    }
-
-    fn reduce_min_u8_supported() -> bool {
-        true
-    }
-
-    fn reduce_min_u16(a: Self::Register) -> u16 {
-        unsafe {
-            let lo = _mm512_castsi512_si256(cast!(a));
-            let hi = _mm512_extracti64x4_epi64::<1>(cast!(a));
-            _mm256_reduce_min_epu16(lo).min(_mm256_reduce_min_epu16(hi))
-        }
-    }
-
-    fn reduce_min_u16_supported() -> bool {
-        true
-    }
-
-    fn reduce_max_i8(a: Self::Register) -> i8 {
-        unsafe {
-            let lo = _mm512_castsi512_si256(cast!(a));
-            let hi = _mm512_extracti64x4_epi64::<1>(cast!(a));
-            _mm256_reduce_max_epi8(lo).max(_mm256_reduce_max_epi8(hi))
-        }
-    }
-
-    fn reduce_max_i8_supported() -> bool {
-        true
-    }
-
-    fn reduce_max_i16(a: Self::Register) -> i16 {
-        unsafe {
-            let lo = _mm512_castsi512_si256(cast!(a));
-            let hi = _mm512_extracti64x4_epi64::<1>(cast!(a));
-            _mm256_reduce_max_epi16(lo).max(_mm256_reduce_max_epi16(hi))
-        }
-    }
-
-    fn reduce_max_i16_supported() -> bool {
-        true
-    }
-
-    fn reduce_max_u8(a: Self::Register) -> u8 {
-        unsafe {
-            let lo = _mm512_castsi512_si256(cast!(a));
-            let hi = _mm512_extracti64x4_epi64::<1>(cast!(a));
-            _mm256_reduce_max_epu8(lo).max(_mm256_reduce_max_epu8(hi))
-        }
-    }
-
-    fn reduce_max_u8_supported() -> bool {
-        true
-    }
-
-    fn reduce_max_u16(a: Self::Register) -> u16 {
-        unsafe {
-            let lo = _mm512_castsi512_si256(cast!(a));
-            let hi = _mm512_extracti64x4_epi64::<1>(cast!(a));
-            _mm256_reduce_max_epu16(lo).max(_mm256_reduce_max_epu16(hi))
-        }
-    }
-
-    fn reduce_max_u16_supported() -> bool {
-        true
     }
 }
 

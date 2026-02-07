@@ -61,7 +61,6 @@ fn test_reduce_op<S: Simd, T: Scalar + Debug, Op: ReduceOp<T>>(a: &[T], default:
     for a in a {
         let a = unsafe { vload_unaligned(a.as_ptr()) };
         let val = Op::call::<S>(a);
-        println!("{val:?}");
         output = Op::call_scalar(output, val);
     }
     output

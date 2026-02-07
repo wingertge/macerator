@@ -107,6 +107,28 @@ macro_rules! impl_unop_scalar {
     };
 }
 
+macro_rules! impl_reduce_scalar {
+    ($func: ident, $intrinsic: path, $($ty: ty),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<$func _ $ty>](a: Self::Register) -> $ty {
+                const LANES: usize = 16 / size_of::<$ty>();
+                let a: [$ty; LANES] = cast!(a);
+                let mut out: $ty = a[0];
+
+                for i in 1..LANES {
+                    out = out.$intrinsic(a[i]);
+                }
+                out
+            }
+            #[inline(always)]
+            fn [<$func _ $ty _supported>]() -> bool {
+                false
+            }
+        })*
+    };
+}
+
 macro_rules! lanes {
     ($($bits: literal),*) => {
         $(paste! {
@@ -159,6 +181,22 @@ impl Simd for Simd128 {
 
     impl_unop_scalar!(abs, abs, f16);
     impl_unop_scalar!(recip, recip, f16, f32, f64);
+
+    impl_reduce_scalar!(
+        reduce_add,
+        wrapping_add,
+        u8,
+        i8,
+        u16,
+        i16,
+        u32,
+        i32,
+        u64,
+        i64
+    );
+    impl_reduce_scalar!(reduce_add, add, f16, f32, f64);
+    impl_reduce_scalar!(reduce_min, min, u8, i8, u16, i16, u32, i32, u64, i64, f16, f32, f64);
+    impl_reduce_scalar!(reduce_max, max, u8, i8, u16, i16, u32, i32, u64, i64, f16, f32, f64);
 
     fn vectorize<Op: WithSimd>(op: Op) -> Op::Output {
         struct Impl<Op> {

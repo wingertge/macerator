@@ -82,6 +82,21 @@ macro_rules! impl_unop {
     };
 }
 
+macro_rules! impl_reduce {
+    ($func: ident, $intrinsic: ident, $($ty: ty),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<$func _ $ty>](a: Self::Register) -> $ty {
+                unsafe { with_ty!($intrinsic, $ty)(cast!(a)) }
+            }
+            #[inline(always)]
+            fn [<$func _ $ty _supported>]() -> bool {
+                true
+            }
+        })*
+    };
+}
+
 macro_rules! impl_binop_scalar {
     ($func: ident, $intrinsic: path, $($ty: ty),*) => {
         $(paste! {
@@ -96,6 +111,28 @@ macro_rules! impl_binop_scalar {
                     out[i] = $intrinsic(a[i], b[i]);
                 }
                 cast!(out)
+            }
+            #[inline(always)]
+            fn [<$func _ $ty _supported>]() -> bool {
+                false
+            }
+        })*
+    };
+}
+
+macro_rules! impl_reduce_scalar {
+    ($func: ident, $intrinsic: path, $($ty: ty),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<$func _ $ty>](a: Self::Register) -> $ty {
+                const LANES: usize = 16 / size_of::<$ty>();
+                let a: [$ty; LANES] = cast!(a);
+                let mut out: $ty = a[0];
+
+                for i in 1..LANES {
+                    out = out.$intrinsic(a[i]);
+                }
+                out
             }
             #[inline(always)]
             fn [<$func _ $ty _supported>]() -> bool {
@@ -194,6 +231,14 @@ impl Simd for NeonFma {
     impl_binop_scalar!(min, f16::min, f16);
     impl_binop_scalar!(max, Ord::max, u64, i64);
     impl_binop_scalar!(max, f16::max, f16);
+
+    impl_reduce!(reduce_add, vaddvq, u8, i8, u16, i16, u32, i32, u64, i64, f32, f64);
+    impl_reduce!(reduce_min, vminvq, u8, i8, u16, i16, u32, i32, f32, f64);
+    impl_reduce!(reduce_max, vmaxvq, u8, i8, u16, i16, u32, i32, f32, f64);
+
+    impl_reduce_scalar!(reduce_add, add, f16);
+    impl_reduce_scalar!(reduce_min, min, f16, u64, i64);
+    impl_reduce_scalar!(reduce_max, max, f16, u64, i64);
 
     fn vectorize<Op: WithSimd>(op: Op) -> Op::Output {
         struct Impl<Op> {

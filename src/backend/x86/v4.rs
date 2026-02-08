@@ -545,19 +545,19 @@ where
     fn abs_f16_supported() -> bool {
         FP16::abs_f16_supported()
     }
-
+    #[inline(always)]
     fn reduce_add_u8(a: Self::Register) -> u8 {
         Self::reduce_add_i8(a) as u8
     }
-
+    #[inline(always)]
     fn reduce_add_u8_supported() -> bool {
         Self::reduce_add_i8_supported()
     }
-
+    #[inline(always)]
     fn reduce_add_u16(a: Self::Register) -> u16 {
         Self::reduce_add_i16(a) as u16
     }
-
+    #[inline(always)]
     fn reduce_add_u16_supported() -> bool {
         Self::reduce_add_i16_supported()
     }

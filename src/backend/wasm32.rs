@@ -8,13 +8,14 @@ use half::f16;
 use num_traits::real::Real;
 use paste::paste;
 
-use crate::{Scalar, WithSimd};
+use crate::{seal::Sealed, Scalar, WithSimd};
 
 use super::{
     arch::{impl_simd, NullaryFnOnce},
     cast, impl_cmp_scalar, Simd, VRegister, Vector,
 };
 
+impl Sealed for v128 {}
 impl VRegister for v128 {}
 
 const WIDTH: usize = size_of::<<Simd128 as Simd>::Register>() * 8;

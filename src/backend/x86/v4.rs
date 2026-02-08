@@ -16,6 +16,7 @@ pub type V4 = V4Impl<FP16Fallback>;
 #[cfg(feature = "fp16")]
 pub type V4FP16 = V4Impl<FP16Intrinsic>;
 
+impl Sealed for __m512 {}
 impl VRegister for __m512 {}
 
 const WIDTH: usize = size_of::<<V4 as Simd>::Register>() * 8;

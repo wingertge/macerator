@@ -7,10 +7,11 @@ use half::f16;
 use num_traits::real::Real;
 use paste::paste;
 
-use crate::{backend::arch::NullaryFnOnce, cast, Scalar};
+use crate::{backend::arch::NullaryFnOnce, cast, seal::Sealed, Scalar};
 
 use super::{arch::impl_simd, impl_cmp_scalar, Simd, VRegister, Vector, WithSimd};
 
+impl Sealed for int8x16_t {}
 impl VRegister for int8x16_t {}
 
 const WIDTH: usize = size_of::<<NeonFma as Simd>::Register>() * 8;

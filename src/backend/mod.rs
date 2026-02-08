@@ -108,6 +108,21 @@ impl<S: Simd, T: Scalar> Mask<S, T> {
     pub fn or(self, rhs: Self) -> Self {
         self.bitor(rhs)
     }
+
+    /// Converts a slice of booleans to a mask. Slice length must be equal to
+    /// `lanes`.
+    pub fn from_bools(bools: &[bool]) -> Self {
+        T::mask_from_bools(bools)
+    }
+
+    /// Store a `Mask` as a set of booleans of `lanes` width, converting as
+    /// necessary.
+    ///
+    /// # SAFETY
+    /// `out` must be valid for `lanes` contiguous values.
+    pub unsafe fn store_as_bool(self, out: *mut bool) {
+        T::mask_store_as_bool(out, self);
+    }
 }
 
 impl<S: Simd, T: Scalar> Deref for Mask<S, T> {

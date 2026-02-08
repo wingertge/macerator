@@ -45,6 +45,11 @@ pub struct Vector<S: Simd, T: Scalar> {
     _ty: PhantomData<T>,
 }
 
+/// SAFETY: S::Register is `Send`, and no other data is stored
+unsafe impl<S: Simd, T: Scalar> Send for Vector<S, T> where S::Register: Send {}
+/// SAFETY: S::Register is `Sync`, and no other data is stored
+unsafe impl<S: Simd, T: Scalar> Sync for Vector<S, T> where S::Register: Sync {}
+
 #[repr(transparent)]
 pub struct Mask<S: Simd, T: Scalar>(pub(crate) T::Mask<S>);
 

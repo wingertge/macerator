@@ -7,7 +7,7 @@ use bytemuck::{NoUninit, Pod};
 use half::{bf16, f16};
 use paste::paste;
 
-pub trait Scalar: Sized + Copy + Pod + NoUninit + Default + Send + Sync + Sealed {
+pub trait Scalar: Sized + Copy + Pod + NoUninit + Default {
     type Mask<S: Simd>: MaskOps;
 
     fn lanes<S: Simd>() -> usize;

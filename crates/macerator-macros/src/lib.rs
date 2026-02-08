@@ -56,6 +56,7 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
         .chain(type_params.skip(1).map(|t| GenericParam::Type(t.clone())))
         .chain(const_params.map(|c| GenericParam::Const(c.clone())))
         .collect();
+
     let mut inner_fn_sig = sig.clone();
     inner_fn_sig.ident = format_ident!("{}_impl", name);
     let struct_name = format_ident!("{}_struct", name);
@@ -123,6 +124,7 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
 
     Ok(quote! {
         #(#attrs)*
+        #[allow(unused_mut, clippy::all)]
         #vis #outer_fn_sig {
             #[allow(non_camel_case_types)]
             struct #struct_name #impl_generics #where_clause {

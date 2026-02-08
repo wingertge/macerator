@@ -28,9 +28,9 @@ moddef::moddef!(
     }
 );
 
-use crate::{Scalar, VAdd, VBitAnd, VBitNot, VBitOr, VBitXor};
+use crate::{seal::Sealed, Scalar, VAdd, VBitAnd, VBitNot, VBitOr, VBitXor};
 
-pub trait VRegister: Copy + Pod + Debug + Send + Sync {}
+pub trait VRegister: Copy + Pod + Debug + Send + Sync + Sealed {}
 
 macro_rules! cast {
     ($v: expr) => {

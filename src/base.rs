@@ -1,16 +1,13 @@
 use crate::{
     backend::{Simd, Vector},
+    seal::Sealed,
     Mask, MaskOps,
 };
 use bytemuck::{NoUninit, Pod};
 use half::{bf16, f16};
 use paste::paste;
 
-mod private {
-    pub trait Sealed {}
-}
-
-pub trait Scalar: Sized + Copy + Pod + NoUninit + Default + Send + Sync + private::Sealed {
+pub trait Scalar: Sized + Copy + Pod + NoUninit + Default + Send + Sync + Sealed {
     type Mask<S: Simd>: MaskOps;
 
     fn lanes<S: Simd>() -> usize;
@@ -110,7 +107,7 @@ pub trait Scalar: Sized + Copy + Pod + NoUninit + Default + Send + Sync + privat
 macro_rules! impl_vectorizable {
     ($ty: ty, $bits: literal) => {
         paste! {
-            impl private::Sealed for $ty {}
+            impl Sealed for $ty {}
             impl Scalar for $ty {
                 type Mask<S: Simd> = S::[<Mask $bits>];
 

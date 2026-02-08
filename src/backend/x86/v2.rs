@@ -15,6 +15,7 @@ use crate::backend::{arch::impl_simd, cast, seal::Sealed, Simd, VRegister, Vecto
 
 use super::*;
 
+impl Sealed for __m128 {}
 impl VRegister for __m128 {}
 
 const WIDTH: usize = size_of::<<V2 as Simd>::Register>() * 8;

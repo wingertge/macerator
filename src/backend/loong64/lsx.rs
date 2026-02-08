@@ -24,6 +24,7 @@ pub struct Register(v4f32);
 unsafe impl Pod for Register {}
 unsafe impl Zeroable for Register {}
 
+impl Sealed for Register {}
 impl VRegister for Register {}
 
 const WIDTH: usize = size_of::<<Lsx as Simd>::Register>() * 8;

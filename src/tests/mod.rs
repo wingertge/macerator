@@ -11,6 +11,7 @@ use crate::{vload_unaligned, vstore_unaligned, Scalar, Simd, Vector};
 
 mod arithmetic;
 mod bitwise;
+mod macro_tests;
 mod ord;
 mod reduce;
 mod unary;

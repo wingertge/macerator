@@ -1,10 +1,10 @@
 use crate::{
     tests::{binop, test_binop},
-    vload_unaligned, Scalar, Simd, VEq, VOrd, Vector,
+    vload_unaligned, Mask, Scalar, Simd, VEq, VOrd, Vector,
 };
 
 pub(crate) trait CmpOp<T: Scalar> {
-    fn call<S: Simd>(lhs: Vector<S, T>, rhs: Vector<S, T>) -> T::Mask<S>;
+    fn call<S: Simd>(lhs: Vector<S, T>, rhs: Vector<S, T>) -> Mask<S, T>;
 }
 
 #[inline(always)]
@@ -29,7 +29,7 @@ macro_rules! cmp_op {
             struct [<$trait Op>]<T>(::core::marker::PhantomData<T>);
             impl<T: $trait> CmpOp<T> for [<$trait Op>]<T> {
                 #[inline(always)]
-                fn call<S: Simd>(lhs: $crate::Vector<S, T>, rhs: $crate::Vector<S, T>) -> T::Mask<S> {
+                fn call<S: Simd>(lhs: $crate::Vector<S, T>, rhs: $crate::Vector<S, T>) -> Mask<S, T> {
                     $impl(lhs, rhs)
                 }
             }

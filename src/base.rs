@@ -1,18 +1,17 @@
-use crate::backend::{Simd, Vector};
-use bytemuck::{CheckedBitPattern, NoUninit, Pod, Zeroable};
-use core::fmt::Debug;
+use crate::{
+    backend::{Simd, Vector},
+    Mask, MaskOps,
+};
+use bytemuck::{NoUninit, Pod};
 use half::{bf16, f16};
 use paste::paste;
 
-pub trait Scalar: Sized + Copy + Pod + NoUninit + Default {
-    type Mask<S: Simd>: Debug
-        + Copy
-        + Send
-        + Sync
-        + Zeroable
-        + NoUninit
-        + CheckedBitPattern
-        + 'static;
+mod private {
+    pub trait Sealed {}
+}
+
+pub trait Scalar: Sized + Copy + Pod + NoUninit + Default + Send + Sync + private::Sealed {
+    type Mask<S: Simd>: MaskOps;
 
     fn lanes<S: Simd>() -> usize;
 
@@ -100,10 +99,10 @@ pub trait Scalar: Sized + Copy + Pod + NoUninit + Default {
     ///
     /// # SAFETY
     /// `out` must be valid for `lanes` contiguous values.
-    unsafe fn mask_store_as_bool<S: Simd>(out: *mut bool, mask: Self::Mask<S>);
+    unsafe fn mask_store_as_bool<S: Simd>(out: *mut bool, mask: Mask<S, Self>);
     /// Converts a slice of booleans to a mask. Slice length must be equal to
     /// `lanes`.
-    fn mask_from_bools<S: Simd>(bools: &[bool]) -> Self::Mask<S>;
+    fn mask_from_bools<S: Simd>(bools: &[bool]) -> Mask<S, Self>;
     /// Create a vector with the scalar `value` in each element.
     fn splat<S: Simd>(self) -> Vector<S, Self>;
 }
@@ -111,6 +110,7 @@ pub trait Scalar: Sized + Copy + Pod + NoUninit + Default {
 macro_rules! impl_vectorizable {
     ($ty: ty, $bits: literal) => {
         paste! {
+            impl private::Sealed for $ty {}
             impl Scalar for $ty {
                 type Mask<S: Simd> = S::[<Mask $bits>];
 
@@ -151,12 +151,12 @@ macro_rules! impl_vectorizable {
                     unsafe { S::store_high(ptr, value) }
                 }
                 #[inline(always)]
-                unsafe fn mask_store_as_bool<S: Simd>(out: *mut bool, mask: Self::Mask<S>) {
-                    S::[<mask_store_as_bool_ $bits>](out, mask);
+                unsafe fn mask_store_as_bool<S: Simd>(out: *mut bool, mask: Mask<S, Self>) {
+                    S::[<mask_store_as_bool_ $bits>](out, *mask);
                 }
                 #[inline(always)]
-                fn mask_from_bools<S: Simd>(bools: &[bool]) -> Self::Mask<S> {
-                    S::[<mask_from_bools_ $bits>](bools)
+                fn mask_from_bools<S: Simd>(bools: &[bool]) -> Mask<S, Self> {
+                    Mask(S::[<mask_from_bools_ $bits>](bools))
                 }
                 #[inline(always)]
                 fn splat<S: Simd>(self) -> Vector<S, Self> {

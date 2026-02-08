@@ -5,11 +5,12 @@ use core::{
     ptr::{read, read_unaligned, write, write_unaligned},
 };
 
+use bytemuck::{Pod, Zeroable};
 use half::f16;
 use num_traits::Float;
 use paste::paste;
 
-use crate::Scalar;
+use crate::{MaskOps, Scalar};
 
 use super::{cast, Simd, VRegister, WithSimd};
 
@@ -136,12 +137,66 @@ macro_rules! lanes {
     };
 }
 
+#[derive(Debug, Clone, Copy, Pod, Zeroable)]
+#[repr(transparent)]
+pub struct ScalarMask<const LANES: usize>([u8; LANES]);
+
+impl<const LANES: usize> core::ops::Not for ScalarMask<LANES> {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        let mut out = [0; LANES];
+        for (i, o) in self.0.into_iter().zip(&mut out) {
+            *o = !i;
+        }
+        ScalarMask(out)
+    }
+}
+
+impl<const LANES: usize> core::ops::BitAnd for ScalarMask<LANES> {
+    type Output = Self;
+
+    fn bitand(self, rhs: Self) -> Self::Output {
+        let mut out = [0; LANES];
+        for ((lhs, rhs), o) in self.0.into_iter().zip(rhs.0).zip(&mut out) {
+            *o = lhs & rhs;
+        }
+        ScalarMask(out)
+    }
+}
+
+impl<const LANES: usize> core::ops::BitOr for ScalarMask<LANES> {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        let mut out = [0; LANES];
+        for ((lhs, rhs), o) in self.0.into_iter().zip(rhs.0).zip(&mut out) {
+            *o = lhs | rhs;
+        }
+        ScalarMask(out)
+    }
+}
+
+impl<const LANES: usize> core::ops::BitXor for ScalarMask<LANES> {
+    type Output = Self;
+
+    fn bitxor(self, rhs: Self) -> Self::Output {
+        let mut out = [0; LANES];
+        for ((lhs, rhs), o) in self.0.into_iter().zip(rhs.0).zip(&mut out) {
+            *o = lhs ^ rhs;
+        }
+        ScalarMask(out)
+    }
+}
+
+impl<const LANES: usize> MaskOps for ScalarMask<LANES> {}
+
 impl Simd for Fallback {
     type Register = u64;
-    type Mask8 = [u8; 8];
-    type Mask16 = [u8; 4];
-    type Mask32 = [u8; 2];
-    type Mask64 = [u8; 1];
+    type Mask8 = ScalarMask<8>;
+    type Mask16 = ScalarMask<4>;
+    type Mask32 = ScalarMask<2>;
+    type Mask64 = ScalarMask<1>;
 
     lanes!(8, 16, 32, 64);
 

@@ -8,7 +8,7 @@ license.workspace = true
 name = "macerator"
 readme.workspace = true
 repository.workspace = true
-rust-version = "1.81"
+rust-version = "1.82"
 version = "0.2.10"
 
 [features]
@@ -24,6 +24,7 @@ bytemuck = { version = "1.23.1", features = [
     "aarch64_simd",
     "wasm_simd",
     "avx512_simd",
+    "min_const_generics",
 ] }
 half = { version = "2.5.0", features = ["bytemuck", "num-traits"] }
 macerator-macros = { version = "0.1.3", path = "crates/macerator-macros" }

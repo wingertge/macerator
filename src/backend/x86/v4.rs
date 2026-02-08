@@ -8,7 +8,7 @@ use half::f16;
 use num_traits::real::Real;
 use paste::paste;
 
-use crate::{backend::arch::*, cast, seal::Sealed, Scalar, Simd, VRegister, Vector};
+use crate::{backend::arch::*, cast, seal::Sealed, MaskOps, Scalar, Simd, VRegister, Vector};
 
 use super::*;
 
@@ -276,6 +276,11 @@ macro_rules! impl_cmp {
         })*
     };
 }
+
+impl MaskOps for __mmask64 {}
+impl MaskOps for __mmask32 {}
+impl MaskOps for __mmask16 {}
+impl MaskOps for __mmask8 {}
 
 impl<FP16: FP16Ext> Simd for V4Impl<FP16>
 where

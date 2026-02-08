@@ -10,6 +10,7 @@
 )]
 
 use bytemuck::{CheckedBitPattern, NoUninit, Pod, Zeroable};
+use core::ops::{BitAnd, BitOr, BitXor, Not};
 use core::{fmt::Debug, marker::PhantomData, ops::Deref};
 use half::{bf16, f16};
 use paste::paste;
@@ -27,9 +28,9 @@ moddef::moddef!(
     }
 );
 
-use crate::{Scalar, VAdd};
+use crate::{Scalar, VAdd, VBitAnd, VBitNot, VBitOr, VBitXor};
 
-pub trait VRegister: Copy + Pod + Debug {}
+pub trait VRegister: Copy + Pod + Debug + Send + Sync {}
 
 macro_rules! cast {
     ($v: expr) => {
@@ -43,6 +44,9 @@ pub struct Vector<S: Simd, T: Scalar> {
     inner: S::Register,
     _ty: PhantomData<T>,
 }
+
+#[repr(transparent)]
+pub struct Mask<S: Simd, T: Scalar>(pub(crate) T::Mask<S>);
 
 impl<S: Simd, T: Scalar> Clone for Vector<S, T> {
     fn clone(&self) -> Self {
@@ -64,6 +68,53 @@ impl<S: Simd, T: Scalar> Deref for Vector<S, T> {
 
     fn deref(&self) -> &Self::Target {
         &self.inner
+    }
+}
+
+impl<S: Simd, T: Scalar> Not for Mask<S, T> {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        Self(self.0.not())
+    }
+}
+impl<S: Simd, T: Scalar> BitAnd for Mask<S, T> {
+    type Output = Self;
+
+    fn bitand(self, rhs: Self) -> Self::Output {
+        Self(self.0.bitand(rhs.0))
+    }
+}
+impl<S: Simd, T: Scalar> BitOr for Mask<S, T> {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        Self(self.0.bitor(rhs.0))
+    }
+}
+impl<S: Simd, T: Scalar> BitXor for Mask<S, T> {
+    type Output = Self;
+
+    fn bitxor(self, rhs: Self) -> Self::Output {
+        Self(self.0.bitxor(rhs.0))
+    }
+}
+
+impl<S: Simd, T: Scalar> Mask<S, T> {
+    pub fn and(self, rhs: Self) -> Self {
+        self.bitand(rhs)
+    }
+
+    pub fn or(self, rhs: Self) -> Self {
+        self.bitor(rhs)
+    }
+}
+
+impl<S: Simd, T: Scalar> Deref for Mask<S, T> {
+    type Target = T::Mask<S>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
@@ -124,12 +175,30 @@ pub(crate) mod seal {
     pub trait Sealed {}
 }
 
+pub trait MaskOps:
+    BitAnd<Output = Self>
+    + BitOr<Output = Self>
+    + BitXor<Output = Self>
+    + Not<Output = Self>
+    + Debug
+    + Copy
+    + Send
+    + Sync
+    + Zeroable
+    + NoUninit
+    + CheckedBitPattern
+    + 'static
+{
+}
+
+impl<S: Simd, T: VBitAnd + VBitOr + VBitXor + VBitNot> MaskOps for Vector<S, T> {}
+
 pub trait Simd: Sized + seal::Sealed + 'static {
     type Register: VRegister;
-    type Mask8: Debug + Copy + Send + Sync + Zeroable + NoUninit + CheckedBitPattern + 'static;
-    type Mask16: Debug + Copy + Send + Sync + Zeroable + NoUninit + CheckedBitPattern + 'static;
-    type Mask32: Debug + Copy + Send + Sync + Zeroable + NoUninit + CheckedBitPattern + 'static;
-    type Mask64: Debug + Copy + Send + Sync + Zeroable + NoUninit + CheckedBitPattern + 'static;
+    type Mask8: MaskOps;
+    type Mask16: MaskOps;
+    type Mask32: MaskOps;
+    type Mask64: MaskOps;
 
     fn lanes8() -> usize;
     fn lanes16() -> usize;

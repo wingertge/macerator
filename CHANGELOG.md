@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0](https://github.com/wingertge/macerator/compare/macerator-v0.2.10...macerator-v0.3.0) - 2026-02-08
+
+### Added
+
+- Make masks more ergonomic and add mask logical ops ([#20](https://github.com/wingertge/macerator/pull/20))
+
+### Fixed
+
+- Seal traits that were meant to be sealed before ([#21](https://github.com/wingertge/macerator/pull/21))
+- Fix weird lifetime handling in macro to allow for reference params ([#17](https://github.com/wingertge/macerator/pull/17))
+- Add missing `#[inline(always)]` on unsigned int `reduce_add` ([#15](https://github.com/wingertge/macerator/pull/15))
+
+### Other
+
+- Revert seal on `Scalar`, manually impl Send/Sync
+- Only trigger CI on main push ([#18](https://github.com/wingertge/macerator/pull/18))
+
 ## [0.2.10](https://github.com/wingertge/macerator/compare/macerator-v0.2.9...macerator-v0.2.10) - 2026-02-07
 
 ### Added

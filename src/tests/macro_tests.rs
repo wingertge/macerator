@@ -4,6 +4,8 @@
     clippy::needless_lifetimes
 )]
 
+use std::vec::Vec;
+
 use crate as macerator;
 use macerator_macros::with_simd;
 

@@ -1,3 +1,5 @@
+use std::{vec, vec::Vec};
+
 use crate::{
     tests::{binop, test_binop},
     vload_unaligned, Mask, Scalar, Simd, VEq, VOrd, Vector,

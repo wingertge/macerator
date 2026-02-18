@@ -1,4 +1,5 @@
 use core::ops::Not;
+use std::vec::Vec;
 
 use crate::{Simd, VBitAnd, VBitNot, VBitOr, VBitXor};
 

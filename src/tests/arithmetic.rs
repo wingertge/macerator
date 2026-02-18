@@ -1,3 +1,5 @@
+use std::{vec, vec::Vec};
+
 use crate::scalar::Fallback;
 
 use bytemuck::Zeroable;

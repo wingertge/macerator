@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1](https://github.com/wingertge/macerator/compare/macerator-v0.3.0...macerator-v0.3.1) - 2026-03-10
+
+### Fixed
+
+- Remove unsupported `__mm_fmadd` from x86_64-v2 ([#25](https://github.com/wingertge/macerator/pull/25))
+
+### Other
+
+- Unconditionally enable `no_std` ([#22](https://github.com/wingertge/macerator/pull/22))
+
 ## [0.3.0](https://github.com/wingertge/macerator/compare/macerator-v0.2.10...macerator-v0.3.0) - 2026-02-08
 
 ### Added

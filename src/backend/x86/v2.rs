@@ -372,7 +372,8 @@ impl Simd for V2 {
     }
     #[inline(always)]
     fn mul_add_f32(a: Self::Register, b: Self::Register, c: Self::Register) -> Self::Register {
-        unsafe { _mm_fmadd_ps(a, b, c) }
+        let mul = Self::mul_f32(a, b);
+        Self::add_f32(mul, c)
     }
     #[inline(always)]
     fn mul_add_f32_supported() -> bool {
@@ -380,7 +381,8 @@ impl Simd for V2 {
     }
     #[inline(always)]
     fn mul_add_f64(a: Self::Register, b: Self::Register, c: Self::Register) -> Self::Register {
-        cast!(_mm_fmadd_pd(cast!(a), cast!(b), cast!(c)))
+        let mul = Self::mul_f64(a, b);
+        Self::add_f64(mul, c)
     }
     #[inline(always)]
     fn mul_add_f64_supported() -> bool {

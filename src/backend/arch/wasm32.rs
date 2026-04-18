@@ -1,6 +1,7 @@
 use crate::{
+    backend::scalar::Fallback,
+    wasm32::{Simd128Fallback, Simd128Relaxed},
     Simd,
-    backend::{scalar::Fallback, wasm32::Simd128},
 };
 
 use super::WithSimd;
@@ -10,13 +11,16 @@ use super::WithSimd;
 #[repr(u8)]
 pub enum Arch {
     Scalar,
-    Simd128,
+    Simd128Relaxed,
+    Simd128Fallback,
 }
 
 impl Arch {
     pub fn new() -> Self {
-        if Simd128::is_available() {
-            Self::Simd128
+        if Simd128Relaxed::is_available() {
+            Self::Simd128Relaxed
+        } else if Simd128Fallback::is_available() {
+            Self::Simd128Fallback
         } else {
             Self::Scalar
         }
@@ -25,7 +29,8 @@ impl Arch {
     pub fn dispatch<Op: WithSimd>(self, op: Op) -> Op::Output {
         match self {
             Arch::Scalar => <Fallback as Simd>::vectorize(op),
-            Arch::Simd128 => <Simd128 as Simd>::vectorize(op),
+            Arch::Simd128Relaxed => <Simd128Relaxed as Simd>::vectorize(op),
+            Arch::Simd128Fallback => <Simd128Fallback as Simd>::vectorize(op),
         }
     }
 }

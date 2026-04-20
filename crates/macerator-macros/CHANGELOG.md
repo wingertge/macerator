@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.5](https://github.com/wingertge/macerator/compare/macerator-macros-v0.1.4...macerator-macros-v0.1.5) - 2026-04-20
+
+### Fixed
+
+- Separate relaxed ops from Simd128 and provide fallback option ([#28](https://github.com/wingertge/macerator/pull/28))
+
 ## [0.1.4](https://github.com/wingertge/macerator/compare/macerator-macros-v0.1.3...macerator-macros-v0.1.4) - 2026-02-08
 
 ### Fixed

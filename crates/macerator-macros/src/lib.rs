@@ -162,16 +162,12 @@ fn add_named_lifetimes(ty: &mut Type) -> bool {
         Type::Group(type_group) => add_named_lifetimes(&mut type_group.elem),
         Type::Paren(type_paren) => add_named_lifetimes(&mut type_paren.elem),
         Type::Ptr(type_ptr) => add_named_lifetimes(&mut type_ptr.elem),
-        Type::Reference(type_reference) => {
-            if type_reference.lifetime.is_none() {
-                type_reference.lifetime = Some(Lifetime::new(
-                    ANON_LIFETIME,
-                    type_reference.and_token.span(),
-                ));
-                true
-            } else {
-                false
-            }
+        Type::Reference(type_reference) if type_reference.lifetime.is_none() => {
+            type_reference.lifetime = Some(Lifetime::new(
+                ANON_LIFETIME,
+                type_reference.and_token.span(),
+            ));
+            true
         }
         Type::Slice(type_slice) => add_named_lifetimes(&mut type_slice.elem),
         Type::Tuple(type_tuple) => type_tuple.elems.iter_mut().any(add_named_lifetimes),

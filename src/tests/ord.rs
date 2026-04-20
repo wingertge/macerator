@@ -97,9 +97,16 @@ macro_rules! testgen_cmp {
                 }
                 #[cfg(wasm32)]
                 {
-                    use crate::backend::wasm32::Simd128;
-                    let out = Simd128::run_vectorized(|| [<$test_fn _impl>]::<Simd128, $ty>(&lhs, &rhs));
-                    assert_eq!(&out_ref, &out);
+                    use crate::backend::wasm32;
+                    #[cfg(relaxed_simd)]
+                    if wasm32::Simd128Relaxed::is_available() {
+                        let out = wasm32::Simd128Relaxed::run_vectorized(|| [<$test_fn _impl>]::<wasm32::Simd128Relaxed, $ty>(&lhs, &rhs));
+                        assert_eq!(&out_ref, &out);
+                    }
+                    if wasm32::Simd128Fallback::is_available() {
+                        let out = wasm32::Simd128Fallback::run_vectorized(|| [<$test_fn _impl>]::<wasm32::Simd128Fallback, $ty>(&lhs, &rhs));
+                        assert_eq!(&out_ref, &out);
+                    }
                 }
                 let out = [<$test_fn _impl>]::<$crate::backend::scalar::Fallback, $ty>(&lhs, &rhs);
                 assert_eq!(out_ref, out);
@@ -166,9 +173,16 @@ macro_rules! testgen_min_max {
                 }
                 #[cfg(wasm32)]
                 {
-                    use crate::backend::wasm32::Simd128;
-                    let out = Simd128::run_vectorized(|| [<$test_fn _impl>]::<Simd128, $ty>(&lhs, &rhs));
-                    assert_eq!(&out_ref, &out);
+                    use crate::backend::wasm32;
+                    #[cfg(relaxed_simd)]
+                    if wasm32::Simd128Relaxed::is_available() {
+                        let out = wasm32::Simd128Relaxed::run_vectorized(|| [<$test_fn _impl>]::<wasm32::Simd128Relaxed, $ty>(&lhs, &rhs));
+                        assert_eq!(&out_ref, &out);
+                    }
+                    if wasm32::Simd128Fallback::is_available() {
+                        let out = wasm32::Simd128Fallback::run_vectorized(|| [<$test_fn _impl>]::<wasm32::Simd128Fallback, $ty>(&lhs, &rhs));
+                        assert_eq!(&out_ref, &out);
+                    }
                 }
                 let out = [<$test_fn _impl>]::<$crate::backend::scalar::Fallback, $ty>(&lhs, &rhs);
                 assert_eq!(out_ref, out);

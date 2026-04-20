@@ -151,9 +151,16 @@ macro_rules! testgen_fma {
                 }
                 #[cfg(wasm32)]
                 {
-                    use crate::backend::wasm32::Simd128;
-                    let out = Simd128::run_vectorized(|| [<$test_fn _impl>]::<Simd128, $ty>(&a, &b, &c));
-                    assert_approx_eq(&out_ref, &out);
+                    use crate::backend::wasm32;
+                    #[cfg(relaxed_simd)]
+                    if wasm32::Simd128Relaxed::is_available() {
+                        let out = wasm32::Simd128Relaxed::run_vectorized(|| [<$test_fn _impl>]::<wasm32::Simd128Relaxed, $ty>(&a, &b, &c));
+                        assert_approx_eq(&out_ref, &out);
+                    }
+                    if wasm32::Simd128Fallback::is_available() {
+                        let out = wasm32::Simd128Fallback::run_vectorized(|| [<$test_fn _impl>]::<wasm32::Simd128Fallback, $ty>(&a, &b, &c));
+                        assert_approx_eq(&out_ref, &out);
+                    }
                 }
                 let out = [<$test_fn _impl>]::<Fallback, $ty>(&a, &b, &c);
                 assert_approx_eq(&out_ref, &out);

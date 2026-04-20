@@ -1,5 +1,6 @@
 use core::{
     arch::wasm32::*,
+    marker::PhantomData,
     ops::{Add, Div, Mul, Sub},
     ptr::{read, read_unaligned, write, write_unaligned},
 };
@@ -18,11 +19,15 @@ use super::{
 impl Sealed for v128 {}
 impl VRegister for v128 {}
 
-const WIDTH: usize = size_of::<<Simd128 as Simd>::Register>() * 8;
+const WIDTH: usize = size_of::<<Simd128<FallbackFma> as Simd>::Register>() * 8;
 
-pub struct Simd128;
+pub struct Simd128<F: Fma> {
+    _fma: PhantomData<F>,
+}
 
-impl super::seal::Sealed for Simd128 {}
+pub type Simd128Fallback = Simd128<FallbackFma>;
+
+impl<F: Fma> super::seal::Sealed for Simd128<F> {}
 
 macro_rules! impl_binop {
     ($name: ident, $intrinsic: ident, $($ty: ident x $lanes: literal),*) => {
@@ -141,7 +146,78 @@ macro_rules! lanes {
     };
 }
 
-impl Simd for Simd128 {
+pub trait Fma: Sealed + 'static {
+    fn mul_add_f32(a: v128, b: v128, c: v128) -> v128;
+    fn mul_add_f64(a: v128, b: v128, c: v128) -> v128;
+}
+
+#[cfg(relaxed_simd)]
+mod relaxed {
+    use super::*;
+
+    pub struct RelaxedFma;
+    pub type Simd128Relaxed = Simd128<RelaxedFma>;
+
+    impl Sealed for RelaxedFma {}
+    impl Fma for RelaxedFma {
+        #[inline(always)]
+        fn mul_add_f32(a: v128, b: v128, c: v128) -> v128 {
+            unsafe { f32x4_relaxed_madd(a, b, c) }
+        }
+
+        #[inline(always)]
+        fn mul_add_f64(a: v128, b: v128, c: v128) -> v128 {
+            unsafe { f64x2_relaxed_madd(a, b, c) }
+        }
+    }
+
+    impl Simd128Run for Simd128Relaxed {
+        #[inline(always)]
+        fn run_vectorized<F: NullaryFnOnce>(f: F) -> F::Output {
+            Simd128Relaxed::run_vectorized(f)
+        }
+    }
+
+    impl Simd128Relaxed {
+        impl_simd!("simd128", "relaxed-simd");
+    }
+}
+
+#[cfg(relaxed_simd)]
+pub use relaxed::Simd128Relaxed;
+
+pub struct FallbackFma;
+
+impl Sealed for FallbackFma {}
+impl Fma for FallbackFma {
+    #[inline(always)]
+    fn mul_add_f32(a: v128, b: v128, c: v128) -> v128 {
+        let mul = f32x4_mul(a, b);
+        f32x4_add(mul, c)
+    }
+
+    #[inline(always)]
+    fn mul_add_f64(a: v128, b: v128, c: v128) -> v128 {
+        let mul = f64x2_mul(a, b);
+        f64x2_add(mul, c)
+    }
+}
+
+trait Simd128Run {
+    fn run_vectorized<F: NullaryFnOnce>(f: F) -> F::Output;
+}
+
+impl Simd128Run for Simd128Fallback {
+    #[inline(always)]
+    fn run_vectorized<F: NullaryFnOnce>(f: F) -> F::Output {
+        Simd128Fallback::run_vectorized(f)
+    }
+}
+
+impl<F: Fma> Simd for Simd128<F>
+where
+    Self: Simd128Run,
+{
     type Register = v128;
     type Mask8 = Vector<Self, i8>;
     type Mask16 = Vector<Self, i16>;
@@ -200,18 +276,25 @@ impl Simd for Simd128 {
     impl_reduce_scalar!(reduce_max, max, u8, i8, u16, i16, u32, i32, u64, i64, f16, f32, f64);
 
     fn vectorize<Op: WithSimd>(op: Op) -> Op::Output {
-        struct Impl<Op> {
+        struct Impl<Op, F> {
             op: Op,
+            _fma: PhantomData<F>,
         }
-        impl<Op: WithSimd> NullaryFnOnce for Impl<Op> {
+        impl<Op: WithSimd, F: Fma> NullaryFnOnce for Impl<Op, F>
+        where
+            Simd128<F>: Simd128Run,
+        {
             type Output = Op::Output;
 
             #[inline(always)]
             fn call(self) -> Self::Output {
-                self.op.with_simd::<Simd128>()
+                self.op.with_simd::<Simd128<F>>()
             }
         }
-        Self::run_vectorized(Impl { op })
+        Self::run_vectorized(Impl {
+            op,
+            _fma: PhantomData,
+        })
     }
 
     #[inline(always)]
@@ -432,7 +515,7 @@ impl Simd for Simd128 {
     }
     #[inline(always)]
     fn mul_add_f32(a: Self::Register, b: Self::Register, c: Self::Register) -> Self::Register {
-        unsafe { f32x4_relaxed_madd(a, b, c) }
+        F::mul_add_f32(a, b, c)
     }
     #[inline(always)]
     fn mul_add_f32_supported() -> bool {
@@ -440,7 +523,7 @@ impl Simd for Simd128 {
     }
     #[inline(always)]
     fn mul_add_f64(a: Self::Register, b: Self::Register, c: Self::Register) -> Self::Register {
-        unsafe { f64x2_relaxed_madd(a, b, c) }
+        F::mul_add_f64(a, b, c)
     }
     #[inline(always)]
     fn mul_add_f64_supported() -> bool {
@@ -448,6 +531,6 @@ impl Simd for Simd128 {
     }
 }
 
-impl Simd128 {
+impl Simd128Fallback {
     impl_simd!("simd128");
 }

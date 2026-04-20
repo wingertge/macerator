@@ -26,7 +26,10 @@ fn main() {
         x86: { any(target_arch = "x86", target_arch = "x86_64") },
         fp16: { all(target_arch = "x86_64", feature = "fp16", feature = "nightly") },
         aarch64: { target_arch = "aarch64" },
-        wasm32: { target_arch = "wasm32" },
-        loong64: { all(target_arch = "loongarch64", feature = "nightly") }
+        wasm32: { all(target_arch = "wasm32", target_feature = "simd128") },
+        loong64: { all(target_arch = "loongarch64", feature = "nightly") },
+
+        // Workaround for Safari
+        relaxed_simd: { all(target_arch = "wasm32", target_feature = "simd128", target_feature = "relaxed-simd") },
     }
 }

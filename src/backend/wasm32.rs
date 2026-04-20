@@ -26,7 +26,6 @@ pub struct Simd128<F: Fma> {
 }
 
 pub type Simd128Fallback = Simd128<FallbackFma>;
-pub type Simd128Relaxed = Simd128<RelaxedFma>;
 
 impl<F: Fma> super::seal::Sealed for Simd128<F> {}
 
@@ -152,21 +151,42 @@ pub trait Fma: Sealed + 'static {
     fn mul_add_f64(a: v128, b: v128, c: v128) -> v128;
 }
 
-pub struct RelaxedFma;
-pub struct FallbackFma;
+#[cfg(relaxed_simd)]
+mod relaxed {
+    use super::*;
 
-impl Sealed for RelaxedFma {}
-impl Fma for RelaxedFma {
-    #[inline(always)]
-    fn mul_add_f32(a: v128, b: v128, c: v128) -> v128 {
-        unsafe { f32x4_relaxed_madd(a, b, c) }
+    pub struct RelaxedFma;
+    pub type Simd128Relaxed = Simd128<RelaxedFma>;
+
+    impl Sealed for RelaxedFma {}
+    impl Fma for RelaxedFma {
+        #[inline(always)]
+        fn mul_add_f32(a: v128, b: v128, c: v128) -> v128 {
+            unsafe { f32x4_relaxed_madd(a, b, c) }
+        }
+
+        #[inline(always)]
+        fn mul_add_f64(a: v128, b: v128, c: v128) -> v128 {
+            unsafe { f64x2_relaxed_madd(a, b, c) }
+        }
     }
 
-    #[inline(always)]
-    fn mul_add_f64(a: v128, b: v128, c: v128) -> v128 {
-        unsafe { f64x2_relaxed_madd(a, b, c) }
+    impl Simd128Run for Simd128Relaxed {
+        #[inline(always)]
+        fn run_vectorized<F: NullaryFnOnce>(f: F) -> F::Output {
+            Simd128Relaxed::run_vectorized(f)
+        }
+    }
+
+    impl Simd128Relaxed {
+        impl_simd!("simd128", "relaxed-simd");
     }
 }
+
+#[cfg(relaxed_simd)]
+pub use relaxed::Simd128Relaxed;
+
+pub struct FallbackFma;
 
 impl Sealed for FallbackFma {}
 impl Fma for FallbackFma {
@@ -191,13 +211,6 @@ impl Simd128Run for Simd128Fallback {
     #[inline(always)]
     fn run_vectorized<F: NullaryFnOnce>(f: F) -> F::Output {
         Simd128Fallback::run_vectorized(f)
-    }
-}
-
-impl Simd128Run for Simd128Relaxed {
-    #[inline(always)]
-    fn run_vectorized<F: NullaryFnOnce>(f: F) -> F::Output {
-        Simd128Relaxed::run_vectorized(f)
     }
 }
 
@@ -520,8 +533,4 @@ where
 
 impl Simd128Fallback {
     impl_simd!("simd128");
-}
-
-impl Simd128Relaxed {
-    impl_simd!("simd128", "relaxed-simd");
 }

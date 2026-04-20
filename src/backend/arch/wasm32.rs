@@ -1,8 +1,4 @@
-use crate::{
-    backend::scalar::Fallback,
-    wasm32::{Simd128Fallback, Simd128Relaxed},
-    Simd,
-};
+use crate::{backend::scalar::Fallback, wasm32, Simd};
 
 use super::WithSimd;
 
@@ -11,15 +7,18 @@ use super::WithSimd;
 #[repr(u8)]
 pub enum Arch {
     Scalar,
+    #[cfg(relaxed_simd)]
     Simd128Relaxed,
     Simd128Fallback,
 }
 
 impl Arch {
     pub fn new() -> Self {
-        if Simd128Relaxed::is_available() {
-            Self::Simd128Relaxed
-        } else if Simd128Fallback::is_available() {
+        #[cfg(relaxed_simd)]
+        if wasm32::Simd128Relaxed::is_available() {
+            return Self::Simd128Relaxed;
+        }
+        if wasm32::Simd128Fallback::is_available() {
             Self::Simd128Fallback
         } else {
             Self::Scalar
@@ -29,8 +28,9 @@ impl Arch {
     pub fn dispatch<Op: WithSimd>(self, op: Op) -> Op::Output {
         match self {
             Arch::Scalar => <Fallback as Simd>::vectorize(op),
-            Arch::Simd128Relaxed => <Simd128Relaxed as Simd>::vectorize(op),
-            Arch::Simd128Fallback => <Simd128Fallback as Simd>::vectorize(op),
+            #[cfg(relaxed_simd)]
+            Arch::Simd128Relaxed => <wasm32::Simd128Relaxed as Simd>::vectorize(op),
+            Arch::Simd128Fallback => <wasm32::Simd128Fallback as Simd>::vectorize(op),
         }
     }
 }

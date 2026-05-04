@@ -191,6 +191,14 @@ impl<const LANES: usize> core::ops::BitXor for ScalarMask<LANES> {
 
 impl<const LANES: usize> MaskOps for ScalarMask<LANES> {}
 
+#[inline(always)]
+unsafe fn mask_store_as_bool<const LANES: usize>(out: *mut bool, mask: ScalarMask<LANES>) {
+    for (i, lane) in mask.0.into_iter().enumerate() {
+        // there is no `as bool` in Rust, `!= 0` is the canonical conversion rustc suggests
+        unsafe { write(out.add(i), lane & 1 != 0) };
+    }
+}
+
 impl Simd for Fallback {
     type Register = u64;
     type Mask8 = ScalarMask<8>;
@@ -332,19 +340,19 @@ impl Simd for Fallback {
 
     #[inline(always)]
     unsafe fn mask_store_as_bool_8(out: *mut bool, mask: Self::Mask8) {
-        write(out as _, mask);
+        unsafe { mask_store_as_bool(out, mask) };
     }
     #[inline(always)]
     unsafe fn mask_store_as_bool_16(out: *mut bool, mask: Self::Mask16) {
-        write(out as _, mask);
+        unsafe { mask_store_as_bool(out, mask) };
     }
     #[inline(always)]
     unsafe fn mask_store_as_bool_32(out: *mut bool, mask: Self::Mask32) {
-        write(out as _, mask);
+        unsafe { mask_store_as_bool(out, mask) };
     }
     #[inline(always)]
     unsafe fn mask_store_as_bool_64(out: *mut bool, mask: Self::Mask64) {
-        write(out as _, mask);
+        unsafe { mask_store_as_bool(out, mask) };
     }
     #[inline(always)]
     fn mask_from_bools_8(bools: &[bool]) -> Self::Mask8 {
@@ -394,12 +402,12 @@ impl Simd for Fallback {
     #[inline(always)]
     unsafe fn store_low<T: Scalar>(ptr: *mut T, value: super::Vector<Self, T>) {
         let value: Self::Register = cast!(value);
-        unsafe { write(ptr as *mut u32, (value >> 32) as u32) };
+        unsafe { write_unaligned(ptr as *mut u32, (value >> 32) as u32) };
     }
     #[inline(always)]
     unsafe fn store_high<T: Scalar>(ptr: *mut T, value: super::Vector<Self, T>) {
         let value: Self::Register = cast!(value);
-        unsafe { write(ptr as *mut u32, value as u32) };
+        unsafe { write_unaligned(ptr as *mut u32, value as u32) };
     }
     #[inline(always)]
     fn splat_i8(value: i8) -> Self::Register {
@@ -472,5 +480,55 @@ impl Simd for Fallback {
 
     fn bitnot_supported() -> bool {
         false
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Fallback;
+    use crate::{vstore_high, vstore_low, Mask, Scalar};
+
+    #[test]
+    fn mask_store_as_bool_normalizes_bitwise_mask_bytes() {
+        // `ScalarMask` stores boolean masks as raw `u8` bytes and its safe
+        // `Not` implementation applies bitwise-not to those bytes.
+        // `store_as_bool` must not bulk-copy raw mask bytes into bool storage,
+        // because after `!` true lanes become `0xfe`, which is not a valid
+        // `bool` representation.
+        let mask = !Mask::<Fallback, u8>::from_bools(&[true; 8]);
+        let mut out = [false; 8];
+
+        unsafe { mask.store_as_bool(out.as_mut_ptr()) };
+
+        assert_eq!(out, [false; 8]);
+    }
+
+    #[test]
+    fn vstore_low_accepts_unaligned_pointer() {
+        #[repr(align(4))]
+        struct Aligned([u8; 8]);
+
+        // `vstore_low` documents `write_unaligned`-style requirements, so this
+        // unaligned pointer is valid for the documented unsafe contract. This
+        // regresses the old `ptr::write` through `*mut u32`, which required
+        // 4-byte alignment.
+        let value = 0xabu8.splat::<Fallback>();
+        let mut bytes = Aligned([0; 8]);
+
+        unsafe { vstore_low::<Fallback, u8>(bytes.0.as_mut_ptr().add(1), value) };
+    }
+
+    #[test]
+    fn vstore_high_accepts_unaligned_pointer() {
+        #[repr(align(4))]
+        struct Aligned([u8; 8]);
+
+        // `vstore_high` has the same documented unaligned-pointer contract as
+        // `vstore_low`. This regresses the old aligned `ptr::write` through
+        // `*mut u32`.
+        let value = 0xabu8.splat::<Fallback>();
+        let mut bytes = Aligned([0; 8]);
+
+        unsafe { vstore_high::<Fallback, u8>(bytes.0.as_mut_ptr().add(1), value) };
     }
 }

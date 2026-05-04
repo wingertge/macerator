@@ -1,0 +1,55 @@
+name: Miri
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  miri:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # x86_64
+          - target: x86_64-unknown-linux-gnu
+            rustflags: ""
+            features: nightly
+          # x86_64-v2
+          - target: x86_64-unknown-linux-gnu
+            rustflags: "-C target-feature=+sse,+sse2,+fxsr,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt"
+            features: nightly
+          # x86_64-v3
+          - target: x86_64-unknown-linux-gnu
+            rustflags: "-C target-feature=+sse,+sse2,+fxsr,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+avx,+avx2,+bmi1,+bmi2,+fma,+lzcnt,+f16c"
+            features: miri-x86_v3
+          # x86_64-v4
+          - target: x86_64-unknown-linux-gnu
+            rustflags: "-C target-feature=+sse,+sse2,+fxsr,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+avx,+avx2,+bmi1,+bmi2,+fma,+lzcnt,+f16c,+avx512f,+avx512bw,+avx512cd,+avx512dq,+avx512vl"
+            features: miri-x86_v4
+          # aarch64
+          - target: aarch64-unknown-linux-gnu
+            rustflags: "-C target-feature=+neon"
+            features: nightly
+          # loongarch64, no +lasx because Miri has no support at all
+          - target: loongarch64-unknown-linux-gnu
+            rustflags: "-C target-feature=+lsx"
+            features: nightly
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Miri
+        run: |
+          rustup toolchain install nightly --component miri
+          rustup override set nightly
+          rustup target add ${{ matrix.target }}
+          cargo miri setup
+      - name: Run Miri tests
+        run: cargo miri test --target ${{ matrix.target }} --verbose --features ${{ matrix.features }} --release
+        env:
+          RUSTFLAGS: ${{ matrix.rustflags }}
+          MIRIFLAGS: -Zmiri-strict-provenance

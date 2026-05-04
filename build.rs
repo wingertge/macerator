@@ -31,5 +31,8 @@ fn main() {
 
         // Workaround for Safari
         relaxed_simd: { all(target_arch = "wasm32", target_feature = "simd128", target_feature = "relaxed-simd") },
+
+        x86_v3: { feature = "miri-x86_v3" },
+        x86_v4: { feature = "miri-x86_v4" },
     }
 }

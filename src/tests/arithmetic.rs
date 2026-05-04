@@ -55,6 +55,7 @@ testgen_binop!(
     i8,
     u16,
     i16,
+    #[cfg_attr(all(miri, any(x86_v3, x86_v4)), ignore)]
     f16,
     u32,
     i32,
@@ -71,6 +72,7 @@ testgen_binop!(
     i8,
     u16,
     i16,
+    #[cfg_attr(all(miri, any(x86_v3, x86_v4)), ignore)]
     f16,
     u32,
     i32,
@@ -79,7 +81,14 @@ testgen_binop!(
     i64,
     f64
 );
-testgen_binop!(test_div, |a, b| a / b, f16, f32, f64);
+testgen_binop!(
+    test_div,
+    |a, b| a / b,
+    #[cfg_attr(all(miri, any(x86_v3, x86_v4)), ignore)]
+    f16,
+    f32,
+    f64
+);
 testgen_binop!(
     test_mul,
     |a, b| a * b,
@@ -87,6 +96,7 @@ testgen_binop!(
     i8,
     u16,
     i16,
+    #[cfg_attr(all(miri, any(x86_v3, x86_v4)), ignore)]
     f16,
     u32,
     i32,

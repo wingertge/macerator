@@ -19,6 +19,10 @@ fp16 = ["nightly"]
 nightly = []
 std = []
 
+# Internal testing features to gate tests with MIRI
+miri-x86_v3 = []
+miri-x86_v4 = []
+
 [dependencies]
 bytemuck = { version = "1.23.1", features = [
     "aarch64_simd",

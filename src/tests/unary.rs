@@ -35,5 +35,15 @@ fn assert_approx_eq_recip<T: RelativeEq<Epsilon = T> + Debug + NumCast + Copy>(
     }
 }
 
-testgen_unop!(test_recip, recip, 1, 100, assert_approx_eq_recip, f32, f64);
+testgen_unop!(
+    test_recip,
+    recip,
+    1,
+    100,
+    assert_approx_eq_recip,
+    #[cfg_attr(all(miri, any(aarch64, x86_v4)), ignore)]
+    f32,
+    #[cfg_attr(all(miri, any(aarch64, x86_v4)), ignore)]
+    f64
+);
 testgen_unop!(test_abs, abs, -100, 100, assert_eq, i8, i16, i32, f32, f64);

@@ -237,15 +237,14 @@ impl Simd for Lsx {
         // Hopefully the compiler can optimize this. `asm` doesn't support vreg on
         // loongarch64, so we can't force a reinterpretation.
         let low = unsafe { read_unaligned(ptr as *const f64) };
-        cast!(read_unaligned(&low as *const f64 as *const v16i8))
+        cast!([low, 0.0])
     }
     #[inline(always)]
     unsafe fn load_high<T: Scalar>(ptr: *const T) -> Vector<Self, T> {
         // Hopefully the compiler can optimize this. `asm` doesn't support vreg on
         // loongarch64, so we can't force a reinterpretation.
         let high = unsafe { read_unaligned((ptr as *const f64).add(1)) };
-        let full = read_unaligned(&high as *const f64 as *const v4i32);
-        cast!(lsx_vpermi_w::<0b11110000>(full, cast!(Register::zeroed())))
+        cast!([0.0, high])
     }
     #[inline(always)]
     unsafe fn store<T: Scalar>(ptr: *mut T, value: Vector<Self, T>) {

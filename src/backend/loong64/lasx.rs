@@ -1,6 +1,6 @@
 use bytemuck::{Pod, Zeroable};
+use core::arch::loongarch64::*;
 use core::ops::{Add, Div, Mul, Sub};
-use core::{arch::loongarch64::*, ptr::read_unaligned};
 
 use half::f16;
 use num_traits::Float;
@@ -233,16 +233,15 @@ impl Simd for Lasx {
     unsafe fn load_low<T: Scalar>(ptr: *const T) -> Vector<Self, T> {
         // Hopefully the compiler can optimize this. `asm` doesn't support vreg on
         // loongarch64, so we can't force a reinterpretation.
-        let low = unsafe { lsx_vld::<0>(ptr as _) };
-        cast!(read_unaligned(&low as *const v16i8 as *const v32i8))
+        let low: super::lsx::Register = unsafe { cast!(lsx_vld::<0>(ptr as _)) };
+        cast!([low, Zeroable::zeroed()])
     }
     #[inline(always)]
     unsafe fn load_high<T: Scalar>(ptr: *const T) -> Vector<Self, T> {
         // Hopefully the compiler can optimize this. `asm` doesn't support vreg on
         // loongarch64, so we can't force a reinterpretation.
-        let high = unsafe { lsx_vld::<16>(ptr as _) };
-        let full = read_unaligned(&high as *const v16i8 as *const v32i8);
-        cast!(lasx_xvpermi_q::<0x20>(full, cast!(Register::zeroed())))
+        let high: super::lsx::Register = unsafe { cast!(lsx_vld::<16>(ptr as _)) };
+        cast!([Zeroable::zeroed(), high])
     }
     #[inline(always)]
     unsafe fn store<T: Scalar>(ptr: *mut T, value: Vector<Self, T>) {

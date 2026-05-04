@@ -41,8 +41,9 @@ fn assert_eq<T: PartialEq + Debug>(lhs: &[T], rhs: &[T]) {
 }
 
 macro_rules! testgen_binop {
-    ($test_fn: ident, $reference: expr, $($ty: ty),*) => {
+    ($test_fn: ident, $reference: expr, $($(#[$meta:meta])* $ty: ty),*) => {
         $(::paste::paste! {
+            $(#[$meta])*
             #[::wasm_bindgen_test::wasm_bindgen_test(unsupported = test)]
             fn [<$test_fn _ $ty>]() {
                 use num_traits::NumCast;
@@ -184,8 +185,9 @@ macro_rules! unop {
 pub(crate) use unop;
 
 macro_rules! testgen_unop {
-    ($test_fn: ident, $reference: expr, $lo: expr, $hi: expr, $assert: ident, $($ty: ty),*) => {
+    ($test_fn: ident, $reference: expr, $lo: expr, $hi: expr, $assert: ident, $($(#[$meta:meta])* $ty: ty),*) => {
         $(::paste::paste! {
+            $(#[$meta])*
             #[::wasm_bindgen_test::wasm_bindgen_test(unsupported = test)]
             fn [<$test_fn _ $ty>]() {
                 use num_traits::NumCast;

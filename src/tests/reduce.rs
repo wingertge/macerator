@@ -89,8 +89,9 @@ fn test_reduce_op<S: Simd, T: Scalar + Debug, Op: ReduceOp<T>>(a: &[T], default:
 }
 
 macro_rules! testgen_reduce {
-    ($test_fn: ident, $reference: expr, $default: expr, $lo: expr, $hi: expr, $size: expr, $assert: ident, $($ty: ty),*) => {
+    ($test_fn: ident, $reference: expr, $default: expr, $lo: expr, $hi: expr, $size: expr, $assert: ident, $($(#[$meta:meta])* $ty: ty),*) => {
         $(::paste::paste! {
+            $(#[$meta])*
             #[::wasm_bindgen_test::wasm_bindgen_test(unsupported = test)]
             fn [<$test_fn _ $ty>]() {
                 use num_traits::NumCast;
@@ -168,7 +169,9 @@ testgen_reduce!(
     100,
     128,
     assert_approx_eq_sum,
+    #[cfg_attr(all(miri, aarch64), ignore)]
     f32,
+    #[cfg_attr(all(miri, aarch64), ignore)]
     f64
 );
 
@@ -236,7 +239,9 @@ testgen_reduce!(
     50,
     128,
     assert_eq,
+    #[cfg_attr(all(miri, aarch64), ignore)]
     f32,
+    #[cfg_attr(all(miri, aarch64), ignore)]
     f64
 );
 
@@ -276,7 +281,9 @@ testgen_reduce!(
     50,
     128,
     assert_eq,
+    #[cfg_attr(all(miri, aarch64), ignore)]
     f32,
+    #[cfg_attr(all(miri, aarch64), ignore)]
     f64
 );
 

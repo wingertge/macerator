@@ -40,8 +40,9 @@ macro_rules! cmp_op {
 }
 
 macro_rules! testgen_cmp {
-    ($test_fn: ident, $reference: expr, $($ty: ty),*) => {
+    ($test_fn: ident, $reference: expr, $($(#[$meta:meta])* $ty: ty),*) => {
         $(::paste::paste! {
+            $(#[$meta])*
             #[::wasm_bindgen_test::wasm_bindgen_test(unsupported = test)]
             fn [<$test_fn _ $ty>]() {
                 use num_traits::NumCast;
@@ -116,8 +117,9 @@ macro_rules! testgen_cmp {
 }
 
 macro_rules! testgen_min_max {
-    ($test_fn: ident, $reference: expr, $($ty: ty),*) => {
+    ($test_fn: ident, $reference: expr, $($(#[$meta:meta])* $ty: ty),*) => {
         $(::paste::paste! {
+            $(#[$meta])*
             #[::wasm_bindgen_test::wasm_bindgen_test(unsupported = test)]
             fn [<$test_fn _ $ty>]() {
                 use num_traits::NumCast;
@@ -233,10 +235,115 @@ fn test_max_impl<S: Simd, T: VOrd>(lhs: &[T], rhs: &[T]) -> Vec<T> {
     test_binop::<S, T, VOrdOp<T>>(lhs, rhs)
 }
 
-testgen_cmp!(test_eq, eq, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64);
-testgen_cmp!(test_lt, lt, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64);
-testgen_cmp!(test_gt, gt, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64);
-testgen_cmp!(test_le, le, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64);
-testgen_cmp!(test_ge, ge, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64);
-testgen_min_max!(test_min, min, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64);
-testgen_min_max!(test_max, max, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64);
+testgen_cmp!(
+    test_eq,
+    eq,
+    u8,
+    i8,
+    u16,
+    i16,
+    u32,
+    i32,
+    #[cfg_attr(all(miri, x86_v4), ignore)]
+    f32,
+    u64,
+    i64,
+    #[cfg_attr(all(miri, x86_v4), ignore)]
+    f64
+);
+testgen_cmp!(
+    test_lt,
+    lt,
+    u8,
+    i8,
+    u16,
+    i16,
+    u32,
+    i32,
+    #[cfg_attr(all(miri, x86_v4), ignore)]
+    f32,
+    u64,
+    i64,
+    #[cfg_attr(all(miri, x86_v4), ignore)]
+    f64
+);
+testgen_cmp!(
+    test_gt,
+    gt,
+    u8,
+    i8,
+    u16,
+    i16,
+    u32,
+    i32,
+    #[cfg_attr(all(miri, x86_v4), ignore)]
+    f32,
+    u64,
+    i64,
+    #[cfg_attr(all(miri, x86_v4), ignore)]
+    f64
+);
+testgen_cmp!(
+    test_le,
+    le,
+    u8,
+    i8,
+    u16,
+    i16,
+    u32,
+    i32,
+    #[cfg_attr(all(miri, x86_v4), ignore)]
+    f32,
+    u64,
+    i64,
+    #[cfg_attr(all(miri, x86_v4), ignore)]
+    f64
+);
+testgen_cmp!(
+    test_ge,
+    ge,
+    u8,
+    i8,
+    u16,
+    i16,
+    u32,
+    i32,
+    #[cfg_attr(all(miri, x86_v4), ignore)]
+    f32,
+    u64,
+    i64,
+    #[cfg_attr(all(miri, x86_v4), ignore)]
+    f64
+);
+testgen_min_max!(
+    test_min,
+    min,
+    u8,
+    i8,
+    u16,
+    i16,
+    u32,
+    i32,
+    #[cfg_attr(all(miri, any(aarch64, x86_v4)), ignore)]
+    f32,
+    u64,
+    i64,
+    #[cfg_attr(all(miri, any(aarch64, x86_v4)), ignore)]
+    f64
+);
+testgen_min_max!(
+    test_max,
+    max,
+    u8,
+    i8,
+    u16,
+    i16,
+    u32,
+    i32,
+    #[cfg_attr(all(miri, any(aarch64, x86_v4)), ignore)]
+    f32,
+    u64,
+    i64,
+    #[cfg_attr(all(miri, any(aarch64, x86_v4)), ignore)]
+    f64
+);

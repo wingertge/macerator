@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.3](https://github.com/wingertge/macerator/compare/macerator-v0.3.2...macerator-v0.3.3) - 2026-05-04
+
+### Fixed
+
+- Avoid stack clobbering in load_low/load_high on loong64 ([#36](https://github.com/wingertge/macerator/pull/36))
+
+### Other
+
+- Add Miri CI workflow ([#35](https://github.com/wingertge/macerator/pull/35))
+- Fix miri UB in scalar backend ([#33](https://github.com/wingertge/macerator/pull/33))
+
 ## [0.3.2](https://github.com/wingertge/macerator/compare/macerator-v0.3.1...macerator-v0.3.2) - 2026-04-20
 
 ### Fixed

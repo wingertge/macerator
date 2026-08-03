@@ -152,6 +152,7 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
         }
 
         #(#attrs)*
+        #[inline(always)]
         #inner_fn_sig #block
     })
 }

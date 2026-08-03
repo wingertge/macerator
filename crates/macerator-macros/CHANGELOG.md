@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0](https://github.com/wingertge/macerator/compare/macerator-macros-v0.1.5...macerator-macros-v0.2.0) - 2026-08-03
+
+### Fixed
+
+- [**breaking**] Add `#[inline(always)]` by default when usingthe macro ([#37](https://github.com/wingertge/macerator/pull/37))
+
 ## [0.1.5](https://github.com/wingertge/macerator/compare/macerator-macros-v0.1.4...macerator-macros-v0.1.5) - 2026-04-20
 
 ### Fixed

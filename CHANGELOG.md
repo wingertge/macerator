@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0](https://github.com/wingertge/macerator/compare/macerator-v0.3.4...macerator-v0.4.0) - 2026-09-02
+
+### Added
+
+- Add FP16 variant for `aarch64` ([#40](https://github.com/wingertge/macerator/pull/40))
+
+### Fixed
+
+- [**breaking**] Make `run_vectorized` and `dispatch` unsafe to avoid unsoundness ([#41](https://github.com/wingertge/macerator/pull/41))
+
+### Other
+
+- Update dependencies of `macerator-macros` ([#43](https://github.com/wingertge/macerator/pull/43))
+
 ## [0.3.4](https://github.com/wingertge/macerator/compare/macerator-v0.3.3...macerator-v0.3.4) - 2026-08-03
 
 ### Other

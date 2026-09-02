@@ -119,7 +119,7 @@ macro_rules! testgen_fma {
                     .map(|((a, b), c)| a * b + c)
                     .collect::<Vec<_>>();
                 #[cfg(x86)]
-                {
+                unsafe {
                     use crate::backend::x86::*;
                     #[cfg(avx512_fp16)]
                     if V4FP16::is_available() {
@@ -141,7 +141,7 @@ macro_rules! testgen_fma {
                     }
                 }
                 #[cfg(aarch64)]
-                {
+                unsafe {
                     use crate::backend::aarch64::*;
                     #[cfg(feature = "fp16")]
                     if NeonFP16::is_available() {
@@ -154,7 +154,7 @@ macro_rules! testgen_fma {
                     }
                 }
                 #[cfg(loong64)]
-                {
+                unsafe {
                     use crate::backend::loong64::*;
                     if Lasx::is_available() {
                         let out = Lasx::run_vectorized(|| [<$test_fn _impl>]::<Lasx, $ty>(&a, &b, &c));
@@ -166,7 +166,7 @@ macro_rules! testgen_fma {
                     }
                 }
                 #[cfg(wasm32)]
-                {
+                unsafe {
                     use crate::backend::wasm32;
                     #[cfg(relaxed_simd)]
                     if wasm32::Simd128Relaxed::is_available() {

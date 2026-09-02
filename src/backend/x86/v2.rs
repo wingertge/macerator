@@ -118,7 +118,7 @@ impl Simd for V2 {
     impl_reduce_scalar!(reduce_min, min, u8, i8, u16, i16, u32, i32, u64, i64, f16, f32, f64);
     impl_reduce_scalar!(reduce_max, max, u8, i8, u16, i16, u32, i32, u64, i64, f16, f32, f64);
 
-    fn vectorize<Op: WithSimd>(op: Op) -> Op::Output {
+    unsafe fn vectorize<Op: WithSimd>(op: Op) -> Op::Output {
         struct Impl<Op> {
             op: Op,
         }

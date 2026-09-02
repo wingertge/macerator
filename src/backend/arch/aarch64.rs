@@ -16,7 +16,7 @@ pub enum Arch {
 }
 
 impl Arch {
-    pub fn new() -> Self {
+    pub fn detect() -> Self {
         #[cfg(feature = "fp16")]
         if NeonFP16::is_available() {
             return Self::NeonF16;
@@ -28,7 +28,11 @@ impl Arch {
         }
     }
 
-    pub fn dispatch<Op: WithSimd>(self, op: Op) -> Op::Output {
+    /// Dispatch a function on this [`Arch`]
+    ///
+    /// # Safety
+    /// Required features for the [`Arch`] must be available.
+    pub unsafe fn dispatch<Op: WithSimd>(self, op: Op) -> Op::Output {
         match self {
             Arch::Scalar => <Fallback as Simd>::vectorize(op),
             Arch::NeonFma => <NeonFma as Simd>::vectorize(op),
@@ -40,6 +44,6 @@ impl Arch {
 
 impl Default for Arch {
     fn default() -> Self {
-        Self::new()
+        Self::detect()
     }
 }

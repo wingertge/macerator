@@ -16,7 +16,7 @@ pub enum Arch {
 }
 
 impl Arch {
-    pub fn new() -> Self {
+    pub fn detect() -> Self {
         #[cfg(avx512_fp16)]
         if x86::V4FP16::is_available() {
             return Self::V4FP16;
@@ -35,7 +35,11 @@ impl Arch {
         }
     }
 
-    pub fn dispatch<Op: WithSimd>(self, op: Op) -> Op::Output {
+    /// Dispatch a function on this [`Arch`]
+    ///
+    /// # Safety
+    /// Required features for the [`Arch`] must be available.
+    pub unsafe fn dispatch<Op: WithSimd>(self, op: Op) -> Op::Output {
         match self {
             Arch::Scalar => <Fallback as Simd>::vectorize(op),
             Arch::V2 => <x86::V2 as Simd>::vectorize(op),
@@ -50,6 +54,6 @@ impl Arch {
 
 impl Default for Arch {
     fn default() -> Self {
-        Self::new()
+        Self::detect()
     }
 }

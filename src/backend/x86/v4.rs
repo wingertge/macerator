@@ -378,7 +378,7 @@ where
     delegate_fp16!(reduce reduce_add, reduce_min, reduce_max);
     delegate_fp16!(cmp equals, less_than, less_than_or_equal, greater_than_or_equal, greater_than);
 
-    fn vectorize<Op: WithSimd>(op: Op) -> Op::Output {
+    unsafe fn vectorize<Op: WithSimd>(op: Op) -> Op::Output {
         struct Impl<Op, FP16: FP16Ext> {
             op: Op,
             _fp16: PhantomData<FP16>,
@@ -570,12 +570,12 @@ where
 }
 
 trait V4Run {
-    fn run_vectorized<F: NullaryFnOnce>(f: F) -> F::Output;
+    unsafe fn run_vectorized<F: NullaryFnOnce>(f: F) -> F::Output;
 }
 
 impl V4Run for V4 {
     #[inline(always)]
-    fn run_vectorized<F: NullaryFnOnce>(f: F) -> F::Output {
+    unsafe fn run_vectorized<F: NullaryFnOnce>(f: F) -> F::Output {
         V4::run_vectorized(f)
     }
 }
@@ -583,7 +583,7 @@ impl V4Run for V4 {
 #[cfg(avx512_fp16)]
 impl V4Run for V4FP16 {
     #[inline(always)]
-    fn run_vectorized<F: NullaryFnOnce>(f: F) -> F::Output {
+    unsafe fn run_vectorized<F: NullaryFnOnce>(f: F) -> F::Output {
         V4FP16::run_vectorized(f)
     }
 }

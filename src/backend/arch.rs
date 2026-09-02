@@ -8,6 +8,30 @@ moddef::moddef!(
     }
 );
 
+/// Auto-selected [`Arch`], implements a safe version of [`Arch::dispatch`] by
+/// ensuring it can only be initialized with the correct feature checks.
+pub struct AutoArch(Arch);
+
+impl AutoArch {
+    /// Construct a new [`AutoArch`] by automatically detecting the newest
+    /// supported [`Arch`]
+    pub fn new() -> Self {
+        Self(Arch::detect())
+    }
+
+    /// Dispatch a function on the inner [`Arch`]
+    pub fn dispatch<Op: WithSimd>(self, op: Op) -> Op::Output {
+        // Safety: auto-detection enforces feature support
+        unsafe { self.0.dispatch(op) }
+    }
+}
+
+impl Default for AutoArch {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(all(feature = "std", x86))]
 #[macro_export]
 macro_rules! feature_detected {
@@ -73,61 +97,64 @@ macro_rules! impl_simd {
         }
 
         /// Vectorizes the given function as if the CPU features for this type were
-    /// applied to it.
-    ///
-    /// # Note
-    /// For the vectorization to work properly, the given function must be
-    /// inlined. Consider marking it as `#[inline(always)]`
-    #[inline(always)]
-    pub fn run_vectorized<F: NullaryFnOnce>(f: F) -> F::Output {
-        $(#[target_feature(enable = $feature)])*
-        #[inline]
-        #[allow(clippy::too_many_arguments)]
-        unsafe fn imp_fastcall<F: NullaryFnOnce>(
-            f0: ::core::mem::MaybeUninit<::core::primitive::usize>,
-            f1: ::core::mem::MaybeUninit<::core::primitive::usize>,
-            f2: ::core::mem::MaybeUninit<::core::primitive::usize>,
-            f3: ::core::mem::MaybeUninit<::core::primitive::usize>,
-            f4: ::core::mem::MaybeUninit<::core::primitive::usize>,
-            f5: ::core::mem::MaybeUninit<::core::primitive::usize>,
-            f6: ::core::mem::MaybeUninit<::core::primitive::usize>,
-            f7: ::core::mem::MaybeUninit<::core::primitive::usize>,
-        ) -> F::Output {
-            let f: F = unsafe { core::mem::transmute_copy(&[f0, f1, f2, f3, f4, f5, f6, f7]) };
-            f.call()
-        }
-        $(#[target_feature(enable = $feature)])*
-        #[inline]
-        unsafe fn imp<F: NullaryFnOnce>(f: F) -> F::Output {
-            f.call()
-        }
-        if const {
-            (::core::mem::size_of::<F>() <= 8 * ::core::mem::size_of::<::core::primitive::usize>())
-        } {
-            union Pad<T> {
-                t: ::core::mem::ManuallyDrop<T>,
-                __u: ::core::mem::MaybeUninit<[usize; 8]>,
+        /// applied to it.
+        ///
+        /// # Note
+        /// For the vectorization to work properly, the given function must be
+        /// inlined. Consider marking it as `#[inline(always)]`
+        ///
+        /// # Safety
+        /// Required features for this arch must be available.
+        #[inline(always)]
+        pub unsafe fn run_vectorized<F: NullaryFnOnce>(f: F) -> F::Output {
+            $(#[target_feature(enable = $feature)])*
+            #[inline]
+            #[allow(clippy::too_many_arguments)]
+            unsafe fn imp_fastcall<F: NullaryFnOnce>(
+                f0: ::core::mem::MaybeUninit<::core::primitive::usize>,
+                f1: ::core::mem::MaybeUninit<::core::primitive::usize>,
+                f2: ::core::mem::MaybeUninit<::core::primitive::usize>,
+                f3: ::core::mem::MaybeUninit<::core::primitive::usize>,
+                f4: ::core::mem::MaybeUninit<::core::primitive::usize>,
+                f5: ::core::mem::MaybeUninit<::core::primitive::usize>,
+                f6: ::core::mem::MaybeUninit<::core::primitive::usize>,
+                f7: ::core::mem::MaybeUninit<::core::primitive::usize>,
+            ) -> F::Output {
+                let f: F = unsafe { core::mem::transmute_copy(&[f0, f1, f2, f3, f4, f5, f6, f7]) };
+                f.call()
             }
-            let f = Pad {
-                t: ::core::mem::ManuallyDrop::new(f),
-            };
-            let p = (&f) as *const _ as *const ::core::mem::MaybeUninit<usize>;
-            unsafe {
-                imp_fastcall::<F>(
-                    *p.add(0),
-                    *p.add(1),
-                    *p.add(2),
-                    *p.add(3),
-                    *p.add(4),
-                    *p.add(5),
-                    *p.add(6),
-                    *p.add(7),
-                )
+            $(#[target_feature(enable = $feature)])*
+            #[inline]
+            unsafe fn imp<F: NullaryFnOnce>(f: F) -> F::Output {
+                f.call()
             }
-        } else {
-            unsafe { imp(f) }
+            if const {
+                (::core::mem::size_of::<F>() <= 8 * ::core::mem::size_of::<::core::primitive::usize>())
+            } {
+                union Pad<T> {
+                    t: ::core::mem::ManuallyDrop<T>,
+                    __u: ::core::mem::MaybeUninit<[usize; 8]>,
+                }
+                let f = Pad {
+                    t: ::core::mem::ManuallyDrop::new(f),
+                };
+                let p = (&f) as *const _ as *const ::core::mem::MaybeUninit<usize>;
+                unsafe {
+                    imp_fastcall::<F>(
+                        *p.add(0),
+                        *p.add(1),
+                        *p.add(2),
+                        *p.add(3),
+                        *p.add(4),
+                        *p.add(5),
+                        *p.add(6),
+                        *p.add(7),
+                    )
+                }
+            } else {
+                unsafe { imp(f) }
+            }
         }
-    }
     };
 }
 

@@ -194,7 +194,8 @@ impl<const LANES: usize> MaskOps for ScalarMask<LANES> {}
 #[inline(always)]
 unsafe fn mask_store_as_bool<const LANES: usize>(out: *mut bool, mask: ScalarMask<LANES>) {
     for (i, lane) in mask.0.into_iter().enumerate() {
-        // there is no `as bool` in Rust, `!= 0` is the canonical conversion rustc suggests
+        // there is no `as bool` in Rust, `!= 0` is the canonical conversion rustc
+        // suggests
         unsafe { write(out.add(i), lane & 1 != 0) };
     }
 }
@@ -334,7 +335,7 @@ impl Simd for Fallback {
     impl_reduce_scalar!(reduce_min, min, u8, i8, u16, i16, u32, i32, u64, i64, f16, f32, f64);
     impl_reduce_scalar!(reduce_max, max, u8, i8, u16, i16, u32, i32, u64, i64, f16, f32, f64);
 
-    fn vectorize<Op: WithSimd>(op: Op) -> Op::Output {
+    unsafe fn vectorize<Op: WithSimd>(op: Op) -> Op::Output {
         op.with_simd::<Self>()
     }
 

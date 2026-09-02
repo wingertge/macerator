@@ -215,7 +215,7 @@ checksum = "b6d2cec3eae94f9f509c767b45932f1ada8350c4bdb85af2fcab4a3c14807981"
 
 [[package]]
 name = "macerator"
-version = "0.3.4"
+version = "0.4.0"
 dependencies = [
  "bytemuck",
  "cfg_aliases",
@@ -232,7 +232,7 @@ dependencies = [
 
 [[package]]
 name = "macerator-macros"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "darling",
  "proc-macro2",

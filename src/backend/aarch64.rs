@@ -388,18 +388,22 @@ impl FP16Ext for FP16Intrinsic {
     }
     #[inline(always)]
     fn reduce_add_f16(a: int8x16_t) -> f16 {
-        use core::arch::asm;
-        let r: u16;
-        unsafe {
-            asm!(
-                "faddp {a:q}.8h, {a:q}.8h, {a:q}.8h",
-                "faddp {a:d}.4h, {a:d}.4h, {a:d}.4h",
-                "faddp {out:h}, {a:s}.2h",
-                a = in(vreg) a, out = out(vreg) r,
-                options(pure, nomem, nostack)
-            );
+        #[target_feature(enable = "neon,fp16")]
+        fn target_impl(a: int8x16_t) -> f16 {
+            use core::arch::asm;
+            let r: u16;
+            unsafe {
+                asm!(
+                    "faddp {a:v}.8h, {a:v}.8h, {a:v}.8h",
+                    "faddp {a:v}.4h, {a:v}.4h, {a:v}.4h",
+                    "faddp {out:h}, {a:v}.2h",
+                    a = in(vreg) a, out = out(vreg) r,
+                    options(pure, nomem, nostack)
+                );
+            }
+            f16::from_bits(r)
         }
-        f16::from_bits(r)
+        unsafe { target_impl(a) }
     }
     #[inline(always)]
     fn reduce_add_f16_supported() -> bool {
@@ -407,16 +411,20 @@ impl FP16Ext for FP16Intrinsic {
     }
     #[inline(always)]
     fn reduce_min_f16(a: int8x16_t) -> f16 {
-        use core::arch::asm;
-        let r: u16;
-        unsafe {
-            asm!(
-                "fminv {out:h}, {a:q}.8h",
-                a = in(vreg) a, out = out(vreg) r,
-                options(pure, nomem, nostack)
-            );
+        #[target_feature(enable = "neon,fp16")]
+        fn target_impl(a: int8x16_t) -> f16 {
+            use core::arch::asm;
+            let r: u16;
+            unsafe {
+                asm!(
+                    "fminv {out:h}, {a:v}.8h",
+                    a = in(vreg) a, out = out(vreg) r,
+                    options(pure, nomem, nostack)
+                );
+            }
+            f16::from_bits(r)
         }
-        f16::from_bits(r)
+        unsafe { target_impl(a) }
     }
     #[inline(always)]
     fn reduce_min_f16_supported() -> bool {
@@ -424,16 +432,20 @@ impl FP16Ext for FP16Intrinsic {
     }
     #[inline(always)]
     fn reduce_max_f16(a: int8x16_t) -> f16 {
-        use core::arch::asm;
-        let r: u16;
-        unsafe {
-            asm!(
-                "fmaxv {out:h}, {a:q}.8h",
-                a = in(vreg) a, out = out(vreg) r,
-                options(pure, nomem, nostack)
-            );
+        #[target_feature(enable = "neon,fp16")]
+        fn target_impl(a: int8x16_t) -> f16 {
+            use core::arch::asm;
+            let r: u16;
+            unsafe {
+                asm!(
+                    "fmaxv {out:h}, {a:v}.8h",
+                    a = in(vreg) a, out = out(vreg) r,
+                    options(pure, nomem, nostack)
+                );
+            }
+            f16::from_bits(r)
         }
-        f16::from_bits(r)
+        unsafe { target_impl(a) }
     }
     #[inline(always)]
     fn reduce_max_f16_supported() -> bool {

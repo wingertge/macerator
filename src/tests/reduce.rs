@@ -1,9 +1,10 @@
-use approx::{assert_relative_eq, RelativeEq};
 use half::f16;
 use num_traits::{Bounded, Float, NumCast, Zero};
 
 use crate::{
-    tests::assert_eq, vload_unaligned, ReduceAdd, ReduceMax, ReduceMin, Scalar, Simd, Vector,
+    assert_relative_eq,
+    tests::{approx::RelativeEq, assert_eq},
+    vload_unaligned, ReduceAdd, ReduceMax, ReduceMin, Scalar, Simd, Vector,
 };
 use core::fmt::Debug;
 use core::ops::Add;
@@ -175,6 +176,8 @@ testgen_reduce!(
     100,
     128,
     assert_approx_eq_sum,
+    #[cfg_attr(all(miri, any(x86_v3, x86_v4, aarch64)), ignore)]
+    f16,
     #[cfg_attr(all(miri, aarch64), ignore)]
     f32,
     #[cfg_attr(all(miri, aarch64), ignore)]
@@ -245,6 +248,7 @@ testgen_reduce!(
     50,
     128,
     assert_eq,
+    #[cfg_attr(all(miri, any(x86_v3, x86_v4, aarch64)), ignore)]
     f16,
     #[cfg_attr(all(miri, aarch64), ignore)]
     f32,
@@ -288,6 +292,7 @@ testgen_reduce!(
     50,
     128,
     assert_eq,
+    #[cfg_attr(all(miri, any(x86_v3, x86_v4, aarch64)), ignore)]
     f16,
     #[cfg_attr(all(miri, aarch64), ignore)]
     f32,
@@ -299,7 +304,11 @@ fn assert_approx_eq_sum<T: RelativeEq<Epsilon = T> + Debug + NumCast + Copy>(lhs
     // No idea what the actual deviation is, f64 failed with an absolute difference
     // of 1e-10
     let epsilon = T::from(2.0.powf(-8.0)).unwrap();
+    // Higher max relative because instructions may use butterfly reduction, which
+    // can accumulate error to log2(lanes) times the normal error. 4x seems to work
+    // for the largest lane count.
+    let max_relative = T::from(T::default_max_relative().to_f64().unwrap() * 4.0).unwrap();
     for (a, b) in lhs.iter().zip(rhs) {
-        assert_relative_eq!(*a, *b, epsilon = epsilon);
+        assert_relative_eq!(*a, *b, epsilon = epsilon, max_relative = max_relative);
     }
 }

@@ -55,7 +55,7 @@ testgen_binop!(
     i8,
     u16,
     i16,
-    #[cfg_attr(all(miri, any(x86_v3, x86_v4)), ignore)]
+    #[cfg_attr(all(miri, any(x86_v3, x86_v4, aarch64)), ignore)]
     f16,
     u32,
     i32,
@@ -72,7 +72,7 @@ testgen_binop!(
     i8,
     u16,
     i16,
-    #[cfg_attr(all(miri, any(x86_v3, x86_v4)), ignore)]
+    #[cfg_attr(all(miri, any(x86_v3, x86_v4, aarch64)), ignore)]
     f16,
     u32,
     i32,
@@ -84,7 +84,7 @@ testgen_binop!(
 testgen_binop!(
     test_div,
     |a, b| a / b,
-    #[cfg_attr(all(miri, any(x86_v3, x86_v4)), ignore)]
+    #[cfg_attr(all(miri, any(x86_v3, x86_v4, aarch64)), ignore)]
     f16,
     f32,
     f64
@@ -96,7 +96,7 @@ testgen_binop!(
     i8,
     u16,
     i16,
-    #[cfg_attr(all(miri, any(x86_v3, x86_v4)), ignore)]
+    #[cfg_attr(all(miri, any(x86_v3, x86_v4, aarch64)), ignore)]
     f16,
     u32,
     i32,
@@ -105,8 +105,9 @@ testgen_binop!(
 );
 
 macro_rules! testgen_fma {
-    ($test_fn: ident, $($ty: ty),*) => {
+    ($test_fn: ident, $($(#[$meta:meta])* $ty: ty),*) => {
         $(paste! {
+            $(#[$meta])*
             #[::wasm_bindgen_test::wasm_bindgen_test(unsupported = test)]
             fn [<$test_fn _ $ty>]() {
                 let a = super::random(NumCast::from(0).unwrap(), NumCast::from(8).unwrap());
@@ -184,4 +185,10 @@ macro_rules! testgen_fma {
     };
 }
 
-testgen_fma!(test_fma, f32, f64);
+testgen_fma!(
+    test_fma,
+    #[cfg_attr(all(miri, any(x86_v3, x86_v4, aarch64)), ignore)]
+    f16,
+    f32,
+    f64
+);

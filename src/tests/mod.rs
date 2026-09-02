@@ -1,15 +1,19 @@
 use core::fmt::Debug;
 use std::{vec, vec::Vec};
 
-use approx::{assert_relative_eq, RelativeEq};
 use bytemuck::Zeroable;
 use rand::{
     distr::{uniform::SampleUniform, Uniform},
     Rng,
 };
 
-use crate::{vload_unaligned, vstore_unaligned, Scalar, Simd, Vector};
+use crate::{
+    assert_relative_eq, tests::approx::RelativeEq, vload_unaligned, vstore_unaligned, Scalar, Simd,
+    Vector,
+};
 
+/// Mirror of the needed parts from `approx`, since it doesn't support `f16`
+mod approx;
 mod arithmetic;
 mod bitwise;
 mod macro_tests;

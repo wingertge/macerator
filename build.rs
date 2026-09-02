@@ -6,7 +6,7 @@ fn main() {
         aarch64: { target_arch = "aarch64" },
         wasm32: { all(target_arch = "wasm32", target_feature = "simd128") },
         loong64: { all(target_arch = "loongarch64", feature = "nightly") },
-        avx512: { all(x86, feature = "avx512") },
+        avx512: { all(target_arch = "x86_64", feature = "avx512") },
         avx512_fp16: { all(avx512, feature = "fp16", feature = "nightly") },
 
         // Workaround for Safari

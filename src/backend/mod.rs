@@ -16,7 +16,7 @@ use half::{bf16, f16};
 use paste::paste;
 
 mod arch;
-pub use arch::{Arch, WithSimd};
+pub use arch::{Arch, AutoArch, WithSimd};
 
 moddef::moddef!(
     pub(crate) mod {
@@ -231,7 +231,12 @@ pub trait Simd: Sized + seal::Sealed + 'static {
             _ty: PhantomData,
         }
     }
-    fn vectorize<Op: WithSimd>(op: Op) -> Op::Output;
+
+    /// Run a function on on this [`Simd`] arch.
+    ///
+    /// # Safety
+    /// Required features must be available.
+    unsafe fn vectorize<Op: WithSimd>(op: Op) -> Op::Output;
 
     /// Store a `Mask8` as a set of booleans of `lanes8` width, converting as
     /// necessary.

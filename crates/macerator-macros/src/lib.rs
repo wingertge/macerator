@@ -34,7 +34,9 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
         }
     };
 
-    let arch = opts.arch.unwrap_or(parse_quote!(macerator::Arch::new()));
+    let arch = opts
+        .arch
+        .unwrap_or(parse_quote!(macerator::AutoArch::new()));
     let func = syn::parse2::<syn::ItemFn>(item)?;
 
     let ItemFn {

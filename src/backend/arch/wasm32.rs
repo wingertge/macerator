@@ -13,7 +13,7 @@ pub enum Arch {
 }
 
 impl Arch {
-    pub fn new() -> Self {
+    pub fn detect() -> Self {
         #[cfg(relaxed_simd)]
         if wasm32::Simd128Relaxed::is_available() {
             return Self::Simd128Relaxed;
@@ -25,7 +25,11 @@ impl Arch {
         }
     }
 
-    pub fn dispatch<Op: WithSimd>(self, op: Op) -> Op::Output {
+    /// Dispatch a function on this [`Arch`]
+    ///
+    /// # Safety
+    /// Required features for the [`Arch`] must be available.
+    pub unsafe fn dispatch<Op: WithSimd>(self, op: Op) -> Op::Output {
         match self {
             Arch::Scalar => <Fallback as Simd>::vectorize(op),
             #[cfg(relaxed_simd)]
@@ -37,6 +41,6 @@ impl Arch {
 
 impl Default for Arch {
     fn default() -> Self {
-        Self::new()
+        Self::detect()
     }
 }

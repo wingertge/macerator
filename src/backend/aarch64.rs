@@ -535,7 +535,7 @@ where
     impl_reduce_scalar!(reduce_min, min, u64, i64);
     impl_reduce_scalar!(reduce_max, max, u64, i64);
 
-    fn vectorize<Op: WithSimd>(op: Op) -> Op::Output {
+    unsafe fn vectorize<Op: WithSimd>(op: Op) -> Op::Output {
         struct Impl<Op, FP16> {
             op: Op,
             _fp16: PhantomData<FP16>,
@@ -758,12 +758,12 @@ where
 }
 
 trait NeonRun {
-    fn run_vectorized<F: NullaryFnOnce>(f: F) -> F::Output;
+    unsafe fn run_vectorized<F: NullaryFnOnce>(f: F) -> F::Output;
 }
 
 impl NeonRun for NeonFma {
     #[inline(always)]
-    fn run_vectorized<F: NullaryFnOnce>(f: F) -> F::Output {
+    unsafe fn run_vectorized<F: NullaryFnOnce>(f: F) -> F::Output {
         NeonFma::run_vectorized(f)
     }
 }
@@ -771,7 +771,7 @@ impl NeonRun for NeonFma {
 #[cfg(feature = "fp16")]
 impl NeonRun for NeonFP16 {
     #[inline(always)]
-    fn run_vectorized<F: NullaryFnOnce>(f: F) -> F::Output {
+    unsafe fn run_vectorized<F: NullaryFnOnce>(f: F) -> F::Output {
         NeonFP16::run_vectorized(f)
     }
 }

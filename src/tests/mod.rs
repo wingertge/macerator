@@ -60,7 +60,7 @@ macro_rules! testgen_binop {
                     .map(|(a, b)| $reference(a, b))
                     .collect::<Vec<_>>();
                 #[cfg(x86)]
-                {
+                unsafe {
                     use $crate::backend::x86::*;
                     #[cfg(avx512_fp16)]
                     if V4FP16::is_available() {
@@ -82,7 +82,7 @@ macro_rules! testgen_binop {
                     }
                 }
                 #[cfg(aarch64)]
-                {
+                unsafe {
                     use $crate::backend::aarch64::*;
                     #[cfg(feature = "fp16")]
                     if NeonFP16::is_available() {
@@ -95,7 +95,7 @@ macro_rules! testgen_binop {
                     }
                 }
                 #[cfg(loong64)]
-                {
+                unsafe {
                     use $crate::backend::loong64::*;
                     if Lasx::is_available() {
                         let out = Lasx::run_vectorized(|| [<$test_fn _impl>]::<Lasx, $ty>(&lhs, &rhs));
@@ -107,7 +107,7 @@ macro_rules! testgen_binop {
                     }
                 }
                 #[cfg(wasm32)]
-                {
+                unsafe {
                     use crate::backend::wasm32;
                     #[cfg(relaxed_simd)]
                     if wasm32::Simd128Relaxed::is_available() {
@@ -204,7 +204,7 @@ macro_rules! testgen_unop {
                 let a = $crate::tests::random::<$ty>(NumCast::from($lo).unwrap(), NumCast::from($hi).unwrap());
                 let out_ref = a.iter().map(|a| $ty::$reference(*a)).collect::<Vec<_>>();
                 #[cfg(x86)]
-                {
+                unsafe {
                     use $crate::backend::x86::*;
                     #[cfg(avx512_fp16)]
                     if V4FP16::is_available() {
@@ -226,7 +226,7 @@ macro_rules! testgen_unop {
                     }
                 }
                 #[cfg(aarch64)]
-                {
+                unsafe {
                     use $crate::backend::aarch64::*;
                     #[cfg(feature = "fp16")]
                     if NeonFP16::is_available() {
@@ -239,7 +239,7 @@ macro_rules! testgen_unop {
                     }
                 }
                 #[cfg(loong64)]
-                {
+                unsafe {
                     use $crate::backend::loong64::*;
                     if Lasx::is_available() {
                         let out = Lasx::run_vectorized(|| [<$test_fn _impl>]::<Lasx, $ty>(&a));
@@ -251,7 +251,7 @@ macro_rules! testgen_unop {
                     }
                 }
                 #[cfg(wasm32)]
-                {
+                unsafe {
                     use crate::backend::wasm32;
                     #[cfg(relaxed_simd)]
                     if wasm32::Simd128Relaxed::is_available() {

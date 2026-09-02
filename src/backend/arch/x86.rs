@@ -11,13 +11,13 @@ pub enum Arch {
     V3,
     #[cfg(avx512)]
     V4,
-    #[cfg(fp16)]
+    #[cfg(avx512_fp16)]
     V4FP16,
 }
 
 impl Arch {
     pub fn new() -> Self {
-        #[cfg(fp16)]
+        #[cfg(avx512_fp16)]
         if x86::V4FP16::is_available() {
             return Self::V4FP16;
         }
@@ -42,7 +42,7 @@ impl Arch {
             Arch::V3 => <x86::V3 as Simd>::vectorize(op),
             #[cfg(avx512)]
             Arch::V4 => <x86::V4 as Simd>::vectorize(op),
-            #[cfg(fp16)]
+            #[cfg(avx512_fp16)]
             Arch::V4FP16 => <x86::V4FP16 as Simd>::vectorize(op),
         }
     }

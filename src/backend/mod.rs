@@ -430,7 +430,7 @@ pub trait Simd: Sized + seal::Sealed + 'static {
     declare_reduction!(reduce_max, i8, i16, i32, i64, u8, u16, u32, u64, f16, f32, f64);
 }
 
-#[cfg(any(x86, aarch64, loong64, wasm32))]
+#[cfg(any(x86, loong64, wasm32))]
 macro_rules! impl_cmp_scalar {
     ($func: ident, $intrinsic: path, $($ty: ty: $mask_ty: ty),*) => {
         $(paste! {
@@ -454,7 +454,7 @@ macro_rules! impl_cmp_scalar {
     };
 }
 
-#[cfg(any(x86, aarch64, loong64, wasm32))]
+#[cfg(any(x86, loong64, wasm32))]
 pub(crate) use impl_cmp_scalar;
 
 /// Tests that type inference works properly

@@ -1,11 +1,12 @@
 use core::fmt::Debug;
+use half::f16;
 use std::vec::Vec;
 
-use approx::{assert_relative_eq, RelativeEq};
 use num_traits::{Float, NumCast};
 
 use crate::{
-    tests::{assert_eq, test_unop, unop},
+    assert_relative_eq,
+    tests::{approx::RelativeEq, assert_eq, test_unop, unop},
     Simd, VAbs, VRecip, Vector,
 };
 
@@ -41,9 +42,24 @@ testgen_unop!(
     1,
     100,
     assert_approx_eq_recip,
+    #[cfg_attr(all(miri, any(x86_v3, x86_v4, aarch64)), ignore)]
+    f16,
     #[cfg_attr(all(miri, any(aarch64, x86_v4)), ignore)]
     f32,
     #[cfg_attr(all(miri, any(aarch64, x86_v4)), ignore)]
     f64
 );
-testgen_unop!(test_abs, abs, -100, 100, assert_eq, i8, i16, i32, f32, f64);
+testgen_unop!(
+    test_abs,
+    abs,
+    -100,
+    100,
+    assert_eq,
+    i8,
+    i16,
+    i32,
+    #[cfg_attr(all(miri, any(x86_v3, x86_v4, aarch64)), ignore)]
+    f16,
+    f32,
+    f64
+);

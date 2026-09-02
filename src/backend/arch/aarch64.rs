@@ -1,6 +1,6 @@
 use crate::{
+    backend::{aarch64::*, scalar::Fallback},
     Simd,
-    backend::{aarch64::NeonFma, scalar::Fallback},
 };
 
 use super::WithSimd;
@@ -11,10 +11,16 @@ use super::WithSimd;
 pub enum Arch {
     Scalar,
     NeonFma,
+    #[cfg(feature = "fp16")]
+    NeonF16,
 }
 
 impl Arch {
     pub fn new() -> Self {
+        #[cfg(feature = "fp16")]
+        if NeonFP16::is_available() {
+            return Self::NeonF16;
+        }
         if NeonFma::is_available() {
             Self::NeonFma
         } else {
@@ -26,6 +32,8 @@ impl Arch {
         match self {
             Arch::Scalar => <Fallback as Simd>::vectorize(op),
             Arch::NeonFma => <NeonFma as Simd>::vectorize(op),
+            #[cfg(feature = "fp16")]
+            Arch::NeonF16 => <NeonFP16 as Simd>::vectorize(op),
         }
     }
 }

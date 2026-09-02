@@ -55,7 +55,7 @@ testgen_binop!(
     i8,
     u16,
     i16,
-    #[cfg_attr(all(miri, any(x86_v3, x86_v4)), ignore)]
+    #[cfg_attr(all(miri, any(x86_v3, x86_v4, aarch64)), ignore)]
     f16,
     u32,
     i32,
@@ -72,7 +72,7 @@ testgen_binop!(
     i8,
     u16,
     i16,
-    #[cfg_attr(all(miri, any(x86_v3, x86_v4)), ignore)]
+    #[cfg_attr(all(miri, any(x86_v3, x86_v4, aarch64)), ignore)]
     f16,
     u32,
     i32,
@@ -84,7 +84,7 @@ testgen_binop!(
 testgen_binop!(
     test_div,
     |a, b| a / b,
-    #[cfg_attr(all(miri, any(x86_v3, x86_v4)), ignore)]
+    #[cfg_attr(all(miri, any(x86_v3, x86_v4, aarch64)), ignore)]
     f16,
     f32,
     f64
@@ -96,7 +96,7 @@ testgen_binop!(
     i8,
     u16,
     i16,
-    #[cfg_attr(all(miri, any(x86_v3, x86_v4)), ignore)]
+    #[cfg_attr(all(miri, any(x86_v3, x86_v4, aarch64)), ignore)]
     f16,
     u32,
     i32,
@@ -105,8 +105,9 @@ testgen_binop!(
 );
 
 macro_rules! testgen_fma {
-    ($test_fn: ident, $($ty: ty),*) => {
+    ($test_fn: ident, $($(#[$meta:meta])* $ty: ty),*) => {
         $(paste! {
+            $(#[$meta])*
             #[::wasm_bindgen_test::wasm_bindgen_test(unsupported = test)]
             fn [<$test_fn _ $ty>]() {
                 let a = super::random(NumCast::from(0).unwrap(), NumCast::from(8).unwrap());
@@ -120,7 +121,7 @@ macro_rules! testgen_fma {
                 #[cfg(x86)]
                 {
                     use crate::backend::x86::*;
-                    #[cfg(fp16)]
+                    #[cfg(avx512_fp16)]
                     if V4FP16::is_available() {
                         let out = V4FP16::run_vectorized(|| [<$test_fn _impl>]::<V4FP16, $ty>(&a, &b, &c));
                         assert_approx_eq(&out_ref, &out);
@@ -141,7 +142,12 @@ macro_rules! testgen_fma {
                 }
                 #[cfg(aarch64)]
                 {
-                    use crate::backend::aarch64::NeonFma;
+                    use crate::backend::aarch64::*;
+                    #[cfg(feature = "fp16")]
+                    if NeonFP16::is_available() {
+                        let out = NeonFP16::run_vectorized(|| [<$test_fn _impl>]::<NeonFP16, $ty>(&a, &b, &c));
+                        assert_approx_eq(&out_ref, &out);
+                    }
                     if NeonFma::is_available() {
                         let out = NeonFma::run_vectorized(|| [<$test_fn _impl>]::<NeonFma, $ty>(&a, &b, &c));
                         assert_approx_eq(&out_ref, &out);
@@ -179,4 +185,10 @@ macro_rules! testgen_fma {
     };
 }
 
-testgen_fma!(test_fma, f32, f64);
+testgen_fma!(
+    test_fma,
+    #[cfg_attr(all(miri, any(x86_v3, x86_v4, aarch64)), ignore)]
+    f16,
+    f32,
+    f64
+);

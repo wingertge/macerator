@@ -1,7 +1,7 @@
 use darling::FromMeta;
 use proc_macro2::{Span, TokenStream};
 use quote::{format_ident, quote};
-use syn::{parse_quote, LifetimeParam, Type};
+use syn::{parse_quote, LifetimeParam, Token, Type};
 use syn::{spanned::Spanned, FnArg, GenericParam, ItemFn, Pat};
 use syn::{Expr, Lifetime};
 
@@ -34,6 +34,7 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
         }
     };
 
+    let unsafety = opts.arch.as_ref().map(|arch| Token![unsafe](arch.span()));
     let arch = opts
         .arch
         .unwrap_or(parse_quote!(macerator::AutoArch::new()));
@@ -44,6 +45,7 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
         vis,
         sig,
         block,
+        modifiers: _,
     } = func.clone();
 
     let name = &sig.ident;
@@ -127,7 +129,7 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
     Ok(quote! {
         #(#attrs)*
         #[allow(unused_mut, clippy::all)]
-        #vis #outer_fn_sig {
+        #unsafety #vis #outer_fn_sig {
             #[allow(non_camel_case_types)]
             struct #struct_name #impl_generics #where_clause {
                 #(#field_decl,)*

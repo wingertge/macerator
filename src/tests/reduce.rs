@@ -1,4 +1,5 @@
 use approx::{assert_relative_eq, RelativeEq};
+use half::f16;
 use num_traits::{Bounded, Float, NumCast, Zero};
 
 use crate::{
@@ -101,7 +102,7 @@ macro_rules! testgen_reduce {
                 #[cfg(x86)]
                 {
                     use $crate::backend::x86::*;
-                    #[cfg(fp16)]
+                    #[cfg(avx512_fp16)]
                     if V4FP16::is_available() {
                         let out = V4FP16::run_vectorized(|| [<$test_fn _impl>]::<V4FP16, $ty>(&a));
                         $assert(&out_ref, &[out]);
@@ -122,7 +123,12 @@ macro_rules! testgen_reduce {
                 }
                 #[cfg(aarch64)]
                 {
-                    use $crate::backend::aarch64::NeonFma;
+                    use $crate::backend::aarch64::*;
+                    #[cfg(feature = "fp16")]
+                    if NeonFP16::is_available() {
+                        let out = NeonFP16::run_vectorized(|| [<$test_fn _impl>]::<NeonFP16, $ty>(&a));
+                        $assert(&out_ref, &[out]);
+                    }
                     if NeonFma::is_available() {
                         let out = NeonFma::run_vectorized(|| [<$test_fn _impl>]::<NeonFma, $ty>(&a));
                         $assert(&out_ref, &[out]);
@@ -239,6 +245,7 @@ testgen_reduce!(
     50,
     128,
     assert_eq,
+    f16,
     #[cfg_attr(all(miri, aarch64), ignore)]
     f32,
     #[cfg_attr(all(miri, aarch64), ignore)]
@@ -281,6 +288,7 @@ testgen_reduce!(
     50,
     128,
     assert_eq,
+    f16,
     #[cfg_attr(all(miri, aarch64), ignore)]
     f32,
     #[cfg_attr(all(miri, aarch64), ignore)]

@@ -8,14 +8,14 @@ license.workspace = true
 name = "macerator"
 readme.workspace = true
 repository.workspace = true
-rust-version = "1.82"
+rust-version = "1.94"
 version = "0.3.4"
 
 [features]
-default = ["std", "avx512"]
+default = ["std", "avx512", "fp16"]
 
 avx512 = []
-fp16 = ["nightly"]
+fp16 = []
 nightly = []
 std = []
 
@@ -45,7 +45,6 @@ wasm-bindgen-test = "0.3.0"
 
 [build-dependencies]
 cfg_aliases = "0.2"
-rustc_version = "0.4"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 getrandom = { version = "0.3.1", features = ["wasm_js"] }

@@ -57,7 +57,7 @@ macro_rules! testgen_cmp {
                 #[cfg(x86)]
                 {
                     use $crate::backend::x86::*;
-                    #[cfg(fp16)]
+                    #[cfg(avx512_fp16)]
                     if V4FP16::is_available() {
                         let out = V4FP16::run_vectorized(|| [<$test_fn _impl>]::<V4FP16, $ty>(&lhs, &rhs));
                         assert_eq!(out_ref, out);
@@ -78,7 +78,12 @@ macro_rules! testgen_cmp {
                 }
                 #[cfg(aarch64)]
                 {
-                    use $crate::backend::aarch64::NeonFma;
+                    use $crate::backend::aarch64::*;
+                    #[cfg(feature = "fp16")]
+                    if NeonFP16::is_available() {
+                        let out = NeonFP16::run_vectorized(|| [<$test_fn _impl>]::<NeonFP16, $ty>(&lhs, &rhs));
+                        assert_eq!(out_ref, out);
+                    }
                     if NeonFma::is_available() {
                         let out = NeonFma::run_vectorized(|| [<$test_fn _impl>]::<NeonFma, $ty>(&lhs, &rhs));
                         assert_eq!(out_ref, out);
@@ -134,7 +139,7 @@ macro_rules! testgen_min_max {
                 #[cfg(x86)]
                 {
                     use $crate::backend::x86::*;
-                    #[cfg(fp16)]
+                    #[cfg(avx512_fp16)]
                     if V4FP16::is_available() {
                         let out = V4FP16::run_vectorized(|| [<$test_fn _impl>]::<V4FP16, $ty>(&lhs, &rhs));
                         assert_eq!(out_ref, out);
@@ -155,7 +160,12 @@ macro_rules! testgen_min_max {
                 }
                 #[cfg(aarch64)]
                 {
-                    use $crate::backend::aarch64::NeonFma;
+                    use $crate::backend::aarch64::*;
+                    #[cfg(feature = "fp16")]
+                    if NeonFP16::is_available() {
+                        let out = NeonFP16::run_vectorized(|| [<$test_fn _impl>]::<NeonFP16, $ty>(&lhs, &rhs));
+                        assert_eq!(out_ref, out);
+                    }
                     if NeonFma::is_available() {
                         let out = NeonFma::run_vectorized(|| [<$test_fn _impl>]::<NeonFma, $ty>(&lhs, &rhs));
                         assert_eq!(out_ref, out);

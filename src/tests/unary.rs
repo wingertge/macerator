@@ -1,4 +1,5 @@
 use core::fmt::Debug;
+use half::f16;
 use std::vec::Vec;
 
 use approx::{assert_relative_eq, RelativeEq};
@@ -46,4 +47,4 @@ testgen_unop!(
     #[cfg_attr(all(miri, any(aarch64, x86_v4)), ignore)]
     f64
 );
-testgen_unop!(test_abs, abs, -100, 100, assert_eq, i8, i16, i32, f32, f64);
+testgen_unop!(test_abs, abs, -100, 100, assert_eq, i8, i16, i32, f16, f32, f64);

@@ -4,8 +4,6 @@
     clippy::transmute_int_to_float,
     unused_unsafe
 )]
-// Lint can't detect the build script version check
-#![cfg_attr(all(avx512, not(avx512_nightly)), allow(incompatible_msrv))]
 
 pub mod v2;
 pub mod v3;
@@ -16,7 +14,7 @@ pub use v2::V2;
 pub use v3::V3;
 #[cfg(avx512)]
 pub use v4::V4;
-#[cfg(fp16)]
+#[cfg(avx512_fp16)]
 pub use v4::V4FP16;
 
 macro_rules! lanes {
@@ -200,6 +198,7 @@ macro_rules! impl_unop {
 }
 pub(crate) use impl_unop;
 
+#[allow(unused)]
 macro_rules! impl_reduce {
     ($func: ident, $intrinsic: ident, $($ty: ty),*) => {
         $(paste! {
@@ -214,8 +213,10 @@ macro_rules! impl_reduce {
         })*
     };
 }
+#[allow(unused)]
 pub(crate) use impl_reduce;
 
+#[allow(unused)]
 macro_rules! impl_reduce_signless {
     ($func: ident, $intrinsic: ident, $($ty: ty),*) => {
         $(paste! {
@@ -230,6 +231,7 @@ macro_rules! impl_reduce_signless {
         })*
     };
 }
+#[allow(unused)]
 pub(crate) use impl_reduce_signless;
 
 macro_rules! impl_cmp {

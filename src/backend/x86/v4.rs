@@ -13,7 +13,7 @@ use crate::{backend::arch::*, cast, seal::Sealed, MaskOps, Scalar, Simd, VRegist
 use super::*;
 
 pub type V4 = V4Impl<FP16Fallback>;
-#[cfg(feature = "fp16")]
+#[cfg(avx512_fp16)]
 pub type V4FP16 = V4Impl<FP16Intrinsic>;
 
 impl Sealed for __m512 {}
@@ -36,7 +36,7 @@ macro_rules! with_ty_cmp {
     }
 }
 
-#[cfg(fp16)]
+#[cfg(avx512_fp16)]
 macro_rules! impl_cmp_fp16 {
     ($func: ident, $op: expr, $($ty: ty),*) => {
         $(paste! {
@@ -138,7 +138,7 @@ pub trait FP16Ext: Sealed + 'static {
 }
 
 pub struct FP16Fallback;
-#[cfg(feature = "fp16")]
+#[cfg(avx512_fp16)]
 pub struct FP16Intrinsic;
 
 impl Sealed for FP16Fallback {}
@@ -184,9 +184,9 @@ impl FP16Ext for FP16Fallback {
     }
 }
 
-#[cfg(fp16)]
+#[cfg(avx512_fp16)]
 impl Sealed for FP16Intrinsic {}
-#[cfg(fp16)]
+#[cfg(avx512_fp16)]
 impl FP16Ext for FP16Intrinsic {
     type Register = __m512;
 
@@ -580,7 +580,7 @@ impl V4Run for V4 {
     }
 }
 
-#[cfg(feature = "fp16")]
+#[cfg(avx512_fp16)]
 impl V4Run for V4FP16 {
     #[inline(always)]
     fn run_vectorized<F: NullaryFnOnce>(f: F) -> F::Output {
@@ -596,7 +596,7 @@ impl V4 {
     );
 }
 
-#[cfg(feature = "fp16")]
+#[cfg(avx512_fp16)]
 impl V4FP16 {
     impl_simd!(
         "sse",

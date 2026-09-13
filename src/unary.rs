@@ -9,6 +9,13 @@ pub trait VRecip: Scalar {
 }
 
 impl<S: Simd, T: VRecip> Vector<S, T> {
+    /// Elementwise reciprocal (`1 / x`).
+    ///
+    /// On `f32`/`f64`, this is precise to within a couple ULP on every
+    /// backend (SIMD backends refine the hardware reciprocal *estimate*
+    /// instruction with Newton-Raphson steps rather than returning it
+    /// directly). `f16` is not yet refined and may only be accurate to
+    /// ~8 bits on backends that compute it via a hardware estimate.
     #[inline(always)]
     pub fn recip(self) -> Self {
         T::vrecip(self)

@@ -28,9 +28,11 @@ fn assert_approx_eq_recip<T: RelativeEq<Epsilon = T> + Debug + NumCast + Copy>(
     lhs: &[T],
     rhs: &[T],
 ) {
-    // Generous epsilon, intel specifies `1.5 * 2^-12`, but ARM doesn't have any
-    // spec.
-    let epsilon = T::from(2.0.powf(-8.0)).unwrap();
+    let epsilon = if core::mem::size_of::<T>() <= 2 {
+        T::from(2.0.powf(-8.0)).unwrap()
+    } else {
+        T::from(2.0.powf(-20.0)).unwrap()
+    };
     for (a, b) in lhs.iter().zip(rhs) {
         assert_relative_eq!(*a, *b, epsilon = epsilon);
     }

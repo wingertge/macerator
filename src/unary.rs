@@ -15,6 +15,7 @@ impl<S: Simd, T: VRecip> Vector<S, T> {
     /// (hardware reciprocal *estimates* are refined with Newton-Raphson
     /// steps). `f16` is not yet refined and may only be accurate to ~8
     /// bits on backends that compute it with a hardware estimate.
+    /// 
     #[inline(always)]
     pub fn recip(self) -> Self {
         T::vrecip(self)

@@ -92,29 +92,7 @@ impl Simd for Lasx {
     impl_binop_untyped!(bitor, lasx_xvor_v);
     impl_binop_untyped!(bitxor, lasx_xvxor_v);
 
-    #[inline(always)]
-    fn recip_f32(a: Self::Register) -> Self::Register {
-        let y: Self::Register = cast!(lasx_xvfrecip_s(cast!(a)));
-        // One Newton-Raphson step: y1 = y0 * (2 - a*y0).
-        Self::mul_f32(y, Self::sub_f32(Self::splat_f32(2.0), Self::mul_f32(a, y)))
-    }
-    #[inline(always)]
-    fn recip_f32_supported() -> bool {
-        true
-    }
-    #[inline(always)]
-    fn recip_f64(a: Self::Register) -> Self::Register {
-        let mut y: Self::Register = cast!(lasx_xvfrecip_d(cast!(a)));
-        // Two Newton-Raphson steps: y1 = y0 * (2 - a*y0).
-        for _ in 0..2 {
-            y = Self::mul_f64(y, Self::sub_f64(Self::splat_f64(2.0), Self::mul_f64(a, y)));
-        }
-        y
-    }
-    #[inline(always)]
-    fn recip_f64_supported() -> bool {
-        true
-    }
+    impl_unop!(recip, lasx_xvfrecip, f32, f64);
     impl_unop_scalar!(recip, recip, f16);
 
     impl_cmp_signless!(equals, lasx_xvseq, u8, i8, u16, i16, u32, i32, u64, i64);

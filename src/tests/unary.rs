@@ -34,7 +34,6 @@ fn assert_approx_eq_recip<T: RelativeEq<Epsilon = T> + Debug + NumCast + Copy>(
         // `f32`: couple ULP, i.e. a small multiple of `f32::EPSILON` (2^-23).
         4 => T::from(4.0 * f32::EPSILON as f64).unwrap(),
         // `f64`: couple ULP, i.e. a small multiple of `f64::EPSILON` (2^-52).
-        
         _ => T::from(4.0 * f64::EPSILON).unwrap(),
     };
     for (a, b) in lhs.iter().zip(rhs) {

@@ -363,7 +363,36 @@ where
         i64
     );
 
-    impl_unop!(recip, _mm512_rcp14, f32, f64);
+    #[inline(always)]
+    fn recip_f32(a: Self::Register) -> Self::Register {
+        unsafe {
+            let y = _mm512_rcp14_ps(a);
+            // One Newton-Raphson step: e = 1 - a*y0; y1 = y0 + y0*e.
+            let e = _mm512_fnmadd_ps(a, y, _mm512_set1_ps(1.0));
+            _mm512_fmadd_ps(y, e, y)
+        }
+    }
+    #[inline(always)]
+    fn recip_f32_supported() -> bool {
+        true
+    }
+    #[inline(always)]
+    fn recip_f64(a: Self::Register) -> Self::Register {
+        unsafe {
+            let x: __m512d = cast!(a);
+            let mut y = _mm512_rcp14_pd(x);
+            // Two Newton-Raphson steps: e = 1 - a*y0; y1 = y0 + y0*e.
+            for _ in 0..2 {
+                let e = _mm512_fnmadd_pd(x, y, _mm512_set1_pd(1.0));
+                y = _mm512_fmadd_pd(y, e, y);
+            }
+            cast!(y)
+        }
+    }
+    #[inline(always)]
+    fn recip_f64_supported() -> bool {
+        true
+    }
     impl_unop!(abs, _mm512_abs, i8, i16, i32, i64, f32, f64);
 
     impl_reduce_signless!(reduce_add, _mm512_reduce_add, u32, i32, u64, i64, f32, f64);

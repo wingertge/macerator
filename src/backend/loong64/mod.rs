@@ -186,22 +186,6 @@ macro_rules! impl_binop {
 }
 pub(crate) use impl_binop;
 
-macro_rules! impl_unop {
-    ($func: ident, $intrinsic: ident, $($ty: ty),*) => {
-        $(paste! {
-            #[inline(always)]
-            fn [<$func _ $ty>](a: Self::Register) -> Self::Register {
-                cast!(with_ty!($intrinsic, $ty)(cast!(a)))
-            }
-            #[inline(always)]
-            fn [<$func _ $ty _supported>]() -> bool {
-                true
-            }
-        })*
-    };
-}
-pub(crate) use impl_unop;
-
 macro_rules! impl_cmp {
     ($func: ident, $intrinsic: ident, $($ty: ty),*) => {
         $(paste! {

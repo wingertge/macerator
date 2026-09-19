@@ -19,9 +19,10 @@ impl<S: Simd, T: VRecip> Vector<S, T> {
     /// Subnormals are the one place backends differ. A refined estimate can
     /// only reach the subnormal range if the estimate instruction itself
     /// supports it: `frecpe` (aarch64) does, `rcp_ps` (sse/avx2) does not and
-    /// flushes both its input and its result. So on sse/avx2 a subnormal
-    /// input, or an input whose reciprocal is subnormal, saturates to `±inf`
-    /// or `±0` instead of reaching the extreme finite value. It saturates
+    /// flushes both its input and its result. So on sse/avx2 the ends of the
+    /// range saturate rather than reaching the extreme finite value: a
+    /// subnormal input gives `±inf`, and an input whose reciprocal would be no
+    /// larger than the smallest normal gives `±0`. Saturation always goes
     /// towards the true value and keeps the sign of the input; it never
     /// returns `NaN` or the wrong sign.
     ///

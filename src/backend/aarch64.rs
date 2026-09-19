@@ -477,14 +477,10 @@ where
         unsafe {
             let x: float32x4_t = cast!(a);
             let y0 = vrecpeq_f32(x);
+            // Two Newton-Raphson steps
             let mut y = vmulq_f32(vrecpsq_f32(x, y0), y0);
             y = vmulq_f32(vrecpsq_f32(x, y), y);
-            // ±0/±inf refine correctly, because `frecps` is defined to return
-            // 2.0 for the `0 * inf` pair. A subnormal `x` that saturates the
-            // estimate is not that pair: `2 - x*inf` is -inf, and refinement
-            // flips the sign. `y0` is the correctly rounded ±inf wherever it
-            // saturated, so keep it. `facgt` against MAX is |y0| == inf; a NaN
-            // `x` compares false and refines to NaN as it should.
+            // Keep initial y0 if it saturated (|y0| == inf) to prevent subnormal sign corruption
             cast!(vbslq_f32(vcagtq_f32(y0, vdupq_n_f32(f32::MAX)), y0, y))
         }
     }
@@ -498,10 +494,11 @@ where
         unsafe {
             let x: float64x2_t = cast!(a);
             let y0 = vrecpeq_f64(x);
+            // Three Newton-Raphson refinement steps
             let mut y = vmulq_f64(vrecpsq_f64(x, y0), y0);
             y = vmulq_f64(vrecpsq_f64(x, y), y);
             y = vmulq_f64(vrecpsq_f64(x, y), y);
-            // Same saturation gap as the f32 path.
+            // Keep initial y0 if it saturated (|y0| == inf) to prevent sign corruption
             cast!(vbslq_f64(vcagtq_f64(y0, vdupq_n_f64(f64::MAX)), y0, y))
         }
     }

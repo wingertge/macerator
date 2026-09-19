@@ -29,35 +29,21 @@ fn assert_approx_eq_recip<T: RelativeEq<Epsilon = T> + Debug + NumCast + Copy>(
     rhs: &[T],
 ) {
     let epsilon = match core::mem::size_of::<T>() {
-        // `f16`: unrefined hardware estimate on some backends, only ~8 bits accurate.
-        ..=2 => T::from(2.0.powf(-8.0)).unwrap(),
-        // `f32`: couple ULP, i.e. a small multiple of `f32::EPSILON` (2^-23).
-        4 => T::from(4.0 * f32::EPSILON as f64).unwrap(),
-        // `f64`: couple ULP, i.e. a small multiple of `f64::EPSILON` (2^-52).
-        _ => T::from(4.0 * f64::EPSILON).unwrap(),
+        ..=2 => T::from(2.0.powf(-8.0)).unwrap(), // f16: ~8-bit estimate precision
+        4 => T::from(4.0 * f32::EPSILON as f64).unwrap(), // f32: ~4 ULP
+        _ => T::from(4.0 * f64::EPSILON).unwrap(),        // f64: ~4 ULP
     };
     for (a, b) in lhs.iter().zip(rhs) {
-        // `epsilon` is only the absolute floor, which does nothing once a
-        // reciprocal is large; `max_relative` is what a ULP budget needs.
         assert_relative_eq!(*a, *b, epsilon = epsilon, max_relative = epsilon);
     }
 }
 
-/// `assert_relative_eq!` treats inf and NaN as never equal, so special values
-/// are compared bitwise instead: any NaN matches any NaN, and zeroes have to
-/// agree on sign.
+/// Compares special values bitwise (handles NaNs and zero sign-matching).
 fn recip_bits_eq<T: Float>(a: T, b: T) -> bool {
     (a.is_nan() && b.is_nan()) || (a == b && a.is_sign_negative() == b.is_sign_negative())
 }
 
-/// The contract documented on [`Vector::recip`], against scalar `T::recip()`.
-///
-/// `±0`, `±inf` and `NaN` have to map exactly; everything else owes the ULP
-/// budget. The exception is a subnormal input, or an input whose reciprocal is
-/// subnormal: a backend refining an estimate instruction with no subnormal
-/// support (`rcp_ps`, i.e. sse/avx2) may saturate to `±inf`/`±0` there. Even
-/// then it has to saturate towards the true value and keep the sign of the
-/// input, and never land on NaN.
+/// Verifies `Vector::recip` special values (±0, ±inf, NaN) and permits HW saturation for subnormals.
 fn assert_recip_specials<T: Float + Debug + RelativeEq<Epsilon = T>>(
     input: &[T],
     expected: &[T],
@@ -66,13 +52,10 @@ fn assert_recip_specials<T: Float + Debug + RelativeEq<Epsilon = T>>(
     let epsilon = T::epsilon() * NumCast::from(4.0).unwrap();
     for ((x, want), got) in input.iter().zip(expected).zip(actual) {
         let saturation = if x.classify() == FpCategory::Subnormal {
-            // 1/subnormal is enormous, so saturating overshoots to infinity.
-            Some(T::infinity())
+            Some(T::infinity()) // 1/subnormal overshoots to infinity.
         } else if want.classify() == FpCategory::Subnormal {
-            // 1/x is subnormal, so saturating undershoots to zero.
-            Some(T::zero())
+            Some(T::zero())     // 1/x subnormal undershoots to zero
         } else {
-            // Normal in, normal out: nothing to excuse.
             None
         };
         let saturation = saturation.map(|s| if x.is_sign_negative() { -s } else { s });
@@ -110,13 +93,13 @@ testgen_unop_values!(
     test_recip_impl,
     recip,
     vec![
-        // Where refinement used to corrupt the estimate: 2 - a*y0 is 0*inf.
+        // Where refinement used to corrupt the estimate: 2 - a * y0 is 0 * inf.
         0.0f32,
         -0.0,
         f32::INFINITY,
         f32::NEG_INFINITY,
         f32::NAN,
-        // Ordinary lanes, to keep the fallback from being taken vector-wide.
+        // Ordinary values, to keep the fallback from being taken vector-wide.
         1.0,
         -1.0,
         2.0,
@@ -150,13 +133,13 @@ testgen_unop_values!(
     test_recip_impl,
     recip,
     vec![
-        // Where refinement used to corrupt the estimate: 2 - a*y0 is 0*inf.
+        // Where refinement used to corrupt the estimate: 2 - a * y0 is 0 * inf.
         0.0f64,
         -0.0,
         f64::INFINITY,
         f64::NEG_INFINITY,
         f64::NAN,
-        // Ordinary lanes, to keep the fallback from being taken vector-wide.
+        // Ordinary values, to keep the fallback from being taken vector-wide.
         1.0,
         -1.0,
         2.0,

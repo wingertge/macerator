@@ -193,8 +193,7 @@ macro_rules! unop {
 }
 pub(crate) use unop;
 
-/// Runs `$impl_fn` over `$a` on every backend available at runtime, plus the
-/// scalar fallback, handing each backend's output to `$check`.
+/// Runs `$impl_fn` across all available runtime backends (and scalar fallback), passing outputs to `$check`.
 macro_rules! for_each_backend {
     ($impl_fn: ident, $ty: ty, $a: expr, $check: expr) => {{
         let a = $a;
@@ -277,10 +276,7 @@ macro_rules! testgen_unop {
 }
 pub(crate) use testgen_unop;
 
-/// Like `testgen_unop!`, but against an explicit list of inputs instead of a
-/// random range. `$assert` additionally receives the inputs, so it can state a
-/// different contract per input class. Takes the impl fn by name rather than
-/// deriving it from `$test_fn`, so several tests can share one.
+/// Unary operator test generator using explicit input values instead of random ranges.
 macro_rules! testgen_unop_values {
     ($test_fn: ident, $impl_fn: ident, $reference: expr, $values: expr, $assert: ident, $($(#[$meta:meta])* $ty: ty),*) => {
         $(::paste::paste! {
@@ -288,10 +284,7 @@ macro_rules! testgen_unop_values {
             #[::wasm_bindgen_test::wasm_bindgen_test(unsupported = test)]
             fn [<$test_fn _ $ty>]() {
                 let values: Vec<$ty> = $values;
-                // `test_unop` only writes whole vectors and zeroes what is left
-                // over, so cycle the inputs up to a length every backend's lane
-                // count divides. Every value then lands in a vectorized lane
-                // rather than in the untouched remainder.
+                // Cycle inputs to fill complete SIMD vector lanes up to SIZE
                 let a: Vec<$ty> = values.iter().copied().cycle().take($crate::tests::SIZE).collect();
                 let out_ref = a.iter().map(|a| $ty::$reference(*a)).collect::<Vec<_>>();
                 $crate::tests::for_each_backend!(

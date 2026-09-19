@@ -367,12 +367,10 @@ where
     fn recip_f32(a: Self::Register) -> Self::Register {
         unsafe {
             let y0 = _mm512_rcp14_ps(a);
-            // One Newton-Raphson step: e = 1 - a*y0; y1 = y0 + y0*e.
+            // One Newton-Raphson step: e = 1 - a * y0; y1 = y0 + y0 * e.
             let e = _mm512_fnmadd_ps(a, y0, _mm512_set1_ps(1.0));
             let y1 = _mm512_fmadd_ps(y0, e, y0);
-            // The residual is ~0 wherever the estimate was usable; NaN (`a` is
-            // ±0 or ±inf, making `a*y0` the `0 * inf` pair) or -inf means `y0`
-            // saturated, and refining a saturated estimate corrupts it.
+            // Restore y0 (±0 / ±inf) if `a`` is 0, inf, or subnormal to prevent NaN corruption
             let saturated = _mm512_cmp_ps_mask::<_CMP_NGT_UQ>(e, _mm512_set1_ps(-1.0));
             _mm512_mask_blend_ps(saturated, y1, y0)
         }
@@ -387,12 +385,12 @@ where
             let x: __m512d = cast!(a);
             let one = _mm512_set1_pd(1.0);
             let y0 = _mm512_rcp14_pd(x);
-            // Two Newton-Raphson steps: e = 1 - x*y; y' = y + y*e.
+            // Two Newton-Raphson steps: e = 1 - x * y; y' = y + y * e.
             let e0 = _mm512_fnmadd_pd(x, y0, one);
             let mut y = _mm512_fmadd_pd(y0, e0, y0);
             let e1 = _mm512_fnmadd_pd(x, y, one);
             y = _mm512_fmadd_pd(y, e1, y);
-            // Same saturation gap as the f32 path.
+            // Restore y0 (±0 / ±inf) if `x` is 0, inf, or subnormal
             let saturated = _mm512_cmp_pd_mask::<_CMP_NGT_UQ>(e0, _mm512_set1_pd(-1.0));
             cast!(_mm512_mask_blend_pd(saturated, y, y0))
         }

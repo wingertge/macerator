@@ -11,23 +11,12 @@ pub trait VRecip: Scalar {
 impl<S: Simd, T: VRecip> Vector<S, T> {
     /// Elementwise reciprocal (`1 / x`).
     ///
-    /// `f32`/`f64` are precise to within a couple ULP on every backend, since
-    /// backends without an exact reciprocal refine the hardware *estimate*
-    /// with Newton-Raphson steps. `±0`, `±inf` and `NaN` map to `±inf`, `±0`
-    /// and `NaN` exactly, everywhere.
+    /// `f32`/`f64` are accurate within a few ULP using Newton-Raphson refinement.
+    /// Special values (`±0`, `±inf`, `NaN`) map accurately across all backends.
     ///
-    /// Subnormals are the one place backends differ. A refined estimate can
-    /// only reach the subnormal range if the estimate instruction itself
-    /// supports it: `frecpe` (aarch64) does, `rcp_ps` (sse/avx2) does not and
-    /// flushes both its input and its result. So on sse/avx2 the ends of the
-    /// range saturate rather than reaching the extreme finite value: a
-    /// subnormal input gives `±inf`, and an input whose reciprocal would be no
-    /// larger than the smallest normal gives `±0`. Saturation always goes
-    /// towards the true value and keeps the sign of the input; it never
-    /// returns `NaN` or the wrong sign.
-    ///
-    /// `f16` is not yet refined and may only be accurate to ~8 bits on
-    /// backends that compute it with a hardware estimate.
+    /// Backends that flush subnormals (e.g. SSE/AVX2 `rcp_ps`) saturate subnormal inputs
+    /// or subnormal results to signed `±inf`/`±0`, preserving sign without returning NaN.
+    /// `f16` uses unrefined hardware estimates (~8-bit precision) for now.
     #[inline(always)]
     pub fn recip(self) -> Self {
         T::vrecip(self)

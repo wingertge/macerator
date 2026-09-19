@@ -89,14 +89,11 @@ impl Simd for V2 {
         unsafe {
             let two = _mm_set1_ps(2.0);
             let y0 = _mm_rcp_ps(a);
-            // One Newton-Raphson step: y1 = y0 * (2 - a*y0).
+            // One Newton-Raphson step: y1 = y0 * (2 - a * y0).
             let p = _mm_mul_ps(a, y0);
             let y1 = _mm_mul_ps(y0, _mm_sub_ps(two, p));
-            // `rcp_ps` gives `y0` the sign of `a`, so `p` lands within a
-            // whisker of +1 wherever the estimate was usable. NaN (`a` is ±0 or ±inf, making
-            // `p` the `0 * inf` pair) or +inf (`a` is subnormal, which `rcp_ps`
-            // flushes to zero) means `y0` saturated, and refining a saturated
-            // estimate corrupts it. Keep `y0`, which is already ±inf/±0.
+            // If `a`` is 0, inf, or subnormal, `p` evaluates to NaN or >= 2.
+            // Keep initial y0 (±0 / ±inf) to prevent NaN corruption.
             _mm_blendv_ps(y1, y0, _mm_cmpnlt_ps(p, two))
         }
     }

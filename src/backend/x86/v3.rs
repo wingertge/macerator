@@ -99,10 +99,17 @@ impl Simd for V3 {
     #[inline(always)]
     fn recip_f32(a: Self::Register) -> Self::Register {
         unsafe {
-            let y = _mm256_rcp_ps(a);
+            let y0 = _mm256_rcp_ps(a);
             // One Newton-Raphson step: e = 1 - a*y0; y1 = y0 + y0*e.
-            let e = _mm256_fnmadd_ps(a, y, _mm256_set1_ps(1.0));
-            _mm256_fmadd_ps(y, e, y)
+            let e = _mm256_fnmadd_ps(a, y0, _mm256_set1_ps(1.0));
+            let y1 = _mm256_fmadd_ps(y0, e, y0);
+            // The residual is ~0 wherever the estimate was usable. NaN (`a` is
+            // ±0 or ±inf, making `a*y0` the `0 * inf` pair) or -inf (`a` is
+            // subnormal, which `rcp_ps` flushes to zero) means `y0` saturated,
+            // and refining a saturated estimate corrupts it. Keep `y0`, which
+            // is already ±inf/±0.
+            let saturated = _mm256_cmp_ps::<_CMP_NGT_UQ>(e, _mm256_set1_ps(-1.0));
+            _mm256_blendv_ps(y1, y0, saturated)
         }
     }
     #[inline(always)]

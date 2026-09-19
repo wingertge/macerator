@@ -87,9 +87,17 @@ impl Simd for V2 {
     #[inline(always)]
     fn recip_f32(a: Self::Register) -> Self::Register {
         unsafe {
-            let y = _mm_rcp_ps(a);
+            let two = _mm_set1_ps(2.0);
+            let y0 = _mm_rcp_ps(a);
             // One Newton-Raphson step: y1 = y0 * (2 - a*y0).
-            _mm_mul_ps(y, _mm_sub_ps(_mm_set1_ps(2.0), _mm_mul_ps(a, y)))
+            let p = _mm_mul_ps(a, y0);
+            let y1 = _mm_mul_ps(y0, _mm_sub_ps(two, p));
+            // `rcp_ps` gives `y0` the sign of `a`, so `p` lands just shy of +1
+            // wherever the estimate was usable. NaN (`a` is ±0 or ±inf, making
+            // `p` the `0 * inf` pair) or +inf (`a` is subnormal, which `rcp_ps`
+            // flushes to zero) means `y0` saturated, and refining a saturated
+            // estimate corrupts it. Keep `y0`, which is already ±inf/±0.
+            _mm_blendv_ps(y1, y0, _mm_cmpnlt_ps(p, two))
         }
     }
     #[inline(always)]

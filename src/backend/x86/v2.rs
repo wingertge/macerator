@@ -84,7 +84,23 @@ impl Simd for V2 {
     impl_binop_untyped!(bitor, _mm_or_si128);
     impl_binop_untyped!(bitxor, _mm_xor_si128);
 
-    impl_unop!(recip, _mm_rcp, f32);
+    #[inline(always)]
+    fn recip_f32(a: Self::Register) -> Self::Register {
+        unsafe {
+            let two = _mm_set1_ps(2.0);
+            let y0 = _mm_rcp_ps(a);
+            // One Newton-Raphson step: y1 = y0 * (2 - a * y0).
+            let p = _mm_mul_ps(a, y0);
+            let y1 = _mm_mul_ps(y0, _mm_sub_ps(two, p));
+            // If `a`` is 0, inf, or subnormal, `p` evaluates to NaN or >= 2.
+            // Keep initial y0 (±0 / ±inf) to prevent NaN corruption.
+            _mm_blendv_ps(y1, y0, _mm_cmpnlt_ps(p, two))
+        }
+    }
+    #[inline(always)]
+    fn recip_f32_supported() -> bool {
+        true
+    }
     impl_unop!(abs, _mm_abs, i8, i16, i32);
     impl_unop_scalar!(recip, recip, f16, f64);
 

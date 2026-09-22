@@ -472,7 +472,41 @@ where
     impl_binop!(min, vminq, u8, i8, u16, i16, u32, i32, f32, f64);
     impl_binop!(max, vmaxq, u8, i8, u16, i16, u32, i32, f32, f64);
 
-    impl_unop!(recip, vrecpeq, f32, f64);
+    #[inline(always)]
+    fn recip_f32(a: Self::Register) -> Self::Register {
+        unsafe {
+            let x: float32x4_t = cast!(a);
+            let y0 = vrecpeq_f32(x);
+            // Two Newton-Raphson steps
+            let mut y = vmulq_f32(vrecpsq_f32(x, y0), y0);
+            y = vmulq_f32(vrecpsq_f32(x, y), y);
+            // Keep initial y0 if it saturated (|y0| == inf) to prevent subnormal sign corruption
+            cast!(vbslq_f32(vcagtq_f32(y0, vdupq_n_f32(f32::MAX)), y0, y))
+        }
+    }
+    #[inline(always)]
+    fn recip_f32_supported() -> bool {
+        true
+    }
+
+    #[inline(always)]
+    fn recip_f64(a: Self::Register) -> Self::Register {
+        unsafe {
+            let x: float64x2_t = cast!(a);
+            let y0 = vrecpeq_f64(x);
+            // Three Newton-Raphson refinement steps
+            let mut y = vmulq_f64(vrecpsq_f64(x, y0), y0);
+            y = vmulq_f64(vrecpsq_f64(x, y), y);
+            y = vmulq_f64(vrecpsq_f64(x, y), y);
+            // Keep initial y0 if it saturated (|y0| == inf) to prevent sign corruption
+            cast!(vbslq_f64(vcagtq_f64(y0, vdupq_n_f64(f64::MAX)), y0, y))
+        }
+    }
+    #[inline(always)]
+    fn recip_f64_supported() -> bool {
+        true
+    }
+
     impl_unop!(abs, vabsq, i8, i16, i32, i64, f32, f64);
 
     impl_cmp!(equals, vceqq, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64);

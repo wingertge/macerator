@@ -96,7 +96,22 @@ impl Simd for V3 {
     impl_binop_untyped!(bitor, _mm256_or_si256);
     impl_binop_untyped!(bitxor, _mm256_xor_si256);
 
-    impl_unop!(recip, _mm256_rcp, f32);
+    #[inline(always)]
+    fn recip_f32(a: Self::Register) -> Self::Register {
+        unsafe {
+            let y0 = _mm256_rcp_ps(a);
+            // One Newton-Raphson step: e = 1 - a * y0; y1 = y0 + y0 * e.
+            let e = _mm256_fnmadd_ps(a, y0, _mm256_set1_ps(1.0));
+            let y1 = _mm256_fmadd_ps(y0, e, y0);
+            // Restore y0 (±0 / ±inf) if `a` is 0, inf, or subnormal to prevent NaN corruption
+            let saturated = _mm256_cmp_ps::<_CMP_NGT_UQ>(e, _mm256_set1_ps(-1.0));
+            _mm256_blendv_ps(y1, y0, saturated)
+        }
+    }
+    #[inline(always)]
+    fn recip_f32_supported() -> bool {
+        true
+    }
     impl_unop!(abs, _mm256_abs, i8, i16, i32);
     impl_unop_scalar!(recip, recip, f16, f64);
 

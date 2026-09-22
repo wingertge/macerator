@@ -193,6 +193,70 @@ macro_rules! unop {
 }
 pub(crate) use unop;
 
+/// Runs `$impl_fn` across all available runtime backends (and scalar fallback), passing outputs to `$check`.
+macro_rules! for_each_backend {
+    ($impl_fn: ident, $ty: ty, $a: expr, $check: expr) => {{
+        let a = $a;
+        let check = $check;
+        #[cfg(x86)]
+        unsafe {
+            use $crate::backend::x86::*;
+            #[cfg(avx512_fp16)]
+            if V4FP16::is_available() {
+                check(&V4FP16::run_vectorized(|| $impl_fn::<V4FP16, $ty>(a)));
+            }
+            #[cfg(avx512)]
+            if V4::is_available() {
+                check(&V4::run_vectorized(|| $impl_fn::<V4, $ty>(a)));
+            }
+            if V3::is_available() {
+                check(&V3::run_vectorized(|| $impl_fn::<V3, $ty>(a)));
+            }
+            if V2::is_available() {
+                check(&V2::run_vectorized(|| $impl_fn::<V2, $ty>(a)));
+            }
+        }
+        #[cfg(aarch64)]
+        unsafe {
+            use $crate::backend::aarch64::*;
+            #[cfg(feature = "fp16")]
+            if NeonFP16::is_available() {
+                check(&NeonFP16::run_vectorized(|| $impl_fn::<NeonFP16, $ty>(a)));
+            }
+            if NeonFma::is_available() {
+                check(&NeonFma::run_vectorized(|| $impl_fn::<NeonFma, $ty>(a)));
+            }
+        }
+        #[cfg(loong64)]
+        unsafe {
+            use $crate::backend::loong64::*;
+            if Lasx::is_available() {
+                check(&Lasx::run_vectorized(|| $impl_fn::<Lasx, $ty>(a)));
+            }
+            if Lsx::is_available() {
+                check(&Lsx::run_vectorized(|| $impl_fn::<Lsx, $ty>(a)));
+            }
+        }
+        #[cfg(wasm32)]
+        unsafe {
+            use $crate::backend::wasm32;
+            #[cfg(relaxed_simd)]
+            if wasm32::Simd128Relaxed::is_available() {
+                check(&wasm32::Simd128Relaxed::run_vectorized(|| {
+                    $impl_fn::<wasm32::Simd128Relaxed, $ty>(a)
+                }));
+            }
+            if wasm32::Simd128Fallback::is_available() {
+                check(&wasm32::Simd128Fallback::run_vectorized(|| {
+                    $impl_fn::<wasm32::Simd128Fallback, $ty>(a)
+                }));
+            }
+        }
+        check(&$impl_fn::<$crate::backend::scalar::Fallback, $ty>(a));
+    }};
+}
+pub(crate) use for_each_backend;
+
 macro_rules! testgen_unop {
     ($test_fn: ident, $reference: expr, $lo: expr, $hi: expr, $assert: ident, $($(#[$meta:meta])* $ty: ty),*) => {
         $(::paste::paste! {
@@ -203,70 +267,31 @@ macro_rules! testgen_unop {
 
                 let a = $crate::tests::random::<$ty>(NumCast::from($lo).unwrap(), NumCast::from($hi).unwrap());
                 let out_ref = a.iter().map(|a| $ty::$reference(*a)).collect::<Vec<_>>();
-                #[cfg(x86)]
-                unsafe {
-                    use $crate::backend::x86::*;
-                    #[cfg(avx512_fp16)]
-                    if V4FP16::is_available() {
-                        let out = V4FP16::run_vectorized(|| [<$test_fn _impl>]::<V4FP16, $ty>(&a));
-                        $assert(&out_ref, &out);
-                    }
-                    #[cfg(avx512)]
-                    if V4::is_available() {
-                        let out = V4::run_vectorized(|| [<$test_fn _impl>]::<V4, $ty>(&a));
-                        $assert(&out_ref, &out);
-                    }
-                    if V3::is_available() {
-                        let out = V3::run_vectorized(|| [<$test_fn _impl>]::<V3, $ty>(&a));
-                        $assert(&out_ref, &out);
-                    }
-                    if V2::is_available() {
-                        let out = V2::run_vectorized(|| [<$test_fn _impl>]::<V2, $ty>(&a));
-                        $assert(&out_ref, &out);
-                    }
-                }
-                #[cfg(aarch64)]
-                unsafe {
-                    use $crate::backend::aarch64::*;
-                    #[cfg(feature = "fp16")]
-                    if NeonFP16::is_available() {
-                        let out = NeonFP16::run_vectorized(|| [<$test_fn _impl>]::<NeonFP16, $ty>(&a));
-                        $assert(&out_ref, &out);
-                    }
-                    if NeonFma::is_available() {
-                        let out = NeonFma::run_vectorized(|| [<$test_fn _impl>]::<NeonFma, $ty>(&a));
-                        $assert(&out_ref, &out);
-                    }
-                }
-                #[cfg(loong64)]
-                unsafe {
-                    use $crate::backend::loong64::*;
-                    if Lasx::is_available() {
-                        let out = Lasx::run_vectorized(|| [<$test_fn _impl>]::<Lasx, $ty>(&a));
-                        $assert(&out_ref, &out);
-                    }
-                    if Lsx::is_available() {
-                        let out = Lsx::run_vectorized(|| [<$test_fn _impl>]::<Lsx, $ty>(&a));
-                        $assert(&out_ref, &out);
-                    }
-                }
-                #[cfg(wasm32)]
-                unsafe {
-                    use crate::backend::wasm32;
-                    #[cfg(relaxed_simd)]
-                    if wasm32::Simd128Relaxed::is_available() {
-                        let out = wasm32::Simd128Relaxed::run_vectorized(|| [<$test_fn _impl>]::<wasm32::Simd128Relaxed, $ty>(&a));
-                        $assert(&out_ref, &out);
-                    }
-                    if wasm32::Simd128Fallback::is_available() {
-                        let out = wasm32::Simd128Fallback::run_vectorized(|| [<$test_fn _impl>]::<wasm32::Simd128Fallback, $ty>(&a));
-                        $assert(&out_ref, &out);
-                    }
-                }
-                let out = [<$test_fn _impl>]::<$crate::backend::scalar::Fallback, $ty>(&a);
-                $assert(&out_ref, &out);
+                $crate::tests::for_each_backend!(
+                    [<$test_fn _impl>], $ty, &a, |out: &[$ty]| $assert(&out_ref, out)
+                );
             }
         })*
     };
 }
 pub(crate) use testgen_unop;
+
+/// Unary operator test generator using explicit input values instead of random ranges.
+macro_rules! testgen_unop_values {
+    ($test_fn: ident, $impl_fn: ident, $reference: expr, $values: expr, $assert: ident, $($(#[$meta:meta])* $ty: ty),*) => {
+        $(::paste::paste! {
+            $(#[$meta])*
+            #[::wasm_bindgen_test::wasm_bindgen_test(unsupported = test)]
+            fn [<$test_fn _ $ty>]() {
+                let values: Vec<$ty> = $values;
+                // Cycle inputs to fill complete SIMD vector lanes up to SIZE
+                let a: Vec<$ty> = values.iter().copied().cycle().take($crate::tests::SIZE).collect();
+                let out_ref = a.iter().map(|a| $ty::$reference(*a)).collect::<Vec<_>>();
+                $crate::tests::for_each_backend!(
+                    $impl_fn, $ty, &a, |out: &[$ty]| $assert(&a, &out_ref, out)
+                );
+            }
+        })*
+    };
+}
+pub(crate) use testgen_unop_values;

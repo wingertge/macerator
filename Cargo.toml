@@ -9,7 +9,7 @@ name = "macerator"
 readme.workspace = true
 repository.workspace = true
 rust-version = "1.94"
-version = "0.4.0"
+version = "0.4.1"
 
 [features]
 default = ["std", "avx512", "fp16"]

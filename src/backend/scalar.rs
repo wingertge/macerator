@@ -486,13 +486,14 @@ mod tests {
     #[test]
     fn vstore_high_accepts_unaligned_pointer() {
         #[repr(align(4))]
-        struct Aligned([u8; 8]);
+        struct Aligned([u8; 9]);
 
         // `vstore_high` has the same documented unaligned-pointer contract as
         // `vstore_low`. This regresses the old aligned `ptr::write` through
-        // `*mut u32`.
+        // `*mut u32`. `ptr` addresses the whole vector, so the buffer needs
+        // room for 8 bytes after the offset.
         let value = 0xabu8.splat::<Fallback>();
-        let mut bytes = Aligned([0; 8]);
+        let mut bytes = Aligned([0; 9]);
 
         unsafe { vstore_high::<Fallback, u8>(bytes.0.as_mut_ptr().add(1), value) };
     }

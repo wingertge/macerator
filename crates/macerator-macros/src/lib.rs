@@ -4,6 +4,7 @@ use quote::{format_ident, quote};
 use syn::{parse_quote, LifetimeParam, Token, Type};
 use syn::{spanned::Spanned, FnArg, GenericParam, ItemFn, Pat};
 use syn::{Expr, Lifetime};
+use syn::{Ident, TypeGroup, TypeParen, WherePredicate};
 
 #[derive(FromMeta, Default)]
 #[darling(default)]
@@ -60,6 +61,22 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
         .chain(type_params.skip(1).map(|t| GenericParam::Type(t.clone())))
         .chain(const_params.map(|c| GenericParam::Const(c.clone())))
         .collect();
+
+    let Some(simd_param) = sig.generics.type_params().next() else {
+        return Err(syn::Error::new(
+            sig.ident.span(),
+            "`with_simd` needs a SIMD type parameter, e.g. `<S: Simd>`",
+        ));
+    };
+    let simd_generic_name = simd_param.ident.clone();
+    // The dispatcher doesn't have the SIMD parameter, so `where` bounds on it
+    // only apply to the inner fn.
+    if let Some(where_clause) = &mut outer_fn_sig.generics.where_clause {
+        where_clause.predicates = core::mem::take(&mut where_clause.predicates)
+            .into_iter()
+            .filter(|predicate| !bounds_param(predicate, &simd_generic_name))
+            .collect();
+    }
 
     let mut inner_fn_sig = sig.clone();
     inner_fn_sig.ident = format_ident!("{}_impl", name);
@@ -133,8 +150,6 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
     let field_decl = fields.iter().map(|(ident, ty, _)| quote![#ident: #ty]);
     let field_names = fields.iter().map(|it| &it.0).collect::<Vec<_>>();
 
-    let simd_generic_name = sig.generics.type_params().next().unwrap().ident.clone();
-
     let mut inner_generics_no_lifetime = inner_fn_sig.generics.clone();
     inner_generics_no_lifetime.params = inner_generics_no_lifetime
         .params
@@ -187,6 +202,19 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
         #[inline(always)]
         #inner_fn_sig #block
     })
+}
+
+/// Whether `predicate` is a `where` bound on the type parameter `param`.
+fn bounds_param(predicate: &WherePredicate, param: &Ident) -> bool {
+    let WherePredicate::Type(predicate) = predicate else {
+        return false;
+    };
+    let mut ty = &predicate.bounded_ty;
+    // `macro_rules!` fragments arrive wrapped in invisible groups.
+    while let Type::Group(TypeGroup { elem, .. }) | Type::Paren(TypeParen { elem, .. }) = ty {
+        ty = elem;
+    }
+    matches!(ty, Type::Path(p) if p.qself.is_none() && p.path.is_ident(param))
 }
 
 fn add_named_lifetimes(ty: &mut Type) -> bool {
@@ -266,6 +294,58 @@ mod tests {
             "only doc and lint attributes reach the inner fn"
         );
         assert_eq!(inline_attrs(&expanded, "f_impl"), ["inline(always)"]);
+    }
+
+    #[test]
+    fn where_bound_on_simd_param_stays_off_the_dispatcher() {
+        let expanded = with_simd_impl(
+            quote!(),
+            quote! {
+                fn f<S>(x: u32) -> u32 where S: Simd { x }
+            },
+        )
+        .unwrap();
+        let expanded: syn::File = syn::parse2(expanded).unwrap();
+        let predicates = |name| {
+            generated_fn(&expanded, name)
+                .sig
+                .generics
+                .where_clause
+                .as_ref()
+                .map_or(0, |w| w.predicates.len())
+        };
+        assert_eq!(predicates("f"), 0);
+        assert_eq!(predicates("f_impl"), 1);
+    }
+
+    #[test]
+    fn where_bound_from_macro_rules_stays_off_the_dispatcher() {
+        // A `$s:ty` fragment arrives as an invisible group.
+        let param = proc_macro2::Group::new(proc_macro2::Delimiter::None, quote!(S));
+        let expanded = with_simd_impl(
+            quote!(),
+            quote! {
+                fn f<S>(x: u32) -> u32 where #param: Simd { x }
+            },
+        )
+        .unwrap();
+        let expanded: syn::File = syn::parse2(expanded).unwrap();
+        let predicates = generated_fn(&expanded, "f")
+            .sig
+            .generics
+            .where_clause
+            .as_ref()
+            .map_or(0, |w| w.predicates.len());
+        assert_eq!(predicates, 0);
+    }
+
+    #[test]
+    fn missing_simd_param_is_a_compile_error() {
+        let err = with_simd_impl(quote!(), quote! { fn f(x: u32) -> u32 { x } }).unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "`with_simd` needs a SIMD type parameter, e.g. `<S: Simd>`"
+        );
     }
 
     #[test]

@@ -397,7 +397,8 @@ impl FP16Ext for FP16Intrinsic {
                     "faddp {a:v}.8h, {a:v}.8h, {a:v}.8h",
                     "faddp {a:v}.4h, {a:v}.4h, {a:v}.4h",
                     "faddp {out:h}, {a:v}.2h",
-                    a = in(vreg) a, out = out(vreg) r,
+                    // The pairwise adds overwrite `a`, so it is not input-only.
+                    a = inout(vreg) a => _, out = out(vreg) r,
                     options(pure, nomem, nostack)
                 );
             }

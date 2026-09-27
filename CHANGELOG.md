@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0](https://github.com/wingertge/macerator/compare/macerator-v0.4.0...macerator-v0.5.0) - 2026-09-27
+
+### Added
+
+- add VSqrt ([#60](https://github.com/wingertge/macerator/pull/60))
+- use Newton-Raphson for recip() to get ULP-level precision  ([#47](https://github.com/wingertge/macerator/pull/47))
+
+### Fixed
+
+- [**breaking**] make half-vector loads and stores consistent across backends ([#53](https://github.com/wingertge/macerator/pull/53))
+- *(macros)* keep dispatcher-only attributes off the with_simd body ([#55](https://github.com/wingertge/macerator/pull/55))
+- wrap integer lanes emulated with scalar code ([#54](https://github.com/wingertge/macerator/pull/54))
+- emit all-ones lanes from emulated f16 comparisons ([#51](https://github.com/wingertge/macerator/pull/51))
+- compute abs_i64 correctly on SSE4.2, AVX2 and LoongArch ([#52](https://github.com/wingertge/macerator/pull/52))
+- declare FP16 reduce_add asm scratch register as clobbered ([#50](https://github.com/wingertge/macerator/pull/50))
+- use ordered predicate for AVX2 float equality ([#49](https://github.com/wingertge/macerator/pull/49))
+
+### Other
+
+- widen the f16 reduce_add tolerance ([#61](https://github.com/wingertge/macerator/pull/61))
+- allow inlining arch detection into dispatchers ([#58](https://github.com/wingertge/macerator/pull/58))
+- use plain unaligned loads on SSE4.2 and AVX2 ([#56](https://github.com/wingertge/macerator/pull/56))
+
 ## [0.4.0](https://github.com/wingertge/macerator/compare/macerator-v0.3.4...macerator-v0.4.0) - 2026-09-02
 
 ### Added

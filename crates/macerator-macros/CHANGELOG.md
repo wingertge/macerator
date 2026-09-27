@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1](https://github.com/wingertge/macerator/compare/macerator-macros-v0.3.0...macerator-macros-v0.3.1) - 2026-09-27
+
+### Fixed
+
+- *(macros)* keep dispatcher-only attributes off the with_simd body ([#55](https://github.com/wingertge/macerator/pull/55))
+
 ## [0.3.0](https://github.com/wingertge/macerator/compare/macerator-macros-v0.2.0...macerator-macros-v0.3.0) - 2026-09-02
 
 ### Fixed

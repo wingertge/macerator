@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.2](https://github.com/wingertge/macerator/compare/macerator-macros-v0.3.1...macerator-macros-v0.3.2) - 2026-09-27
+
+### Fixed
+
+- *(macros)* accept where-bounds on the SIMD parameter ([#67](https://github.com/wingertge/macerator/pull/67))
+
+### Other
+
+- say when mul_add is fused, and update the README ([#66](https://github.com/wingertge/macerator/pull/66))
+
 ## [0.3.1](https://github.com/wingertge/macerator/compare/macerator-macros-v0.3.0...macerator-macros-v0.3.1) - 2026-09-27
 
 ### Fixed

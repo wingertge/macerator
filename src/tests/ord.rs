@@ -406,6 +406,43 @@ testgen_min_max!(
     f64
 );
 
+/// The tests above draw operands from `0..127`, so they never see negative
+/// signed values or unsigned values with the top bit set, which is where the
+/// biased compares emulating unsigned ordering on x86 and wasm matter.
+mod full_range {
+    use super::*;
+    use num_traits::Bounded;
+
+    /// Operands over the whole range of the type, starting with every pairing
+    /// of `MIN`, `MAX`, 0 and 1.
+    fn random_inputs<T: SampleUniform + NumCast + Copy + Bounded>() -> (Vec<T>, Vec<T>) {
+        let mut lhs = random(T::min_value(), T::max_value());
+        let mut rhs = random(T::min_value(), T::max_value());
+        let edges = [
+            T::min_value(),
+            T::max_value(),
+            T::from(0).unwrap(),
+            T::from(1).unwrap(),
+        ];
+        for (i, a) in edges.iter().enumerate() {
+            for (j, b) in edges.iter().enumerate() {
+                lhs[i * edges.len() + j] = *a;
+                rhs[i * edges.len() + j] = *b;
+            }
+        }
+        (lhs, rhs)
+    }
+
+    testgen_cmp!(test_eq, eq, u8, i8, u16, i16, u32, i32, u64, i64);
+    testgen_cmp!(test_ne, ne, u8, i8, u16, i16, u32, i32, u64, i64);
+    testgen_cmp!(test_lt, lt, u8, i8, u16, i16, u32, i32, u64, i64);
+    testgen_cmp!(test_le, le, u8, i8, u16, i16, u32, i32, u64, i64);
+    testgen_cmp!(test_gt, gt, u8, i8, u16, i16, u32, i32, u64, i64);
+    testgen_cmp!(test_ge, ge, u8, i8, u16, i16, u32, i32, u64, i64);
+    testgen_min_max!(test_min, min, u8, i8, u16, i16, u32, i32, u64, i64);
+    testgen_min_max!(test_max, max, u8, i8, u16, i16, u32, i32, u64, i64);
+}
+
 mod nan {
     use super::*;
 

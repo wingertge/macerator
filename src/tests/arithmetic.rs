@@ -9,7 +9,7 @@ use paste::paste;
 
 use crate::{vload_unaligned, vstore_unaligned, Scalar, Simd, VAdd, VDiv, VMul, VMulAdd, VSub};
 
-use super::{assert_approx_eq, binop, test_binop, testgen_binop};
+use super::{assert_approx_eq, binop, for_each_backend, test_binop, testgen_binop, SIZE};
 
 #[inline(always)]
 fn test_add_impl<S: Simd, T: VAdd>(lhs: &[T], rhs: &[T]) -> Vec<T> {
@@ -213,3 +213,45 @@ fn test_unaligned_roundtrip() {
         assert_eq!(out, &src[1..out.len() + 1])
     });
 }
+#[inline(always)]
+fn test_wrapping_impl<S: Simd, T: VAdd + VSub + VMul + VMulAdd>(
+    inputs: &(Vec<T>, Vec<T>),
+) -> Vec<T> {
+    let (lhs, rhs) = inputs;
+    let mut out = test_add_impl::<S, T>(lhs, rhs);
+    out.extend(test_sub_impl::<S, T>(lhs, rhs));
+    out.extend(test_mul_impl::<S, T>(lhs, rhs));
+    out.extend(test_fma_impl::<S, T>(lhs, rhs, rhs));
+    out
+}
+
+/// Integer lanes wrap on overflow on every backend, including where a lane op
+/// is emulated with scalar code. Only meaningful with overflow checks on (the
+/// default for tests), where overflowing scalar arithmetic panics.
+macro_rules! testgen_wrapping {
+    ($($ty: ty),*) => {
+        $(paste! {
+            #[::wasm_bindgen_test::wasm_bindgen_test(unsupported = test)]
+            fn [<test_wrapping_ $ty>]() {
+                let values = [<$ty>::MAX, <$ty>::MAX - 1, <$ty>::MIN, 0, 1, 2, <$ty>::MAX / 2 + 1];
+                let n = values.len();
+                let lhs: Vec<$ty> = (0..SIZE).map(|i| values[i % n]).collect();
+                let rhs: Vec<$ty> = (0..SIZE).map(|i| values[(i / n) % n]).collect();
+                let ops: [fn($ty, $ty) -> $ty; 3] =
+                    [<$ty>::wrapping_add, <$ty>::wrapping_sub, <$ty>::wrapping_mul];
+                let mut expected: Vec<$ty> = ops
+                    .iter()
+                    .flat_map(|op| lhs.iter().zip(&rhs).map(|(a, b)| op(*a, *b)))
+                    .collect();
+                // mul_add(a, b, b)
+                expected.extend(lhs.iter().zip(&rhs).map(|(a, b)| a.wrapping_mul(*b).wrapping_add(*b)));
+                let inputs = (lhs, rhs);
+                for_each_backend!(test_wrapping_impl, $ty, &inputs, |out: &[$ty]| {
+                    assert_eq!(expected, out)
+                });
+            }
+        })*
+    };
+}
+
+testgen_wrapping!(u8, i8, u16, i16, u32, i32, u64, i64);

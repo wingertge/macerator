@@ -10,7 +10,7 @@ use paste::paste;
 
 use crate::{backend::arch::NullaryFnOnce, cast, seal::Sealed, Scalar};
 
-use super::{arch::impl_simd, Simd, VRegister, Vector, WithSimd};
+use super::{arch::impl_simd, wrapping_mul, Simd, VRegister, Vector, WithSimd};
 
 impl Sealed for int8x16_t {}
 impl VRegister for int8x16_t {}
@@ -214,10 +214,10 @@ macro_rules! impl_cmp_scalar {
                 const LANES: usize = WIDTH / (8 * size_of::<$ty>());
                 let a: [$ty; LANES] = cast!(a);
                 let b: [$ty; LANES] = cast!(b);
-                let mut out = [0; LANES];
+                let mut out: [[<i $size>]; LANES] = [0; LANES];
 
                 for i in 0..LANES {
-                    out[i] = a[i].$intrinsic(&b[i]) as [<i $size>];
+                    out[i] = if a[i].$intrinsic(&b[i]) { -1 } else { 0 };
                 }
                 cast!(out)
             }
@@ -397,7 +397,8 @@ impl FP16Ext for FP16Intrinsic {
                     "faddp {a:v}.8h, {a:v}.8h, {a:v}.8h",
                     "faddp {a:v}.4h, {a:v}.4h, {a:v}.4h",
                     "faddp {out:h}, {a:v}.2h",
-                    a = in(vreg) a, out = out(vreg) r,
+                    // The pairwise adds overwrite `a`, so it is not input-only.
+                    a = inout(vreg) a => _, out = out(vreg) r,
                     options(pure, nomem, nostack)
                 );
             }
@@ -558,7 +559,7 @@ where
     delegate_fp16!(reduce reduce_add, reduce_min, reduce_max);
     delegate_fp16!(cmp equals, less_than, less_than_or_equal, greater_than_or_equal, greater_than);
 
-    impl_binop_scalar!(mul, Mul::mul, u64, i64);
+    impl_binop_scalar!(mul, wrapping_mul, u64, i64);
     impl_binop_scalar!(min, Ord::min, u64, i64);
     impl_binop_scalar!(max, Ord::max, u64, i64);
 

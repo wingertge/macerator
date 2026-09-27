@@ -360,8 +360,7 @@ impl Simd for Lsx {
     }
     #[inline(always)]
     fn abs_i64(a: Self::Register) -> Self::Register {
-        let mask = Self::splat_i64(i64::MAX);
-        Self::bitand(a, mask)
+        cast!(lsx_vsigncov_d(cast!(a), cast!(a)))
     }
     #[inline(always)]
     fn abs_i64_supported() -> bool {

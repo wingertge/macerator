@@ -13,6 +13,7 @@ use bytemuck::{CheckedBitPattern, NoUninit, Pod, Zeroable};
 use core::ops::{BitAnd, BitOr, BitXor, Not};
 use core::{fmt::Debug, marker::PhantomData, ops::Deref};
 use half::{bf16, f16};
+use num_traits::{WrappingAdd, WrappingMul, WrappingSub};
 use paste::paste;
 
 mod arch;
@@ -31,6 +32,22 @@ moddef::moddef!(
 use crate::{seal::Sealed, Scalar, VAdd, VBitAnd, VBitNot, VBitOr, VBitXor};
 
 pub trait VRegister: Copy + Pod + Debug + Send + Sync + Sealed {}
+
+// Integer lane arithmetic for ops a backend emulates with scalar code. SIMD
+// integer instructions wrap on overflow, so the emulation must wrap too instead
+// of panicking in debug builds.
+#[inline(always)]
+pub(crate) fn wrapping_add<T: WrappingAdd>(a: T, b: T) -> T {
+    a.wrapping_add(&b)
+}
+#[inline(always)]
+pub(crate) fn wrapping_sub<T: WrappingSub>(a: T, b: T) -> T {
+    a.wrapping_sub(&b)
+}
+#[inline(always)]
+pub(crate) fn wrapping_mul<T: WrappingMul>(a: T, b: T) -> T {
+    a.wrapping_mul(&b)
+}
 
 macro_rules! cast {
     ($v: expr) => {
@@ -444,10 +461,10 @@ macro_rules! impl_cmp_scalar {
                 const LANES: usize = WIDTH / (8 * size_of::<$ty>());
                 let a: [$ty; LANES] = cast!(a);
                 let b: [$ty; LANES] = cast!(b);
-                let mut out = [0; LANES];
+                let mut out: [$mask_ty; LANES] = [0; LANES];
 
                 for i in 0..LANES {
-                    out[i] = a[i].$intrinsic(&b[i]) as $mask_ty;
+                    out[i] = if a[i].$intrinsic(&b[i]) { -1 } else { 0 };
                 }
                 cast!(out)
             }

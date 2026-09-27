@@ -13,7 +13,7 @@ use crate::{seal::Sealed, Scalar, WithSimd};
 
 use super::{
     arch::{impl_simd, NullaryFnOnce},
-    cast, impl_cmp_scalar, Simd, VRegister, Vector,
+    cast, impl_cmp_scalar, wrapping_mul, Simd, VRegister, Vector,
 };
 
 impl Sealed for v128 {}
@@ -243,7 +243,8 @@ where
 
     impl_binop_scalar!(add, Add::add, f16);
     impl_binop_scalar!(sub, Sub::sub, f16);
-    impl_binop_scalar!(mul, Mul::mul, u8, i8, f16);
+    impl_binop_scalar!(mul, wrapping_mul, u8, i8);
+    impl_binop_scalar!(mul, Mul::mul, f16);
     impl_binop_scalar!(div, Div::div, f16);
     impl_binop_scalar!(min, Ord::min, u64, i64);
     impl_binop_scalar!(min, f16::min, f16);

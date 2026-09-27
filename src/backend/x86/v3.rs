@@ -12,7 +12,7 @@ use paste::paste;
 
 use crate::{backend::arch::NullaryFnOnce, impl_cmp_scalar, Scalar, WithSimd};
 
-use crate::backend::{arch::impl_simd, cast, seal::Sealed, Simd, VRegister, Vector};
+use crate::backend::{arch::impl_simd, cast, seal::Sealed, wrapping_mul, Simd, VRegister, Vector};
 
 use super::*;
 
@@ -86,7 +86,8 @@ impl Simd for V3 {
     impl_binop_scalar!(add, Add::add, f16);
     impl_binop_scalar!(sub, Sub::sub, f16);
     impl_binop_scalar!(div, Div::div, f16);
-    impl_binop_scalar!(mul, Mul::mul, i8, u8, f16, u64, i64);
+    impl_binop_scalar!(mul, wrapping_mul, i8, u8, u64, i64);
+    impl_binop_scalar!(mul, Mul::mul, f16);
     impl_binop_scalar!(min, Ord::min, u64, i64);
     impl_binop_scalar!(min, f16::min, f16);
     impl_binop_scalar!(max, Ord::max, u64, i64);
@@ -329,7 +330,7 @@ impl Simd for V3 {
     }
     #[inline(always)]
     fn equals_f32(a: Self::Register, b: Self::Register) -> <f32 as Scalar>::Mask<Self> {
-        cast!(_mm256_cmp_ps::<_CMP_EQ_UQ>(cast!(a), cast!(b)))
+        cast!(_mm256_cmp_ps::<_CMP_EQ_OQ>(cast!(a), cast!(b)))
     }
     #[inline(always)]
     fn equals_f32_supported() -> bool {
@@ -337,7 +338,7 @@ impl Simd for V3 {
     }
     #[inline(always)]
     fn equals_f64(a: Self::Register, b: Self::Register) -> <f64 as Scalar>::Mask<Self> {
-        cast!(_mm256_cmp_pd::<_CMP_EQ_UQ>(cast!(a), cast!(b)))
+        cast!(_mm256_cmp_pd::<_CMP_EQ_OQ>(cast!(a), cast!(b)))
     }
     #[inline(always)]
     fn equals_f64_supported() -> bool {
@@ -482,8 +483,12 @@ impl Simd for V3 {
     }
     #[inline(always)]
     fn abs_i64(a: Self::Register) -> Self::Register {
-        let mask = Self::splat_i64(i64::MAX);
-        Self::bitand(a, mask)
+        // No 64-bit abs before AVX-512: negate the lanes whose sign is set.
+        unsafe {
+            let a: __m256i = cast!(a);
+            let sign = _mm256_cmpgt_epi64(_mm256_setzero_si256(), a);
+            cast!(_mm256_sub_epi64(_mm256_xor_si256(a, sign), sign))
+        }
     }
     #[inline(always)]
     fn abs_i64_supported() -> bool {

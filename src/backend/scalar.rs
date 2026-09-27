@@ -12,7 +12,7 @@ use paste::paste;
 
 use crate::{MaskOps, Scalar};
 
-use super::{cast, Simd, VRegister, WithSimd};
+use super::{cast, wrapping_add, wrapping_mul, wrapping_sub, Simd, VRegister, WithSimd};
 
 impl VRegister for u64 {}
 
@@ -209,52 +209,13 @@ impl Simd for Fallback {
 
     lanes!(8, 16, 32, 64);
 
-    impl_binop_scalar!(
-        add,
-        Add::add,
-        u8,
-        i8,
-        u16,
-        i16,
-        f16,
-        u32,
-        i32,
-        f32,
-        u64,
-        i64,
-        f64
-    );
-    impl_binop_scalar!(
-        sub,
-        Sub::sub,
-        u8,
-        i8,
-        u16,
-        i16,
-        f16,
-        u32,
-        i32,
-        f32,
-        u64,
-        i64,
-        f64
-    );
+    impl_binop_scalar!(add, wrapping_add, u8, i8, u16, i16, u32, i32, u64, i64);
+    impl_binop_scalar!(add, Add::add, f16, f32, f64);
+    impl_binop_scalar!(sub, wrapping_sub, u8, i8, u16, i16, u32, i32, u64, i64);
+    impl_binop_scalar!(sub, Sub::sub, f16, f32, f64);
     impl_binop_scalar!(div, Div::div, f16, f32, f64);
-    impl_binop_scalar!(
-        mul,
-        Mul::mul,
-        u8,
-        i8,
-        u16,
-        i16,
-        f16,
-        u32,
-        i32,
-        f32,
-        u64,
-        i64,
-        f64
-    );
+    impl_binop_scalar!(mul, wrapping_mul, u8, i8, u16, i16, u32, i32, u64, i64);
+    impl_binop_scalar!(mul, Mul::mul, f16, f32, f64);
     impl_binop_scalar!(min, Ord::min, u8, i8, u16, i16, u32, i32, u64, i64);
     impl_binop_scalar!(min, f16::min, f16);
     impl_binop_scalar!(min, f32::min, f32);
@@ -269,7 +230,8 @@ impl Simd for Fallback {
     impl_binop_scalar_full!(bitxor, BitXor::bitxor);
 
     impl_unop_scalar!(recip, recip, f16, f32, f64);
-    impl_unop_scalar!(abs, abs, i8, i16, f16, i32, f32, i64, f64);
+    impl_unop_scalar!(abs, wrapping_abs, i8, i16, i32, i64);
+    impl_unop_scalar!(abs, abs, f16, f32, f64);
 
     impl_cmp_scalar!(equals, eq, u8, i8, u16, i16, f16, u32, i32, f32, u64, i64, f64);
     impl_cmp_scalar!(

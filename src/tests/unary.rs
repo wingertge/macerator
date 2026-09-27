@@ -2,7 +2,7 @@ use core::{fmt::Debug, num::FpCategory};
 use half::f16;
 use std::{vec, vec::Vec};
 
-use num_traits::{Float, NumCast};
+use num_traits::{Float, NumCast, PrimInt};
 
 use crate::{
     assert_relative_eq,
@@ -31,7 +31,7 @@ fn assert_approx_eq_recip<T: RelativeEq<Epsilon = T> + Debug + NumCast + Copy>(
     let epsilon = match core::mem::size_of::<T>() {
         ..=2 => T::from(2.0.powf(-8.0)).unwrap(), // f16: ~8-bit estimate precision
         4 => T::from(4.0 * f32::EPSILON as f64).unwrap(), // f32: ~4 ULP
-        _ => T::from(4.0 * f64::EPSILON).unwrap(),        // f64: ~4 ULP
+        _ => T::from(4.0 * f64::EPSILON).unwrap(), // f64: ~4 ULP
     };
     for (a, b) in lhs.iter().zip(rhs) {
         assert_relative_eq!(*a, *b, epsilon = epsilon, max_relative = epsilon);
@@ -43,7 +43,8 @@ fn recip_bits_eq<T: Float>(a: T, b: T) -> bool {
     (a.is_nan() && b.is_nan()) || (a == b && a.is_sign_negative() == b.is_sign_negative())
 }
 
-/// Verifies `Vector::recip` special values (±0, ±inf, NaN) and permits HW saturation for subnormals.
+/// Verifies `Vector::recip` special values (±0, ±inf, NaN) and permits HW
+/// saturation for subnormals.
 fn assert_recip_specials<T: Float + Debug + RelativeEq<Epsilon = T>>(
     input: &[T],
     expected: &[T],
@@ -54,7 +55,7 @@ fn assert_recip_specials<T: Float + Debug + RelativeEq<Epsilon = T>>(
         let saturation = if x.classify() == FpCategory::Subnormal {
             Some(T::infinity()) // 1/subnormal overshoots to infinity.
         } else if want.classify() == FpCategory::Subnormal {
-            Some(T::zero())     // 1/x subnormal undershoots to zero
+            Some(T::zero()) // 1/x subnormal undershoots to zero
         } else {
             None
         };
@@ -175,8 +176,47 @@ testgen_unop!(
     i8,
     i16,
     i32,
+    i64,
     #[cfg_attr(all(miri, any(x86_v3, x86_v4, aarch64)), ignore)]
     f16,
     f32,
     f64
+);
+
+fn assert_eq_values<T: PartialEq + Debug>(_input: &[T], expected: &[T], actual: &[T]) {
+    assert_eq!(expected, actual);
+}
+
+fn signed_extremes<T: PrimInt + num_traits::Signed>() -> Vec<T> {
+    vec![
+        T::zero(),
+        T::one(),
+        -T::one(),
+        T::max_value(),
+        -T::max_value(),
+        T::min_value(),
+    ]
+}
+
+// `MIN` wraps to itself, like the SIMD instructions.
+testgen_unop_values!(
+    test_abs_extremes,
+    test_abs_impl,
+    wrapping_abs,
+    signed_extremes(),
+    assert_eq_values,
+    i8,
+    i16,
+    i32,
+    i64
+);
+
+// Magnitudes beyond 32 bits.
+testgen_unop_values!(
+    test_abs_values,
+    test_abs_impl,
+    wrapping_abs,
+    vec![1 << 40, -(1 << 40), (1 << 62) + 1, -(1 << 62) - 1],
+    assert_eq_values,
+    i64
 );

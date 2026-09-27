@@ -29,6 +29,7 @@ pub trait VAbs: Scalar {
 }
 
 impl<S: Simd, T: VAbs> Vector<S, T> {
+    /// Elementwise absolute value. For signed integers, `MIN` wraps to itself.
     #[inline(always)]
     pub fn abs(self) -> Self {
         T::vabs(self)
@@ -53,4 +54,4 @@ macro_rules! impl_unop {
 }
 
 impl_unop!(VRecip, recip, f16, f32, f64);
-impl_unop!(VAbs, abs, i8, i16, f16, i32, f32, f64);
+impl_unop!(VAbs, abs, i8, i16, f16, i32, i64, f32, f64);

@@ -63,3 +63,16 @@ fn test_with_simd_attributes_and_wildcards() {
     assert_eq!(test_inline_hint(1), 2);
     assert_eq!(test_wildcard_arg(1, 2), 2);
 }
+
+#[with_simd]
+fn test_where_simd<S>(a: u32) -> u32
+where
+    S: Simd,
+{
+    a + 1
+}
+
+#[::wasm_bindgen_test::wasm_bindgen_test(unsupported = test)]
+fn test_with_simd_where_clause() {
+    assert_eq!(test_where_simd(1), 2);
+}

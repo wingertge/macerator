@@ -401,7 +401,7 @@ where
     }
     #[inline(always)]
     unsafe fn store_high<T: Scalar>(ptr: *mut T, value: super::Vector<Self, T>) {
-        unsafe { v128_store64_lane::<1>(cast!(value), ptr as _) };
+        unsafe { v128_store64_lane::<1>(cast!(value), (ptr as *mut u64).add(1)) };
     }
     #[inline(always)]
     fn splat_i8(value: i8) -> Self::Register {

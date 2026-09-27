@@ -238,7 +238,7 @@ impl Simd for V3 {
     #[inline(always)]
     unsafe fn load_low<T: Scalar>(ptr: *const T) -> Vector<Self, T> {
         let low = unsafe { _mm_lddqu_si128(ptr as _) };
-        cast!(_mm256_castsi128_si256(low))
+        cast!(_mm256_zextsi128_si256(low))
     }
     #[inline(always)]
     unsafe fn load_high<T: Scalar>(ptr: *const T) -> Vector<Self, T> {

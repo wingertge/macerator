@@ -234,7 +234,8 @@ impl Simd for V2 {
     }
     #[inline(always)]
     unsafe fn load_high<T: Scalar>(ptr: *const T) -> Vector<Self, T> {
-        cast!(_mm_loadh_pd(cast!(Self::splat_f64(0.0)), ptr as _))
+        let high = _mm_loadl_epi64((ptr as *const u8).add(8) as _);
+        cast!(_mm_slli_si128::<8>(high))
     }
     #[inline(always)]
     unsafe fn store<T: Scalar>(ptr: *mut T, value: Vector<Self, T>) {
@@ -252,7 +253,8 @@ impl Simd for V2 {
     }
     #[inline(always)]
     unsafe fn store_high<T: Scalar>(ptr: *mut T, value: Vector<Self, T>) {
-        unsafe { _mm_storeh_pd(ptr as _, cast!(value)) };
+        let high = _mm_srli_si128::<8>(cast!(value));
+        unsafe { _mm_storel_epi64((ptr as *mut u8).add(8) as _, high) };
     }
 
     #[inline(always)]

@@ -265,7 +265,7 @@ impl Simd for Lsx {
     unsafe fn store_high<T: Scalar>(ptr: *mut T, value: Vector<Self, T>) {
         let high = lsx_vpickve2gr_d::<1>(cast!(value));
         unsafe {
-            write_unaligned(ptr as _, high);
+            write_unaligned((ptr as *mut i64).add(1), high);
         };
     }
 

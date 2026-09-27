@@ -348,11 +348,13 @@ impl Simd for Fallback {
     }
     #[inline(always)]
     unsafe fn load_low<T: Scalar>(ptr: *const T) -> super::Vector<Self, T> {
-        Self::typed((unsafe { read_unaligned(ptr as *const u32) } as u64) << 32)
+        let halves: [u32; 2] = [unsafe { read_unaligned(ptr as *const u32) }, 0];
+        Self::typed(cast!(halves))
     }
     #[inline(always)]
     unsafe fn load_high<T: Scalar>(ptr: *const T) -> super::Vector<Self, T> {
-        Self::typed(unsafe { read_unaligned((ptr as *const u32).add(1)) } as u64)
+        let halves: [u32; 2] = [0, unsafe { read_unaligned((ptr as *const u32).add(1)) }];
+        Self::typed(cast!(halves))
     }
     #[inline(always)]
     unsafe fn store<T: Scalar>(ptr: *mut T, value: super::Vector<Self, T>) {
@@ -364,13 +366,13 @@ impl Simd for Fallback {
     }
     #[inline(always)]
     unsafe fn store_low<T: Scalar>(ptr: *mut T, value: super::Vector<Self, T>) {
-        let value: Self::Register = cast!(value);
-        unsafe { write_unaligned(ptr as *mut u32, (value >> 32) as u32) };
+        let halves: [u32; 2] = cast!(*value);
+        unsafe { write_unaligned(ptr as *mut u32, halves[0]) };
     }
     #[inline(always)]
     unsafe fn store_high<T: Scalar>(ptr: *mut T, value: super::Vector<Self, T>) {
-        let value: Self::Register = cast!(value);
-        unsafe { write_unaligned(ptr as *mut u32, value as u32) };
+        let halves: [u32; 2] = cast!(*value);
+        unsafe { write_unaligned((ptr as *mut u32).add(1), halves[1]) };
     }
     #[inline(always)]
     fn splat_i8(value: i8) -> Self::Register {

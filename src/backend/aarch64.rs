@@ -214,10 +214,10 @@ macro_rules! impl_cmp_scalar {
                 const LANES: usize = WIDTH / (8 * size_of::<$ty>());
                 let a: [$ty; LANES] = cast!(a);
                 let b: [$ty; LANES] = cast!(b);
-                let mut out = [0; LANES];
+                let mut out: [[<i $size>]; LANES] = [0; LANES];
 
                 for i in 0..LANES {
-                    out[i] = a[i].$intrinsic(&b[i]) as [<i $size>];
+                    out[i] = if a[i].$intrinsic(&b[i]) { -1 } else { 0 };
                 }
                 cast!(out)
             }
@@ -397,7 +397,8 @@ impl FP16Ext for FP16Intrinsic {
                     "faddp {a:v}.8h, {a:v}.8h, {a:v}.8h",
                     "faddp {a:v}.4h, {a:v}.4h, {a:v}.4h",
                     "faddp {out:h}, {a:v}.2h",
-                    a = in(vreg) a, out = out(vreg) r,
+                    // The pairwise adds overwrite `a`, so it is not input-only.
+                    a = inout(vreg) a => _, out = out(vreg) r,
                     options(pure, nomem, nostack)
                 );
             }

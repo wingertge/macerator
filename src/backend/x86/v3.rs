@@ -330,7 +330,7 @@ impl Simd for V3 {
     }
     #[inline(always)]
     fn equals_f32(a: Self::Register, b: Self::Register) -> <f32 as Scalar>::Mask<Self> {
-        cast!(_mm256_cmp_ps::<_CMP_EQ_UQ>(cast!(a), cast!(b)))
+        cast!(_mm256_cmp_ps::<_CMP_EQ_OQ>(cast!(a), cast!(b)))
     }
     #[inline(always)]
     fn equals_f32_supported() -> bool {
@@ -338,7 +338,7 @@ impl Simd for V3 {
     }
     #[inline(always)]
     fn equals_f64(a: Self::Register, b: Self::Register) -> <f64 as Scalar>::Mask<Self> {
-        cast!(_mm256_cmp_pd::<_CMP_EQ_UQ>(cast!(a), cast!(b)))
+        cast!(_mm256_cmp_pd::<_CMP_EQ_OQ>(cast!(a), cast!(b)))
     }
     #[inline(always)]
     fn equals_f64_supported() -> bool {

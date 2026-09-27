@@ -8,17 +8,18 @@ should be automatically used by cargo.
 
 ## AVX-512 on Stable
 
-To avoid a major MSRV bump, AVX-512 currently checks the rustc version and enables AVX-512 on stable
-if it's 1.89 or greater. This will eventually be removed and replaced by an MSRV bump.
+AVX-512 intrinsics are stable since Rust 1.89, and the MSRV is now 1.94, so the `avx512` feature
+(on by default) works on stable.
 
 ## Backends
 
 | Feature set          | Tested on | Requires Nightly |
 | -------------------- | --------- | ---------------- |
-| x86_64-v2 (sse4.1)   | Hardware  | ❌                |
+| x86_64-v2 (sse4.2)   | Hardware  | ❌                |
 | x86_64-v3 (avx2)     | Hardware  | ❌                |
-| x86_64-v4 (avx512)   | Hardware  | <1.89: ✅, >= 1.89: ❌ |
+| x86_64-v4 (avx512)   | Hardware  | ❌                |
 | aarch64 (Neon)       | Hardware  | ❌                |
+| aarch64 (Neon + fp16)| Hardware  | ❌                |
 | loongarch64 (lsx)    | QEMU      | ✅                |
 | loongarch64 (lasx)   | QEMU      | ✅                |
 | wasm32 (simd128)[^1] | Chrome    | ❌                |
@@ -31,7 +32,7 @@ backend is tested on all supported platforms.
 
 `f16` support for `x86_64-v4` is disabled by default, since only one
 Intel arch currently supports it, and AMD has no support. This may change as support expands. Note
-that this also requires nightly, even once `avx512` stabilization is done.
+that this also requires nightly, since the AVX-512 FP16 intrinsics are still unstable.
 
 ## Example
 

@@ -300,6 +300,75 @@ testgen_reduce!(
     f64
 );
 
+/// The tests above use small positive values, and `test_reduce_add_impl`
+/// combines the per-vector sums with `+`, which panics on overflow in debug
+/// builds. Reduce over the whole range of each integer type instead, combining
+/// with wrapping adds like the lanes do.
+mod full_range {
+    use super::*;
+    use num_traits::WrappingAdd;
+    use std::{vec, vec::Vec};
+
+    #[inline(always)]
+    fn test_reduce_add_impl<S: Simd, T: ReduceAdd + WrappingAdd + Zero + Debug>(a: &[T]) -> T {
+        reduce_op!(
+            ReduceAdd,
+            WrappingAdd,
+            |a: Vector<S, T>| a.reduce_add(),
+            |a: T, b: T| a.wrapping_add(&b)
+        );
+        test_reduce_op::<S, T, ReduceAddOp<T>>(a, Zero::zero())
+    }
+
+    macro_rules! testgen_full_range {
+        ($($ty: ident),*) => {
+            $(
+                testgen_reduce!(test_reduce_add, wrapping_add, Zero::zero(), $ty::MIN, $ty::MAX, 128, assert_eq, $ty);
+                testgen_reduce!(test_reduce_min_ord, min, Bounded::max_value(), $ty::MIN, $ty::MAX, 128, assert_eq, $ty);
+                testgen_reduce!(test_reduce_max_ord, max, Bounded::min_value(), $ty::MIN, $ty::MAX, 128, assert_eq, $ty);
+            )*
+        };
+    }
+
+    testgen_full_range!(u8, i8, u16, i16, u32, i32, u64, i64);
+
+    #[inline(always)]
+    fn test_reduce_extremes_impl<S: Simd, T>(a: &[T]) -> Vec<T>
+    where
+        T: ReduceAdd + ReduceMin + ReduceMax + WrappingAdd + Ord + Bounded + Zero + Debug,
+    {
+        vec![
+            test_reduce_add_impl::<S, T>(a),
+            test_reduce_min_ord_impl::<S, T>(a),
+            test_reduce_max_ord_impl::<S, T>(a),
+        ]
+    }
+
+    // `random_of_size` never returns its upper bound, so put `MAX` in the
+    // vectors explicitly.
+    macro_rules! testgen_extremes {
+        ($($ty: ident),*) => {
+            $(::paste::paste! {
+                #[::wasm_bindgen_test::wasm_bindgen_test(unsupported = test)]
+                fn [<test_reduce_extremes_ $ty>]() {
+                    let values = [$ty::MAX, $ty::MIN, 1, $ty::MAX - 1];
+                    let a: Vec<$ty> = (0..crate::tests::SIZE).map(|i| values[i % 4]).collect();
+                    let expected = vec![
+                        a.iter().fold(0, |sum: $ty, x| sum.wrapping_add(*x)),
+                        *a.iter().min().unwrap(),
+                        *a.iter().max().unwrap(),
+                    ];
+                    crate::tests::for_each_backend!(test_reduce_extremes_impl, $ty, &a, |out: &[$ty]| {
+                        assert_eq!(out, &expected[..])
+                    });
+                }
+            })*
+        };
+    }
+
+    testgen_extremes!(u8, i8, u16, i16, u32, i32, u64, i64);
+}
+
 fn assert_approx_eq_sum<T: RelativeEq<Epsilon = T> + Debug + NumCast + Copy>(lhs: &[T], rhs: &[T]) {
     // No idea what the actual deviation is, f64 failed with an absolute difference
     // of 1e-10

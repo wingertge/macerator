@@ -13,6 +13,7 @@ pub enum Arch {
 }
 
 impl Arch {
+    #[inline]
     pub fn detect() -> Self {
         #[cfg(relaxed_simd)]
         if wasm32::Simd128Relaxed::is_available() {
@@ -40,6 +41,7 @@ impl Arch {
 }
 
 impl Default for Arch {
+    #[inline]
     fn default() -> Self {
         Self::detect()
     }

@@ -10,6 +10,7 @@ pub enum Arch {
 }
 
 impl Arch {
+    #[inline]
     pub fn detect() -> Self {
         Self::Scalar
     }
@@ -26,6 +27,7 @@ impl Arch {
 }
 
 impl Default for Arch {
+    #[inline]
     fn default() -> Self {
         Self::detect()
     }

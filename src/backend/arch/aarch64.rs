@@ -16,6 +16,7 @@ pub enum Arch {
 }
 
 impl Arch {
+    #[inline]
     pub fn detect() -> Self {
         #[cfg(feature = "fp16")]
         if NeonFP16::is_available() {
@@ -43,6 +44,7 @@ impl Arch {
 }
 
 impl Default for Arch {
+    #[inline]
     fn default() -> Self {
         Self::detect()
     }

@@ -6,7 +6,7 @@
     feature(stdarch_loongarch_feature_detection)
 )]
 
-#[cfg(feature = "std")]
+#[cfg(any(feature = "std", test))]
 extern crate std;
 
 mod arithmetic;

@@ -836,6 +836,7 @@ impl NeonFma {
     impl_simd!("neon");
 }
 
+#[cfg(feature = "fp16")]
 impl NeonFP16 {
     impl_simd!("neon", "fp16");
 }

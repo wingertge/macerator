@@ -17,7 +17,7 @@ default = ["std", "avx512", "fp16"]
 avx512 = []
 fp16 = []
 nightly = []
-std = []
+std = ["half/std", "num-traits/std"]
 
 # Internal testing features to gate tests with MIRI
 miri-x86_v3 = []
@@ -30,10 +30,13 @@ bytemuck = { version = "1.23.1", features = [
     "avx512_simd",
     "min_const_generics",
 ] }
-half = { version = "2.5.0", features = ["bytemuck", "num-traits"] }
+half = { version = "2.5.0", default-features = false, features = [
+    "bytemuck",
+    "num-traits",
+] }
 macerator-macros = { version = "0.3.1", path = "crates/macerator-macros" }
 moddef = "0.3"
-num-traits = "0.2.0"
+num-traits = { version = "0.2.0", default-features = false, features = ["libm"] }
 paste = "1"
 
 [dev-dependencies]

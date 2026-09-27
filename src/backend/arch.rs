@@ -15,6 +15,7 @@ pub struct AutoArch(Arch);
 impl AutoArch {
     /// Construct a new [`AutoArch`] by automatically detecting the newest
     /// supported [`Arch`]
+    #[inline]
     pub fn new() -> Self {
         Self(Arch::detect())
     }
@@ -27,6 +28,7 @@ impl AutoArch {
 }
 
 impl Default for AutoArch {
+    #[inline]
     fn default() -> Self {
         Self::new()
     }

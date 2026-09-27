@@ -16,6 +16,7 @@ pub enum Arch {
 }
 
 impl Arch {
+    #[inline]
     pub fn detect() -> Self {
         #[cfg(avx512_fp16)]
         if x86::V4FP16::is_available() {
@@ -53,6 +54,7 @@ impl Arch {
 }
 
 impl Default for Arch {
+    #[inline]
     fn default() -> Self {
         Self::detect()
     }

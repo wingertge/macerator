@@ -232,6 +232,7 @@ impl Simd for Fallback {
     impl_unop_scalar!(recip, recip, f16, f32, f64);
     impl_unop_scalar!(abs, wrapping_abs, i8, i16, i32, i64);
     impl_unop_scalar!(abs, abs, f16, f32, f64);
+    impl_unop_scalar!(sqrt, sqrt, f16, f32, f64);
 
     impl_cmp_scalar!(equals, eq, u8, i8, u16, i16, f16, u32, i32, f32, u64, i64, f64);
     impl_cmp_scalar!(

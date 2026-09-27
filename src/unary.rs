@@ -23,6 +23,20 @@ impl<S: Simd, T: VRecip> Vector<S, T> {
     }
 }
 
+pub trait VSqrt: Scalar {
+    fn vsqrt<S: Simd>(input: Vector<S, Self>) -> Vector<S, Self>;
+    fn is_accelerated<S: Simd>() -> bool;
+}
+
+impl<S: Simd, T: VSqrt> Vector<S, T> {
+    /// Elementwise square root. Correctly rounded on every SIMD backend; the
+    /// scalar fallback uses the platform's `sqrt`.
+    #[inline(always)]
+    pub fn sqrt(self) -> Self {
+        T::vsqrt(self)
+    }
+}
+
 pub trait VAbs: Scalar {
     fn vabs<S: Simd>(input: Vector<S, Self>) -> Vector<S, Self>;
     fn is_accelerated<S: Simd>() -> bool;
@@ -55,3 +69,4 @@ macro_rules! impl_unop {
 
 impl_unop!(VRecip, recip, f16, f32, f64);
 impl_unop!(VAbs, abs, i8, i16, f16, i32, i64, f32, f64);
+impl_unop!(VSqrt, sqrt, f16, f32, f64);

@@ -104,6 +104,8 @@ impl Simd for V2 {
     }
     impl_unop!(abs, _mm_abs, i8, i16, i32);
     impl_unop_scalar!(recip, recip, f16, f64);
+    impl_unop!(sqrt, _mm_sqrt, f32, f64);
+    impl_unop_scalar!(sqrt, sqrt, f16);
 
     impl_cmp!(equals, _mm_cmpeq, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64);
     impl_cmp!(greater_than, _mm_cmpgt, i8, i16, i32, f32, i64, f64);

@@ -35,7 +35,8 @@ pub trait Scalar: Sized + Copy + Pod + NoUninit + Default {
     /// requirement that the entire vector must be valid, not just the
     /// element at `ptr`.
     unsafe fn vload_unaligned<S: Simd>(ptr: *const Self) -> Vector<S, Self>;
-    /// Load the lower half of a vector from an unaligned element pointer.
+    /// Load the lower half of a vector from an unaligned element pointer. The
+    /// upper half of the result is zeroed.
     ///
     /// # Safety
     ///
@@ -44,16 +45,19 @@ pub trait Scalar: Sized + Copy + Pod + NoUninit + Default {
     /// requirement that the lower half of the vector must be valid, not just
     /// the element at `ptr`.
     unsafe fn vload_low<S: Simd>(ptr: *const Self) -> Vector<S, Self>;
-    /// Load the upper half of a vector from an unaligned element pointer.
+    /// Load the upper half of a vector. `ptr` points to the start of the whole
+    /// vector, so the half is read from `ptr` plus half the vector width. The
+    /// lower half of the result is zeroed.
     ///
     /// # Safety
     ///
     /// Same safety requirements as
     /// [`read_unaligned`](std::ptr::read_unaligned), with the additional
-    /// requirement that the upper half of the vector must be valid, not just
-    /// the element at `ptr`.
+    /// requirement that `ptr` points to the start of a whole vector in one
+    /// allocation and the upper half of that vector is valid. The lower half is
+    /// not accessed.
     unsafe fn vload_high<S: Simd>(ptr: *const Self) -> Vector<S, Self>;
-    /// Store the lower half of a vector to an aligned element pointer. Must be
+    /// Store a vector to an aligned element pointer. Must be
     /// aligned to the whole vector.
     ///
     /// # Safety
@@ -61,9 +65,9 @@ pub trait Scalar: Sized + Copy + Pod + NoUninit + Default {
     /// Same safety requirements as
     /// [`write`](std::ptr::write), with the additional
     /// requirement that the entire vector must be valid and aligned to the size
-    /// of the full vectgor, not just the element at `ptr`.
+    /// of the full vector, not just the element at `ptr`.
     unsafe fn vstore<S: Simd>(ptr: *mut Self, value: Vector<S, Self>);
-    /// Store the upper half of a vector to an unaligned element pointer.
+    /// Store a vector to an unaligned element pointer.
     ///
     /// # Safety
     ///
@@ -72,7 +76,7 @@ pub trait Scalar: Sized + Copy + Pod + NoUninit + Default {
     /// requirement that the entire vector must be valid, not just
     /// the element at `ptr`.
     unsafe fn vstore_unaligned<S: Simd>(ptr: *mut Self, value: Vector<S, Self>);
-    /// Store the upper half of a vector to an unaligned element pointer.
+    /// Store the lower half of a vector to an unaligned element pointer.
     ///
     /// # Safety
     ///
@@ -81,14 +85,16 @@ pub trait Scalar: Sized + Copy + Pod + NoUninit + Default {
     /// requirement that the lower half of the vector must be valid, not just
     /// the element at `ptr`.
     unsafe fn vstore_low<S: Simd>(ptr: *mut Self, value: Vector<S, Self>);
-    /// Store the upper half of a vector to an unaligned element pointer.
+    /// Store the upper half of a vector. `ptr` points to the start of the whole
+    /// vector, so the half is written to `ptr` plus half the vector width.
     ///
     /// # Safety
     ///
     /// Same safety requirements as
     /// [`write_unaligned`](std::ptr::write_unaligned), with the additional
-    /// requirement that the upper half of the vector must be valid, not just
-    /// the element at `ptr`.
+    /// requirement that `ptr` points to the start of a whole vector in one
+    /// allocation and the upper half of that vector is valid. The lower half is
+    /// not accessed.
     unsafe fn vstore_high<S: Simd>(ptr: *mut Self, value: Vector<S, Self>);
 
     /// Store a `Mask` as a set of booleans of `lanes` width, converting as
@@ -199,7 +205,8 @@ pub unsafe fn vload<S: Simd, T: Scalar>(ptr: *const T) -> Vector<S, T> {
 pub unsafe fn vload_unaligned<S: Simd, T: Scalar>(ptr: *const T) -> Vector<S, T> {
     unsafe { T::vload_unaligned(ptr) }
 }
-/// Load the lower half of a vector from an unaligned element pointer.
+/// Load the lower half of a vector from an unaligned element pointer. The
+/// upper half of the result is zeroed.
 ///
 /// # Safety
 ///
@@ -210,18 +217,21 @@ pub unsafe fn vload_unaligned<S: Simd, T: Scalar>(ptr: *const T) -> Vector<S, T>
 pub unsafe fn vload_low<S: Simd, T: Scalar>(ptr: *const T) -> Vector<S, T> {
     unsafe { T::vload_low(ptr) }
 }
-/// Load the upper half of a vector from an unaligned element pointer.
+/// Load the upper half of a vector. `ptr` points to the start of the whole
+/// vector, so the half is read from `ptr` plus half the vector width. The
+/// lower half of the result is zeroed.
 ///
 /// # Safety
 ///
 /// Same safety requirements as
 /// [`read_unaligned`](std::ptr::read_unaligned), with the additional
-/// requirement that the upper half of the vector must be valid, not just
-/// the element at `ptr`.
+/// requirement that `ptr` points to the start of a whole vector in one
+/// allocation and the upper half of that vector is valid. The lower half is
+/// not accessed.
 pub unsafe fn vload_high<S: Simd, T: Scalar>(ptr: *const T) -> Vector<S, T> {
     unsafe { T::vload_high(ptr) }
 }
-/// Store the lower half of a vector to an aligned element pointer. Must be
+/// Store a vector to an aligned element pointer. Must be
 /// aligned to the whole vector.
 ///
 /// # Safety
@@ -229,11 +239,11 @@ pub unsafe fn vload_high<S: Simd, T: Scalar>(ptr: *const T) -> Vector<S, T> {
 /// Same safety requirements as
 /// [`write`](std::ptr::write), with the additional
 /// requirement that the entire vector must be valid and aligned to the size
-/// of the full vectgor, not just the element at `ptr`.
+/// of the full vector, not just the element at `ptr`.
 pub unsafe fn vstore<S: Simd, T: Scalar>(ptr: *mut T, value: Vector<S, T>) {
     unsafe { T::vstore(ptr, value) };
 }
-/// Store the upper half of a vector to an unaligned element pointer.
+/// Store a vector to an unaligned element pointer.
 ///
 /// # Safety
 ///
@@ -244,7 +254,7 @@ pub unsafe fn vstore<S: Simd, T: Scalar>(ptr: *mut T, value: Vector<S, T>) {
 pub unsafe fn vstore_unaligned<S: Simd, T: Scalar>(ptr: *mut T, value: Vector<S, T>) {
     unsafe { T::vstore_unaligned(ptr, value) };
 }
-/// Store the upper half of a vector to an unaligned element pointer.
+/// Store the lower half of a vector to an unaligned element pointer.
 ///
 /// # Safety
 ///
@@ -255,14 +265,16 @@ pub unsafe fn vstore_unaligned<S: Simd, T: Scalar>(ptr: *mut T, value: Vector<S,
 pub unsafe fn vstore_low<S: Simd, T: Scalar>(ptr: *mut T, value: Vector<S, T>) {
     unsafe { T::vstore_low(ptr, value) };
 }
-/// Store the upper half of a vector to an unaligned element pointer.
+/// Store the upper half of a vector. `ptr` points to the start of the whole
+/// vector, so the half is written to `ptr` plus half the vector width.
 ///
 /// # Safety
 ///
 /// Same safety requirements as
 /// [`write_unaligned`](std::ptr::write_unaligned), with the additional
-/// requirement that the upper half of the vector must be valid, not just
-/// the element at `ptr`.
+/// requirement that `ptr` points to the start of a whole vector in one
+/// allocation and the upper half of that vector is valid. The lower half is
+/// not accessed.
 pub unsafe fn vstore_high<S: Simd, T: Scalar>(ptr: *mut T, value: Vector<S, T>) {
     unsafe { T::vstore_high(ptr, value) };
 }

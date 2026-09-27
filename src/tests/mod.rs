@@ -16,6 +16,7 @@ use crate::{
 mod approx;
 mod arithmetic;
 mod bitwise;
+mod half;
 mod macro_tests;
 mod ord;
 mod reduce;

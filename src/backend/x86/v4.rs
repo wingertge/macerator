@@ -500,7 +500,7 @@ where
     #[inline(always)]
     unsafe fn load_low<T: Scalar>(ptr: *const T) -> Vector<Self, T> {
         let lo = _mm256_lddqu_si256(ptr as _);
-        cast!(_mm512_castsi256_si512(lo))
+        cast!(_mm512_zextsi256_si512(lo))
     }
     #[inline(always)]
     unsafe fn load_high<T: Scalar>(ptr: *const T) -> Vector<Self, T> {

@@ -672,13 +672,13 @@ where
     }
     #[inline(always)]
     unsafe fn load_low<T: Scalar>(ptr: *const T) -> super::Vector<Self, T> {
-        cast!(vld1q_lane_s64::<0>(ptr as _, cast!(Self::splat_i64(0))))
+        cast!(vcombine_s8(vld1_s8(ptr as _), vdup_n_s8(0)))
     }
     #[inline(always)]
     unsafe fn load_high<T: Scalar>(ptr: *const T) -> super::Vector<Self, T> {
-        cast!(vld1q_lane_s64::<1>(
-            (ptr as *const i64).add(i64::lanes::<Self>() / 2),
-            cast!(Self::splat_i64(0))
+        cast!(vcombine_s8(
+            vdup_n_s8(0),
+            vld1_s8((ptr as *const i8).add(8))
         ))
     }
     #[inline(always)]
@@ -691,16 +691,11 @@ where
     }
     #[inline(always)]
     unsafe fn store_low<T: Scalar>(ptr: *mut T, value: super::Vector<Self, T>) {
-        unsafe { vst1q_lane_s64::<0>(ptr as _, cast!(value)) };
+        unsafe { vst1_s8(ptr as _, vget_low_s8(cast!(value))) };
     }
     #[inline(always)]
     unsafe fn store_high<T: Scalar>(ptr: *mut T, value: super::Vector<Self, T>) {
-        unsafe {
-            vst1q_lane_s64::<1>(
-                (ptr as *mut i64).add(i64::lanes::<Self>() / 2),
-                cast!(value),
-            )
-        };
+        unsafe { vst1_s8((ptr as *mut i8).add(8), vget_high_s8(cast!(value))) };
     }
     #[inline(always)]
     fn splat_i8(value: i8) -> Self::Register {

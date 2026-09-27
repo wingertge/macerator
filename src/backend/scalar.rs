@@ -348,11 +348,13 @@ impl Simd for Fallback {
     }
     #[inline(always)]
     unsafe fn load_low<T: Scalar>(ptr: *const T) -> super::Vector<Self, T> {
-        Self::typed((unsafe { read_unaligned(ptr as *const u32) } as u64) << 32)
+        let halves: [u32; 2] = [unsafe { read_unaligned(ptr as *const u32) }, 0];
+        Self::typed(cast!(halves))
     }
     #[inline(always)]
     unsafe fn load_high<T: Scalar>(ptr: *const T) -> super::Vector<Self, T> {
-        Self::typed(unsafe { read_unaligned((ptr as *const u32).add(1)) } as u64)
+        let halves: [u32; 2] = [0, unsafe { read_unaligned((ptr as *const u32).add(1)) }];
+        Self::typed(cast!(halves))
     }
     #[inline(always)]
     unsafe fn store<T: Scalar>(ptr: *mut T, value: super::Vector<Self, T>) {
@@ -364,13 +366,13 @@ impl Simd for Fallback {
     }
     #[inline(always)]
     unsafe fn store_low<T: Scalar>(ptr: *mut T, value: super::Vector<Self, T>) {
-        let value: Self::Register = cast!(value);
-        unsafe { write_unaligned(ptr as *mut u32, (value >> 32) as u32) };
+        let halves: [u32; 2] = cast!(*value);
+        unsafe { write_unaligned(ptr as *mut u32, halves[0]) };
     }
     #[inline(always)]
     unsafe fn store_high<T: Scalar>(ptr: *mut T, value: super::Vector<Self, T>) {
-        let value: Self::Register = cast!(value);
-        unsafe { write_unaligned(ptr as *mut u32, value as u32) };
+        let halves: [u32; 2] = cast!(*value);
+        unsafe { write_unaligned((ptr as *mut u32).add(1), halves[1]) };
     }
     #[inline(always)]
     fn splat_i8(value: i8) -> Self::Register {
@@ -484,13 +486,14 @@ mod tests {
     #[test]
     fn vstore_high_accepts_unaligned_pointer() {
         #[repr(align(4))]
-        struct Aligned([u8; 8]);
+        struct Aligned([u8; 9]);
 
         // `vstore_high` has the same documented unaligned-pointer contract as
         // `vstore_low`. This regresses the old aligned `ptr::write` through
-        // `*mut u32`.
+        // `*mut u32`. `ptr` addresses the whole vector, so the buffer needs
+        // room for 8 bytes after the offset.
         let value = 0xabu8.splat::<Fallback>();
-        let mut bytes = Aligned([0; 8]);
+        let mut bytes = Aligned([0; 9]);
 
         unsafe { vstore_high::<Fallback, u8>(bytes.0.as_mut_ptr().add(1), value) };
     }

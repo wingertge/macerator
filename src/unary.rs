@@ -29,6 +29,7 @@ pub trait VAbs: Scalar {
 }
 
 impl<S: Simd, T: VAbs> Vector<S, T> {
+    /// Elementwise absolute value. For signed integers, `MIN` wraps to itself.
     #[inline(always)]
     pub fn abs(self) -> Self {
         T::vabs(self)

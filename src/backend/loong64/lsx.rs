@@ -97,6 +97,8 @@ impl Simd for Lsx {
 
     impl_unop!(recip, lsx_vfrecip, f32, f64);
     impl_unop_scalar!(recip, recip, f16);
+    impl_unop!(sqrt, lsx_vfsqrt, f32, f64);
+    impl_unop_scalar!(sqrt, sqrt, f16);
 
     impl_cmp_signless!(equals, lsx_vseq, u8, i8, u16, i16, u32, i32, u64, i64);
     impl_cmp_signless!(equals, lsx_vfcmp_ceq, f32, f64);

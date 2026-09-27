@@ -62,6 +62,8 @@ where
     fn abs_f16_supported() -> bool;
     fn recip_f16(a: int8x16_t) -> int8x16_t;
     fn recip_f16_supported() -> bool;
+    fn sqrt_f16(a: int8x16_t) -> int8x16_t;
+    fn sqrt_f16_supported() -> bool;
 
     fn reduce_add_f16(a: int8x16_t) -> f16;
     fn reduce_add_f16_supported() -> bool;
@@ -332,6 +334,20 @@ impl FP16Ext for FP16Fallback {
     fn recip_f16_supported() -> bool {
         false
     }
+    #[inline(always)]
+    fn sqrt_f16(a: Self::Register) -> Self::Register {
+        let a: [f16; 8] = cast!(a);
+        let mut out = [f16::default(); 8];
+
+        for i in 0..8 {
+            out[i] = a[i].sqrt();
+        }
+        cast!(out)
+    }
+    #[inline(always)]
+    fn sqrt_f16_supported() -> bool {
+        false
+    }
 
     #[inline(always)]
     fn mul_add_f16(a: Self::Register, b: Self::Register, c: Self::Register) -> Self::Register {
@@ -370,6 +386,7 @@ impl FP16Ext for FP16Intrinsic {
     impl_binop!(max, vmaxq, f16);
 
     impl_unop!(recip, vrecpeq, f16);
+    impl_unop!(sqrt, vsqrtq, f16);
     impl_unop!(abs, vabsq, f16);
 
     impl_cmp!(equals, vceqq, f16: 16);
@@ -509,6 +526,7 @@ where
     }
 
     impl_unop!(abs, vabsq, i8, i16, i32, i64, f32, f64);
+    impl_unop!(sqrt, vsqrtq, f32, f64);
 
     impl_cmp!(equals, vceqq, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64);
     impl_cmp!(less_than, vcltq, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64);
@@ -781,6 +799,14 @@ where
     #[inline(always)]
     fn recip_f16_supported() -> bool {
         FP16::recip_f16_supported()
+    }
+    #[inline(always)]
+    fn sqrt_f16(a: Self::Register) -> Self::Register {
+        FP16::sqrt_f16(a)
+    }
+    #[inline(always)]
+    fn sqrt_f16_supported() -> bool {
+        FP16::sqrt_f16_supported()
     }
     #[inline(always)]
     fn abs_f16(a: Self::Register) -> Self::Register {

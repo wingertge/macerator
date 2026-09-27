@@ -7,7 +7,7 @@ use num_traits::{Float, NumCast, PrimInt};
 use crate::{
     assert_relative_eq,
     tests::{approx::RelativeEq, assert_eq, test_unop, unop},
-    Simd, VAbs, VRecip, Vector,
+    Simd, VAbs, VRecip, VSqrt, Vector,
 };
 
 use super::{testgen_unop, testgen_unop_values, Unop};
@@ -219,4 +219,63 @@ testgen_unop_values!(
     vec![1 << 40, -(1 << 40), (1 << 62) + 1, -(1 << 62) - 1],
     assert_eq_values,
     i64
+);
+
+#[inline(always)]
+fn test_sqrt_impl<S: Simd, T: VSqrt>(a: &[T]) -> Vec<T> {
+    unop!(VSqrt, |a: Vector<S, T>| a.sqrt());
+    test_unop::<S, T, VSqrtOp<T>>(a)
+}
+
+// The hardware square root is correctly rounded, so results match exactly.
+testgen_unop!(
+    test_sqrt,
+    sqrt,
+    0,
+    1000,
+    assert_eq,
+    #[cfg_attr(all(miri, any(x86_v3, x86_v4, aarch64)), ignore)]
+    f16,
+    f32,
+    f64
+);
+
+fn sqrt_specials<T: Float>() -> Vec<T> {
+    let four: T = NumCast::from(4.0).unwrap();
+    vec![
+        T::zero(),
+        -T::zero(),
+        T::one(),
+        four,
+        -T::one(),
+        T::infinity(),
+        T::neg_infinity(),
+        T::nan(),
+        T::min_positive_value(),
+        T::min_positive_value() / four,
+        T::min_positive_value() * four,
+        T::max_value() / four,
+        T::max_value(),
+    ]
+}
+
+fn assert_sqrt_specials<T: Float + Debug>(input: &[T], expected: &[T], actual: &[T]) {
+    for ((x, want), got) in input.iter().zip(expected).zip(actual) {
+        assert!(
+            recip_bits_eq(*got, *want),
+            "sqrt({x:?}): expected {want:?}, got {got:?}"
+        );
+    }
+}
+
+testgen_unop_values!(
+    test_sqrt_specials,
+    test_sqrt_impl,
+    sqrt,
+    sqrt_specials(),
+    assert_sqrt_specials,
+    #[cfg_attr(all(miri, any(x86_v3, x86_v4, aarch64)), ignore)]
+    f16,
+    f32,
+    f64
 );

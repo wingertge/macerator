@@ -259,6 +259,8 @@ where
 
     impl_unop_scalar!(abs, abs, f16);
     impl_unop_scalar!(recip, recip, f16, f32, f64);
+    impl_unop!(sqrt, sqrt, f32 x 4, f64 x 2);
+    impl_unop_scalar!(sqrt, sqrt, f16);
 
     impl_reduce_scalar!(
         reduce_add,

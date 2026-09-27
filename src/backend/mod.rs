@@ -445,6 +445,7 @@ pub trait Simd: Sized + seal::Sealed + 'static {
     fn mul_add_f64_supported() -> bool;
 
     declare_unop!(recip, f16, f32, f64);
+    declare_unop!(sqrt, f16, f32, f64);
     declare_unop!(abs, i8, i16, i32, i64, f16, f32, f64);
 
     declare_reduction!(reduce_add, i8, i16, i32, i64, u8, u16, u32, u64, f16, f32, f64);

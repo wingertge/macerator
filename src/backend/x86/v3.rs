@@ -482,8 +482,12 @@ impl Simd for V3 {
     }
     #[inline(always)]
     fn abs_i64(a: Self::Register) -> Self::Register {
-        let mask = Self::splat_i64(i64::MAX);
-        Self::bitand(a, mask)
+        // No 64-bit abs before AVX-512: negate the lanes whose sign is set.
+        unsafe {
+            let a: __m256i = cast!(a);
+            let sign = _mm256_cmpgt_epi64(_mm256_setzero_si256(), a);
+            cast!(_mm256_sub_epi64(_mm256_xor_si256(a, sign), sign))
+        }
     }
     #[inline(always)]
     fn abs_i64_supported() -> bool {

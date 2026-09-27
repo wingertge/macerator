@@ -7,7 +7,7 @@ use half::f16;
 use num_traits::NumCast;
 use paste::paste;
 
-use crate::{vload_unaligned, vstore_unaligned, Simd, VAdd, VDiv, VMul, VMulAdd, VSub};
+use crate::{vload_unaligned, vstore_unaligned, Scalar, Simd, VAdd, VDiv, VMul, VMulAdd, VSub};
 
 use super::{assert_approx_eq, binop, test_binop, testgen_binop};
 
@@ -192,3 +192,24 @@ testgen_fma!(
     f32,
     f64
 );
+
+/// Loads and stores at `ptr + 1`, which is not aligned to the vector even when
+/// the allocation is.
+#[inline(always)]
+fn test_unaligned_roundtrip_impl<S: Simd, T: Scalar>(src: &[T]) -> Vec<T> {
+    let lanes = T::lanes::<S>();
+    let mut out = vec![T::default(); lanes + 1];
+    unsafe {
+        let v = vload_unaligned::<S, T>(src.as_ptr().add(1));
+        vstore_unaligned(out.as_mut_ptr().add(1), v);
+    }
+    out[1..].to_vec()
+}
+
+#[::wasm_bindgen_test::wasm_bindgen_test(unsupported = test)]
+fn test_unaligned_roundtrip() {
+    let src: Vec<f32> = (0..65).map(|i| i as f32).collect();
+    super::for_each_backend!(test_unaligned_roundtrip_impl, f32, &src, |out: &[f32]| {
+        assert_eq!(out, &src[1..out.len() + 1])
+    });
+}

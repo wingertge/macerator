@@ -232,7 +232,7 @@ impl Simd for V3 {
     }
     #[inline(always)]
     unsafe fn load_unaligned<T: Scalar>(ptr: *const T) -> Vector<Self, T> {
-        cast!(_mm256_lddqu_si256(ptr as _))
+        cast!(_mm256_loadu_si256(ptr as _))
     }
     #[inline(always)]
     unsafe fn load_low<T: Scalar>(ptr: *const T) -> Vector<Self, T> {

@@ -296,3 +296,20 @@ macro_rules! testgen_unop_values {
     };
 }
 pub(crate) use testgen_unop_values;
+
+/// With `lsx` enabled and `lasx` not, dispatch must pick the LSX backend. Only
+/// under Miri, where detection follows the target features rather than the
+/// host CPU.
+#[cfg(all(miri, loong64))]
+#[test]
+fn test_lsx_selected_without_lasx() {
+    use crate::{
+        backend::loong64::{Lasx, Lsx},
+        Arch,
+    };
+    assert_eq!(Lsx::is_available(), cfg!(target_feature = "lsx"));
+    assert_eq!(Lasx::is_available(), cfg!(target_feature = "lasx"));
+    if cfg!(target_feature = "lsx") && !cfg!(target_feature = "lasx") {
+        assert!(matches!(Arch::detect(), Arch::Lsx));
+    }
+}

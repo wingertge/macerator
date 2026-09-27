@@ -286,11 +286,11 @@ testgen_cmp!(
     i16,
     u32,
     i32,
-    #[cfg_attr(all(miri, x86_v4), ignore)]
+    #[cfg_attr(all(miri, any(x86_v4, loong64)), ignore)]
     f32,
     u64,
     i64,
-    #[cfg_attr(all(miri, x86_v4), ignore)]
+    #[cfg_attr(all(miri, any(x86_v4, loong64)), ignore)]
     f64
 );
 testgen_cmp!(
@@ -302,11 +302,11 @@ testgen_cmp!(
     i16,
     u32,
     i32,
-    #[cfg_attr(all(miri, x86_v4), ignore)]
+    #[cfg_attr(all(miri, any(x86_v4, loong64)), ignore)]
     f32,
     u64,
     i64,
-    #[cfg_attr(all(miri, x86_v4), ignore)]
+    #[cfg_attr(all(miri, any(x86_v4, loong64)), ignore)]
     f64
 );
 testgen_cmp!(
@@ -318,11 +318,11 @@ testgen_cmp!(
     i16,
     u32,
     i32,
-    #[cfg_attr(all(miri, x86_v4), ignore)]
+    #[cfg_attr(all(miri, any(x86_v4, loong64)), ignore)]
     f32,
     u64,
     i64,
-    #[cfg_attr(all(miri, x86_v4), ignore)]
+    #[cfg_attr(all(miri, any(x86_v4, loong64)), ignore)]
     f64
 );
 testgen_cmp!(
@@ -334,11 +334,11 @@ testgen_cmp!(
     i16,
     u32,
     i32,
-    #[cfg_attr(all(miri, x86_v4), ignore)]
+    #[cfg_attr(all(miri, any(x86_v4, loong64)), ignore)]
     f32,
     u64,
     i64,
-    #[cfg_attr(all(miri, x86_v4), ignore)]
+    #[cfg_attr(all(miri, any(x86_v4, loong64)), ignore)]
     f64
 );
 testgen_cmp!(
@@ -350,11 +350,11 @@ testgen_cmp!(
     i16,
     u32,
     i32,
-    #[cfg_attr(all(miri, x86_v4), ignore)]
+    #[cfg_attr(all(miri, any(x86_v4, loong64)), ignore)]
     f32,
     u64,
     i64,
-    #[cfg_attr(all(miri, x86_v4), ignore)]
+    #[cfg_attr(all(miri, any(x86_v4, loong64)), ignore)]
     f64
 );
 testgen_cmp!(
@@ -366,11 +366,11 @@ testgen_cmp!(
     i16,
     u32,
     i32,
-    #[cfg_attr(all(miri, x86_v4), ignore)]
+    #[cfg_attr(all(miri, any(x86_v4, loong64)), ignore)]
     f32,
     u64,
     i64,
-    #[cfg_attr(all(miri, x86_v4), ignore)]
+    #[cfg_attr(all(miri, any(x86_v4, loong64)), ignore)]
     f64
 );
 testgen_min_max!(
@@ -382,11 +382,11 @@ testgen_min_max!(
     i16,
     u32,
     i32,
-    #[cfg_attr(all(miri, any(aarch64, x86_v4)), ignore)]
+    #[cfg_attr(all(miri, any(aarch64, x86_v4, loong64)), ignore)]
     f32,
     u64,
     i64,
-    #[cfg_attr(all(miri, any(aarch64, x86_v4)), ignore)]
+    #[cfg_attr(all(miri, any(aarch64, x86_v4, loong64)), ignore)]
     f64
 );
 testgen_min_max!(
@@ -398,11 +398,11 @@ testgen_min_max!(
     i16,
     u32,
     i32,
-    #[cfg_attr(all(miri, any(aarch64, x86_v4)), ignore)]
+    #[cfg_attr(all(miri, any(aarch64, x86_v4, loong64)), ignore)]
     f32,
     u64,
     i64,
-    #[cfg_attr(all(miri, any(aarch64, x86_v4)), ignore)]
+    #[cfg_attr(all(miri, any(aarch64, x86_v4, loong64)), ignore)]
     f64
 );
 
@@ -414,9 +414,9 @@ mod nan {
         test_eq,
         eq,
         f16,
-        #[cfg_attr(all(miri, x86_v4), ignore)]
+        #[cfg_attr(all(miri, any(x86_v4, loong64)), ignore)]
         f32,
-        #[cfg_attr(all(miri, x86_v4), ignore)]
+        #[cfg_attr(all(miri, any(x86_v4, loong64)), ignore)]
         f64
     );
     testgen_cmp!(
@@ -424,9 +424,9 @@ mod nan {
         test_ne,
         ne,
         f16,
-        #[cfg_attr(all(miri, x86_v4), ignore)]
+        #[cfg_attr(all(miri, any(x86_v4, loong64)), ignore)]
         f32,
-        #[cfg_attr(all(miri, x86_v4), ignore)]
+        #[cfg_attr(all(miri, any(x86_v4, loong64)), ignore)]
         f64
     );
     testgen_cmp!(
@@ -434,9 +434,9 @@ mod nan {
         test_lt,
         lt,
         f16,
-        #[cfg_attr(all(miri, x86_v4), ignore)]
+        #[cfg_attr(all(miri, any(x86_v4, loong64)), ignore)]
         f32,
-        #[cfg_attr(all(miri, x86_v4), ignore)]
+        #[cfg_attr(all(miri, any(x86_v4, loong64)), ignore)]
         f64
     );
     testgen_cmp!(
@@ -444,9 +444,9 @@ mod nan {
         test_le,
         le,
         f16,
-        #[cfg_attr(all(miri, x86_v4), ignore)]
+        #[cfg_attr(all(miri, any(x86_v4, loong64)), ignore)]
         f32,
-        #[cfg_attr(all(miri, x86_v4), ignore)]
+        #[cfg_attr(all(miri, any(x86_v4, loong64)), ignore)]
         f64
     );
     testgen_cmp!(
@@ -454,9 +454,9 @@ mod nan {
         test_gt,
         gt,
         f16,
-        #[cfg_attr(all(miri, x86_v4), ignore)]
+        #[cfg_attr(all(miri, any(x86_v4, loong64)), ignore)]
         f32,
-        #[cfg_attr(all(miri, x86_v4), ignore)]
+        #[cfg_attr(all(miri, any(x86_v4, loong64)), ignore)]
         f64
     );
     testgen_cmp!(
@@ -464,9 +464,9 @@ mod nan {
         test_ge,
         ge,
         f16,
-        #[cfg_attr(all(miri, x86_v4), ignore)]
+        #[cfg_attr(all(miri, any(x86_v4, loong64)), ignore)]
         f32,
-        #[cfg_attr(all(miri, x86_v4), ignore)]
+        #[cfg_attr(all(miri, any(x86_v4, loong64)), ignore)]
         f64
     );
 }

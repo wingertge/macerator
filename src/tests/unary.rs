@@ -173,9 +173,13 @@ testgen_unop!(
     -100,
     100,
     assert_eq,
+    #[cfg_attr(all(miri, loong64), ignore)]
     i8,
+    #[cfg_attr(all(miri, loong64), ignore)]
     i16,
+    #[cfg_attr(all(miri, loong64), ignore)]
     i32,
+    #[cfg_attr(all(miri, loong64), ignore)]
     i64,
     #[cfg_attr(all(miri, any(x86_v3, x86_v4, aarch64)), ignore)]
     f16,
@@ -205,9 +209,13 @@ testgen_unop_values!(
     wrapping_abs,
     signed_extremes(),
     assert_eq_values,
+    #[cfg_attr(all(miri, loong64), ignore)]
     i8,
+    #[cfg_attr(all(miri, loong64), ignore)]
     i16,
+    #[cfg_attr(all(miri, loong64), ignore)]
     i32,
+    #[cfg_attr(all(miri, loong64), ignore)]
     i64
 );
 
@@ -218,6 +226,7 @@ testgen_unop_values!(
     wrapping_abs,
     vec![1 << 40, -(1 << 40), (1 << 62) + 1, -(1 << 62) - 1],
     assert_eq_values,
+    #[cfg_attr(all(miri, loong64), ignore)]
     i64
 );
 

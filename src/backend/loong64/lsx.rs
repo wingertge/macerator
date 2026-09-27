@@ -433,5 +433,5 @@ impl Simd for Lsx {
 }
 
 impl Lsx {
-    impl_simd!("lsx", "lasx");
+    impl_simd!("lsx");
 }

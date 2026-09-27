@@ -8,7 +8,12 @@ use half::f16;
 use num_traits::real::Real;
 use paste::paste;
 
-use crate::{backend::arch::*, cast, seal::Sealed, MaskOps, Scalar, Simd, VRegister, Vector};
+use crate::{
+    backend::{arch::*, wrapping_mul},
+    cast,
+    seal::Sealed,
+    MaskOps, Scalar, Simd, VRegister, Vector,
+};
 
 use super::*;
 
@@ -302,7 +307,7 @@ where
     impl_binop_signless!(mul, _mm512_mullo, u16, i16, u32, i32, u64, i64);
     impl_binop!(min, _mm512_min, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64);
     impl_binop!(max, _mm512_max, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64);
-    impl_binop_scalar!(mul, Mul::mul, i8, u8);
+    impl_binop_scalar!(mul, wrapping_mul, i8, u8);
 
     impl_binop_untyped!(bitand, _mm512_and_si512);
     impl_binop_untyped!(bitor, _mm512_or_si512);

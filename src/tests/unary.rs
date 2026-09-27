@@ -2,7 +2,7 @@ use core::{fmt::Debug, num::FpCategory};
 use half::f16;
 use std::{vec, vec::Vec};
 
-use num_traits::{Float, NumCast};
+use num_traits::{Float, NumCast, PrimInt};
 
 use crate::{
     assert_relative_eq,
@@ -187,22 +187,36 @@ fn assert_eq_values<T: PartialEq + Debug>(_input: &[T], expected: &[T], actual: 
     assert_eq!(expected, actual);
 }
 
-// Magnitudes beyond 32 bits and the extremes. `i64::MIN` is left out because
-// the scalar fallback's `i64::abs` panics on it in debug builds.
+fn signed_extremes<T: PrimInt + num_traits::Signed>() -> Vec<T> {
+    vec![
+        T::zero(),
+        T::one(),
+        -T::one(),
+        T::max_value(),
+        -T::max_value(),
+        T::min_value(),
+    ]
+}
+
+// `MIN` wraps to itself, like the SIMD instructions.
+testgen_unop_values!(
+    test_abs_extremes,
+    test_abs_impl,
+    wrapping_abs,
+    signed_extremes(),
+    assert_eq_values,
+    i8,
+    i16,
+    i32,
+    i64
+);
+
+// Magnitudes beyond 32 bits.
 testgen_unop_values!(
     test_abs_values,
     test_abs_impl,
     wrapping_abs,
-    vec![
-        0,
-        1,
-        -1,
-        1 << 40,
-        -(1 << 40),
-        i64::MAX,
-        -i64::MAX,
-        i64::MIN + 1
-    ],
+    vec![1 << 40, -(1 << 40), (1 << 62) + 1, -(1 << 62) - 1],
     assert_eq_values,
     i64
 );

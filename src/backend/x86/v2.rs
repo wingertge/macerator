@@ -11,7 +11,7 @@ use paste::paste;
 
 use crate::{backend::arch::NullaryFnOnce, impl_cmp_scalar, Scalar, WithSimd};
 
-use crate::backend::{arch::impl_simd, cast, seal::Sealed, Simd, VRegister, Vector};
+use crate::backend::{arch::impl_simd, cast, seal::Sealed, wrapping_mul, Simd, VRegister, Vector};
 
 use super::*;
 
@@ -74,7 +74,8 @@ impl Simd for V2 {
     impl_binop_scalar!(add, Add::add, f16);
     impl_binop_scalar!(sub, Sub::sub, f16);
     impl_binop_scalar!(div, Div::div, f16);
-    impl_binop_scalar!(mul, Mul::mul, i8, u8, f16, u64, i64);
+    impl_binop_scalar!(mul, wrapping_mul, i8, u8, u64, i64);
+    impl_binop_scalar!(mul, Mul::mul, f16);
     impl_binop_scalar!(min, Ord::min, u64, i64);
     impl_binop_scalar!(min, f16::min, f16);
     impl_binop_scalar!(max, Ord::max, u64, i64);

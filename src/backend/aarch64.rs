@@ -214,10 +214,10 @@ macro_rules! impl_cmp_scalar {
                 const LANES: usize = WIDTH / (8 * size_of::<$ty>());
                 let a: [$ty; LANES] = cast!(a);
                 let b: [$ty; LANES] = cast!(b);
-                let mut out = [0; LANES];
+                let mut out: [[<i $size>]; LANES] = [0; LANES];
 
                 for i in 0..LANES {
-                    out[i] = a[i].$intrinsic(&b[i]) as [<i $size>];
+                    out[i] = if a[i].$intrinsic(&b[i]) { -1 } else { 0 };
                 }
                 cast!(out)
             }

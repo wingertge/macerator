@@ -1,5 +1,6 @@
 use std::{vec, vec::Vec};
 
+use half::f16;
 use num_traits::{Float, NumCast};
 use rand::distr::uniform::SampleUniform;
 
@@ -412,6 +413,7 @@ mod nan {
         @inputs special_float_inputs;
         test_eq,
         eq,
+        f16,
         #[cfg_attr(all(miri, x86_v4), ignore)]
         f32,
         #[cfg_attr(all(miri, x86_v4), ignore)]
@@ -421,6 +423,7 @@ mod nan {
         @inputs special_float_inputs;
         test_ne,
         ne,
+        f16,
         #[cfg_attr(all(miri, x86_v4), ignore)]
         f32,
         #[cfg_attr(all(miri, x86_v4), ignore)]
@@ -430,6 +433,7 @@ mod nan {
         @inputs special_float_inputs;
         test_lt,
         lt,
+        f16,
         #[cfg_attr(all(miri, x86_v4), ignore)]
         f32,
         #[cfg_attr(all(miri, x86_v4), ignore)]
@@ -439,6 +443,7 @@ mod nan {
         @inputs special_float_inputs;
         test_le,
         le,
+        f16,
         #[cfg_attr(all(miri, x86_v4), ignore)]
         f32,
         #[cfg_attr(all(miri, x86_v4), ignore)]
@@ -448,6 +453,7 @@ mod nan {
         @inputs special_float_inputs;
         test_gt,
         gt,
+        f16,
         #[cfg_attr(all(miri, x86_v4), ignore)]
         f32,
         #[cfg_attr(all(miri, x86_v4), ignore)]
@@ -457,6 +463,7 @@ mod nan {
         @inputs special_float_inputs;
         test_ge,
         ge,
+        f16,
         #[cfg_attr(all(miri, x86_v4), ignore)]
         f32,
         #[cfg_attr(all(miri, x86_v4), ignore)]

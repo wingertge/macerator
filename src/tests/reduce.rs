@@ -308,6 +308,15 @@ fn assert_approx_eq_sum<T: RelativeEq<Epsilon = T> + Debug + NumCast + Copy>(lhs
     // can accumulate error to log2(lanes) times the normal error. 4x seems to work
     // for the largest lane count.
     let max_relative = T::from(T::default_max_relative().to_f64().unwrap() * 4.0).unwrap();
+    // f16 rounds every partial sum to 11 bits, and the backend and the
+    // reference add in different orders. Over 128 values the two sums drift
+    // apart by up to ~0.6%, more than 4x f16 epsilon (0.39%) allows. 2^-7 still
+    // fails if a whole element (~0.8% of the sum on average) goes missing.
+    let max_relative = if size_of::<T>() == 2 {
+        T::from(2.0.powf(-7.0)).unwrap()
+    } else {
+        max_relative
+    };
     for (a, b) in lhs.iter().zip(rhs) {
         assert_relative_eq!(*a, *b, epsilon = epsilon, max_relative = max_relative);
     }

@@ -312,3 +312,36 @@ fn assert_approx_eq_sum<T: RelativeEq<Epsilon = T> + Debug + NumCast + Copy>(lhs
         assert_relative_eq!(*a, *b, epsilon = epsilon, max_relative = max_relative);
     }
 }
+
+/// Reductions must leave their input vector untouched. The FP16 `reduce_add`
+/// used to overwrite the register holding its input, which only shows up when
+/// the reduction is inlined into a caller that keeps using the vector, so this
+/// only fails in optimized builds.
+#[cfg(all(aarch64, feature = "fp16"))]
+#[test]
+#[cfg_attr(miri, ignore)]
+fn test_reduce_keeps_input_neon_fp16() {
+    use crate::backend::aarch64::NeonFP16;
+    use std::{vec, vec::Vec};
+
+    #[inline(always)]
+    fn reduce_then_store<S: Simd>(a: &[f16], out: &mut [f16]) -> (f16, f16, f16) {
+        let v = unsafe { vload_unaligned::<S, f16>(a.as_ptr()) };
+        let reduced = (v.reduce_add(), v.reduce_min(), v.reduce_max());
+        unsafe { crate::vstore_unaligned(out.as_mut_ptr(), v) };
+        reduced
+    }
+
+    if !NeonFP16::is_available() {
+        return;
+    }
+    let a: Vec<f16> = (1..=8).map(|i| f16::from_f32(i as f32)).collect();
+    let mut out = vec![f16::ZERO; 8];
+    let reduced = unsafe {
+        NeonFP16::run_vectorized(|| {
+            reduce_then_store::<NeonFP16>(core::hint::black_box(&a), &mut out)
+        })
+    };
+    assert_eq!(out, a);
+    assert_eq!(reduced, (f16::from_f32(36.0), f16::ONE, f16::from_f32(8.0)));
+}

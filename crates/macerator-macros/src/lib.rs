@@ -68,12 +68,19 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
     let fields = sig
         .inputs
         .iter()
-        .map(|arg| match arg {
+        .enumerate()
+        .map(|(i, arg)| match arg {
             FnArg::Receiver(_) => Err(syn::Error::new(arg.span(), "Can't use macro on methods")),
             FnArg::Typed(pat_type) => {
                 let ident = match &*pat_type.pat {
-                    Pat::Ident(pat_ident) => &pat_ident.ident,
-                    _ => todo!(),
+                    Pat::Ident(pat_ident) => pat_ident.ident.clone(),
+                    Pat::Wild(_) => format_ident!("__arg{i}"),
+                    pat => {
+                        return Err(syn::Error::new(
+                            pat.span(),
+                            "`with_simd` arguments must be plain identifiers",
+                        ))
+                    }
                 };
                 let mut ty = *pat_type.ty.clone();
                 let has_implicit_ref = add_named_lifetimes(&mut ty);
@@ -81,6 +88,16 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
             }
         })
         .collect::<Result<Vec<_>, _>>()?;
+
+    // The dispatcher moves its arguments into a struct, so `_` parameters need
+    // a name there. The inner fn keeps the `_`.
+    for (arg, (ident, ..)) in outer_fn_sig.inputs.iter_mut().zip(&fields) {
+        if let FnArg::Typed(pat_type) = arg {
+            if let Pat::Wild(_) = *pat_type.pat {
+                *pat_type.pat = parse_quote!(#ident);
+            }
+        }
+    }
 
     let anon_lifetime = Lifetime::new(ANON_LIFETIME, Span::call_site());
 
@@ -93,6 +110,17 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
     };
 
     let inner_name = &inner_fn_sig.ident;
+    // The inner fn must inline into the target-feature trampoline to be compiled
+    // with its features. Only attributes that describe the body carry over; the
+    // rest (`inline`, `target_feature`, attribute macros, ...) stay on the
+    // dispatcher.
+    let inner_attrs = attrs.iter().filter(|attr| {
+        [
+            "doc", "allow", "warn", "deny", "forbid", "expect", "cfg", "cfg_attr",
+        ]
+        .iter()
+        .any(|name| attr.path().is_ident(name))
+    });
 
     let mut struct_generics = outer_fn_sig.generics.clone();
     struct_generics.params.insert(
@@ -103,7 +131,7 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
     let (impl_generics, type_generics, where_clause) = struct_generics.split_for_impl();
 
     let field_decl = fields.iter().map(|(ident, ty, _)| quote![#ident: #ty]);
-    let field_names = fields.iter().map(|it| it.0).collect::<Vec<_>>();
+    let field_names = fields.iter().map(|it| &it.0).collect::<Vec<_>>();
 
     let simd_generic_name = sig.generics.type_params().next().unwrap().ident.clone();
 
@@ -155,7 +183,7 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
             (#arch).dispatch( #struct_name #struct_turbofish { __lifetime: core::marker::PhantomData, #(#field_names,)* } )
         }
 
-        #(#attrs)*
+        #(#inner_attrs)*
         #[inline(always)]
         #inner_fn_sig #block
     })
@@ -177,5 +205,81 @@ fn add_named_lifetimes(ty: &mut Type) -> bool {
         Type::Slice(type_slice) => add_named_lifetimes(&mut type_slice.elem),
         Type::Tuple(type_tuple) => type_tuple.elems.iter_mut().any(add_named_lifetimes),
         _ => false,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::with_simd_impl;
+    use quote::{quote, ToTokens};
+
+    fn generated_fn<'a>(expanded: &'a syn::File, name: &str) -> &'a syn::ItemFn {
+        expanded
+            .items
+            .iter()
+            .find_map(|item| match item {
+                syn::Item::Fn(func) if func.sig.ident == name => Some(func),
+                _ => None,
+            })
+            .unwrap()
+    }
+
+    fn attr_names(expanded: &syn::File, name: &str) -> Vec<String> {
+        generated_fn(expanded, name)
+            .attrs
+            .iter()
+            .map(|attr| attr.path().to_token_stream().to_string())
+            .collect()
+    }
+
+    /// The `inline` attributes of the generated fn `name`, spaces removed.
+    fn inline_attrs(expanded: &syn::File, name: &str) -> Vec<String> {
+        generated_fn(expanded, name)
+            .attrs
+            .iter()
+            .filter(|attr| attr.path().is_ident("inline"))
+            .map(|attr| attr.meta.to_token_stream().to_string().replace(' ', ""))
+            .collect()
+    }
+
+    #[test]
+    fn user_inline_attribute_stays_on_the_dispatcher() {
+        // The body has to inline into the target-feature trampoline to be
+        // compiled with the right features, so `inline(never)` must not reach
+        // the inner fn.
+        let expanded = with_simd_impl(
+            quote!(),
+            quote! {
+                /// Docs.
+                #[inline(never)]
+                #[target_feature(enable = "avx2")]
+                #[allow(clippy::identity_op)]
+                fn f<S: Simd>(x: u32) -> u32 { x }
+            },
+        )
+        .unwrap();
+        let expanded: syn::File = syn::parse2(expanded).unwrap();
+        assert_eq!(inline_attrs(&expanded, "f"), ["inline(never)"]);
+        assert_eq!(
+            attr_names(&expanded, "f_impl"),
+            ["doc", "allow", "inline"],
+            "only doc and lint attributes reach the inner fn"
+        );
+        assert_eq!(inline_attrs(&expanded, "f_impl"), ["inline(always)"]);
+    }
+
+    #[test]
+    fn destructuring_argument_is_a_compile_error() {
+        let err = with_simd_impl(
+            quote!(),
+            quote! {
+                fn f<S: Simd>((a, b): (u32, u32)) -> u32 { a + b }
+            },
+        )
+        .unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "`with_simd` arguments must be plain identifiers"
+        );
     }
 }

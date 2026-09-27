@@ -39,3 +39,27 @@ fn test_ref_input_explicit<'a, S: Simd, F: Default>(a: &'a [F]) -> F {
 fn test_ref_output<S: Simd>(a: &[f32]) -> &f32 {
     &a[0]
 }
+
+#[with_simd]
+#[inline(never)]
+fn test_inline_never<S: Simd>(a: u32) -> u32 {
+    a + 1
+}
+
+#[with_simd]
+#[inline]
+fn test_inline_hint<S: Simd>(a: u32) -> u32 {
+    a + 1
+}
+
+#[with_simd]
+fn test_wildcard_arg<S: Simd>(_: u32, b: u32) -> u32 {
+    b
+}
+
+#[::wasm_bindgen_test::wasm_bindgen_test(unsupported = test)]
+fn test_with_simd_attributes_and_wildcards() {
+    assert_eq!(test_inline_never(1), 2);
+    assert_eq!(test_inline_hint(1), 2);
+    assert_eq!(test_wildcard_arg(1, 2), 2);
+}

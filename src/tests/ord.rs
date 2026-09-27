@@ -1,7 +1,10 @@
 use std::{vec, vec::Vec};
 
+use num_traits::{Float, NumCast};
+use rand::distr::uniform::SampleUniform;
+
 use crate::{
-    tests::{binop, test_binop},
+    tests::{binop, random, test_binop, SIZE},
     vload_unaligned, Mask, Scalar, Simd, VEq, VOrd, Vector,
 };
 
@@ -39,16 +42,41 @@ macro_rules! cmp_op {
     };
 }
 
+/// Random operands in `0..127`.
+fn random_inputs<T: SampleUniform + NumCast + Copy>() -> (Vec<T>, Vec<T>) {
+    let (lo, hi) = (T::from(0).unwrap(), T::from(127).unwrap());
+    (random(lo, hi), random(lo, hi))
+}
+
+/// Every pairing of NaN (both signs), signed zero, signed infinity and ordinary
+/// values, which the random operands never produce.
+fn special_float_inputs<T: Float>() -> (Vec<T>, Vec<T>) {
+    let values = [
+        T::nan(),
+        T::one(),
+        -T::one(),
+        T::zero(),
+        -T::zero(),
+        T::infinity(),
+        T::neg_infinity(),
+        -T::nan(),
+    ];
+    let n = values.len();
+    let lhs = (0..SIZE).map(|i| values[i % n]).collect();
+    let rhs = (0..SIZE).map(|i| values[(i / n) % n]).collect();
+    (lhs, rhs)
+}
+
 macro_rules! testgen_cmp {
     ($test_fn: ident, $reference: expr, $($(#[$meta:meta])* $ty: ty),*) => {
+        testgen_cmp!(@inputs random_inputs; $test_fn, $reference, $($(#[$meta])* $ty),*);
+    };
+    (@inputs $inputs: path; $test_fn: ident, $reference: expr, $($(#[$meta:meta])* $ty: ty),*) => {
         $(::paste::paste! {
             $(#[$meta])*
             #[::wasm_bindgen_test::wasm_bindgen_test(unsupported = test)]
             fn [<$test_fn _ $ty>]() {
-                use num_traits::NumCast;
-
-                let lhs = $crate::tests::random(NumCast::from(0).unwrap(), NumCast::from(127).unwrap());
-                let rhs = $crate::tests::random(NumCast::from(0).unwrap(), NumCast::from(127).unwrap());
+                let (lhs, rhs): (Vec<$ty>, Vec<$ty>) = $inputs();
                 let out_ref = lhs
                     .iter()
                     .zip(rhs.iter())
@@ -127,10 +155,7 @@ macro_rules! testgen_min_max {
             $(#[$meta])*
             #[::wasm_bindgen_test::wasm_bindgen_test(unsupported = test)]
             fn [<$test_fn _ $ty>]() {
-                use num_traits::NumCast;
-
-                let lhs = $crate::tests::random(NumCast::from(0).unwrap(), NumCast::from(127).unwrap());
-                let rhs = $crate::tests::random(NumCast::from(0).unwrap(), NumCast::from(127).unwrap());
+                let (lhs, rhs): (Vec<$ty>, Vec<$ty>) = random_inputs();
                 let out_ref = lhs
                     .iter()
                     .zip(rhs.iter())
@@ -210,6 +235,12 @@ fn test_eq_impl<S: Simd, T: VEq>(lhs: &[T], rhs: &[T]) -> Vec<bool> {
 }
 
 #[inline(always)]
+fn test_ne_impl<S: Simd, T: VEq>(lhs: &[T], rhs: &[T]) -> Vec<bool> {
+    cmp_op!(VEq, |a: Vector<S, T>, b| a.ne(b));
+    test_cmp::<S, T, VEqOp<T>>(lhs, rhs)
+}
+
+#[inline(always)]
 fn test_lt_impl<S: Simd, T: VOrd>(lhs: &[T], rhs: &[T]) -> Vec<bool> {
     cmp_op!(VOrd, |a: Vector<S, T>, b| a.lt(b));
     test_cmp::<S, T, VOrdOp<T>>(lhs, rhs)
@@ -248,6 +279,22 @@ fn test_max_impl<S: Simd, T: VOrd>(lhs: &[T], rhs: &[T]) -> Vec<T> {
 testgen_cmp!(
     test_eq,
     eq,
+    u8,
+    i8,
+    u16,
+    i16,
+    u32,
+    i32,
+    #[cfg_attr(all(miri, x86_v4), ignore)]
+    f32,
+    u64,
+    i64,
+    #[cfg_attr(all(miri, x86_v4), ignore)]
+    f64
+);
+testgen_cmp!(
+    test_ne,
+    ne,
     u8,
     i8,
     u16,
@@ -357,3 +404,62 @@ testgen_min_max!(
     #[cfg_attr(all(miri, any(aarch64, x86_v4)), ignore)]
     f64
 );
+
+mod nan {
+    use super::*;
+
+    testgen_cmp!(
+        @inputs special_float_inputs;
+        test_eq,
+        eq,
+        #[cfg_attr(all(miri, x86_v4), ignore)]
+        f32,
+        #[cfg_attr(all(miri, x86_v4), ignore)]
+        f64
+    );
+    testgen_cmp!(
+        @inputs special_float_inputs;
+        test_ne,
+        ne,
+        #[cfg_attr(all(miri, x86_v4), ignore)]
+        f32,
+        #[cfg_attr(all(miri, x86_v4), ignore)]
+        f64
+    );
+    testgen_cmp!(
+        @inputs special_float_inputs;
+        test_lt,
+        lt,
+        #[cfg_attr(all(miri, x86_v4), ignore)]
+        f32,
+        #[cfg_attr(all(miri, x86_v4), ignore)]
+        f64
+    );
+    testgen_cmp!(
+        @inputs special_float_inputs;
+        test_le,
+        le,
+        #[cfg_attr(all(miri, x86_v4), ignore)]
+        f32,
+        #[cfg_attr(all(miri, x86_v4), ignore)]
+        f64
+    );
+    testgen_cmp!(
+        @inputs special_float_inputs;
+        test_gt,
+        gt,
+        #[cfg_attr(all(miri, x86_v4), ignore)]
+        f32,
+        #[cfg_attr(all(miri, x86_v4), ignore)]
+        f64
+    );
+    testgen_cmp!(
+        @inputs special_float_inputs;
+        test_ge,
+        ge,
+        #[cfg_attr(all(miri, x86_v4), ignore)]
+        f32,
+        #[cfg_attr(all(miri, x86_v4), ignore)]
+        f64
+    );
+}

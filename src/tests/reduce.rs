@@ -8,6 +8,7 @@ use crate::{
 };
 use core::fmt::Debug;
 use core::ops::Add;
+use std::vec::Vec;
 
 macro_rules! reduce_op {
     ($trait: ident, $scalar_trait: path, $impl: expr, $impl_scalar: expr) => {
@@ -344,4 +345,54 @@ fn test_reduce_keeps_input_neon_fp16() {
     };
     assert_eq!(out, a);
     assert_eq!(reduced, (f16::from_f32(36.0), f16::ONE, f16::from_f32(8.0)));
+}
+
+/// Sums whose value doesn't depend on the order of the additions.
+#[inline(always)]
+fn test_reduce_add_specials_impl<S: Simd, T: ReduceAdd + Float>(_: &()) -> Vec<T> {
+    let lanes = T::lanes::<S>();
+    let cases: [&dyn Fn(usize) -> T; 4] = [
+        &|_| -T::zero(),
+        &|i| if i == lanes / 2 { T::nan() } else { T::one() },
+        &|i| if i == 0 { T::infinity() } else { T::one() },
+        &|i| match i {
+            0 => T::infinity(),
+            1 => T::neg_infinity(),
+            _ => T::one(),
+        },
+    ];
+    // A single lane can't hold both infinities, so that case has nothing to sum.
+    let cases = if lanes < 2 { &cases[..3] } else { &cases[..] };
+    cases
+        .iter()
+        .map(|case| {
+            let values: Vec<T> = (0..lanes).map(case).collect();
+            unsafe { vload_unaligned::<S, T>(values.as_ptr()) }.reduce_add()
+        })
+        .collect()
+}
+
+fn check_reduce_add_specials<T: Float + Debug>(sums: &[T]) {
+    assert!(
+        sums[0].is_zero() && sums[0].is_sign_negative(),
+        "-0 sum: {:?}",
+        sums[0]
+    );
+    assert!(sums[1].is_nan(), "NaN sum: {:?}", sums[1]);
+    assert_eq!(sums[2], T::infinity(), "inf sum");
+    if let Some(sum) = sums.get(3) {
+        assert!(sum.is_nan(), "inf - inf sum: {sum:?}");
+    }
+}
+
+#[::wasm_bindgen_test::wasm_bindgen_test(unsupported = test)]
+// Miri doesn't implement NEON's `faddv`.
+#[cfg_attr(all(miri, aarch64), ignore)]
+fn test_reduce_add_specials() {
+    crate::tests::for_each_backend!(test_reduce_add_specials_impl, f32, &(), |sums: &[f32]| {
+        check_reduce_add_specials(sums)
+    });
+    crate::tests::for_each_backend!(test_reduce_add_specials_impl, f64, &(), |sums: &[f64]| {
+        check_reduce_add_specials(sums)
+    });
 }

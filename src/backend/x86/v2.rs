@@ -131,7 +131,20 @@ impl Simd for V2 {
         u64,
         i64
     );
-    impl_reduce_scalar!(reduce_add, add, f16, f32, f64);
+    impl_reduce_scalar!(reduce_add, add, f16, f64);
+
+    // Pairwise tree instead of a serial chain of scalar adds.
+    #[inline(always)]
+    fn reduce_add_f32(a: Self::Register) -> f32 {
+        unsafe {
+            let x = _mm_add_ps(a, _mm_movehl_ps(a, a));
+            _mm_cvtss_f32(_mm_add_ss(x, _mm_movehdup_ps(x)))
+        }
+    }
+    #[inline(always)]
+    fn reduce_add_f32_supported() -> bool {
+        true
+    }
     impl_reduce_scalar!(reduce_min, min, u8, i8, u16, i16, u32, i32, u64, i64, f16, f32, f64);
     impl_reduce_scalar!(reduce_max, max, u8, i8, u16, i16, u32, i32, u64, i64, f16, f32, f64);
 

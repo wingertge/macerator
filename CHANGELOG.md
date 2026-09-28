@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1](https://github.com/wingertge/macerator/compare/macerator-v0.5.0...macerator-v0.5.1) - 2026-09-27
+
+### Fixed
+
+- *(macros)* accept where-bounds on the SIMD parameter ([#67](https://github.com/wingertge/macerator/pull/67))
+- select the LSX backend on CPUs without LASX ([#64](https://github.com/wingertge/macerator/pull/64))
+- build without default features and on no_std targets ([#62](https://github.com/wingertge/macerator/pull/62))
+
+### Other
+
+- say when mul_add is fused, and update the README ([#66](https://github.com/wingertge/macerator/pull/66))
+- cover the whole integer range in compare, min/max and reduce tests ([#63](https://github.com/wingertge/macerator/pull/63))
+
 ## [0.5.0](https://github.com/wingertge/macerator/compare/macerator-v0.4.0...macerator-v0.5.0) - 2026-09-27
 
 ### Added

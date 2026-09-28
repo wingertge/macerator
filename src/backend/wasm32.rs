@@ -274,7 +274,19 @@ where
         u64,
         i64
     );
-    impl_reduce_scalar!(reduce_add, add, f16, f32, f64);
+    impl_reduce_scalar!(reduce_add, add, f16, f64);
+
+    // Pairwise tree instead of a serial chain of scalar adds.
+    #[inline(always)]
+    fn reduce_add_f32(a: Self::Register) -> f32 {
+        let x = f32x4_add(a, i32x4_shuffle::<2, 3, 0, 1>(a, a));
+        let x = f32x4_add(x, i32x4_shuffle::<1, 0, 3, 2>(x, x));
+        f32x4_extract_lane::<0>(x)
+    }
+    #[inline(always)]
+    fn reduce_add_f32_supported() -> bool {
+        true
+    }
     impl_reduce_scalar!(reduce_min, min, u8, i8, u16, i16, u32, i32, u64, i64, f16, f32, f64);
     impl_reduce_scalar!(reduce_max, max, u8, i8, u16, i16, u32, i32, u64, i64, f16, f32, f64);
 

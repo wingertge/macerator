@@ -80,6 +80,30 @@ macro_rules! impl_cmp_scalar {
     };
 }
 
+/// Any and all with an AVX-512 mask register, whose width matches the lane
+/// count, so every lane is set when it is all ones.
+macro_rules! impl_mask_reduce_kmask {
+    ($($bits: literal: $int: ty),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<mask_any_ $bits>](mask: Self::[<Mask $bits>]) -> bool {
+                mask != 0
+            }
+            #[inline(always)]
+            fn [<mask_any_ $bits _supported>]() -> bool {
+                true
+            }
+            #[inline(always)]
+            fn [<mask_all_ $bits>](mask: Self::[<Mask $bits>]) -> bool {
+                mask == <$int>::MAX
+            }
+            #[inline(always)]
+            fn [<mask_all_ $bits _supported>]() -> bool {
+                true
+            }
+        })*
+    };
+}
 macro_rules! impl_reduce_split {
     ($func: ident, $intrinsic: expr, $op: ident, $($ty: ty),*) => {
         $(paste! {
@@ -316,6 +340,8 @@ where
     impl_binop_untyped!(bitand, _mm512_and_si512);
     impl_binop_untyped!(bitor, _mm512_or_si512);
     impl_binop_untyped!(bitxor, _mm512_xor_si512);
+
+    impl_mask_reduce_kmask!(8: u64, 16: u32, 32: u16, 64: u8);
 
     impl_cmp!(equals, _CMP_EQ_OQ, f32, f64);
     impl_cmp!(equals, _MM_CMPINT_EQ, u8, i8, u16, i16, u32, i32, u64, i64);

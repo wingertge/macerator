@@ -85,6 +85,8 @@ impl Simd for V2 {
     impl_binop_untyped!(bitor, _mm_or_si128);
     impl_binop_untyped!(bitxor, _mm_xor_si128);
 
+    impl_select_blendv!(_mm_blendv_epi8, 8, 16, 32, 64);
+
     #[inline(always)]
     fn recip_f32(a: Self::Register) -> Self::Register {
         unsafe {

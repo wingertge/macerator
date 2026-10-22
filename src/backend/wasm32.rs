@@ -135,6 +135,27 @@ macro_rules! impl_reduce_scalar {
     };
 }
 
+/// Select for masks held as vectors of all-ones or all-zero lanes: a bitwise
+/// select gives the same result for every lane width.
+macro_rules! impl_select_bitwise {
+    ($($bits: literal),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<select_ $bits>](
+                mask: Self::[<Mask $bits>],
+                if_true: Self::Register,
+                if_false: Self::Register,
+            ) -> Self::Register {
+                unsafe { v128_bitselect(if_true, if_false, cast!(mask)) }
+            }
+            #[inline(always)]
+            fn [<select_ $bits _supported>]() -> bool {
+                true
+            }
+        })*
+    };
+}
+
 macro_rules! lanes {
     ($($bits: literal),*) => {
         $(paste! {
@@ -445,6 +466,8 @@ where
     fn bitxor_supported() -> bool {
         true
     }
+
+    impl_select_bitwise!(8, 16, 32, 64);
     #[inline(always)]
     fn bitnot(a: Self::Register) -> Self::Register {
         unsafe { v128_not(a) }

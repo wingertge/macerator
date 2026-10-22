@@ -92,6 +92,8 @@ impl Simd for Lasx {
     impl_binop_untyped!(bitor, lasx_xvor_v);
     impl_binop_untyped!(bitxor, lasx_xvxor_v);
 
+    impl_select_bitwise!(lasx_xvbitsel_v, 8, 16, 32, 64);
+
     impl_unop!(recip, lasx_xvfrecip, f32, f64);
     impl_unop_scalar!(recip, recip, f16);
     impl_unop!(sqrt, lasx_xvfsqrt, f32, f64);

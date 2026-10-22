@@ -15,6 +15,7 @@ mod base;
 mod bitwise;
 mod ord;
 mod reduce;
+mod round;
 mod unary;
 
 #[cfg(test)]
@@ -26,6 +27,7 @@ pub use base::*;
 pub use bitwise::*;
 pub use ord::*;
 pub use reduce::*;
+pub use round::*;
 pub use unary::*;
 
 pub use macerator_macros::*;

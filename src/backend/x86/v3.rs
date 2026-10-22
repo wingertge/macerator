@@ -12,7 +12,9 @@ use paste::paste;
 
 use crate::{backend::arch::NullaryFnOnce, impl_cmp_scalar, Scalar, WithSimd};
 
-use crate::backend::{arch::impl_simd, cast, seal::Sealed, wrapping_mul, Simd, VRegister, Vector};
+use crate::backend::{
+    arch::impl_simd, cast, seal::Sealed, wrapping_mul, RoundTiesEven, Simd, VRegister, Vector,
+};
 
 use super::*;
 
@@ -117,6 +119,11 @@ impl Simd for V3 {
     impl_unop_scalar!(recip, recip, f16, f64);
     impl_unop!(sqrt, _mm256_sqrt, f32, f64);
     impl_unop_scalar!(sqrt, sqrt, f16);
+    impl_round!(_mm256_round, f32: ps, f64: pd);
+    impl_unop_scalar!(floor, floor, f16);
+    impl_unop_scalar!(ceil, ceil, f16);
+    impl_unop_scalar!(trunc, trunc, f16);
+    impl_unop_scalar!(round_ties_even, round_ties_even_soft, f16);
 
     impl_cmp!(equals, _mm256_cmpeq, u8, i8, u16, i16, u32, i32, u64, i64);
     impl_cmp!(greater_than, _mm256_cmpgt, i8, i16, i32, i64);

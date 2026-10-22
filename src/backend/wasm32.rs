@@ -13,7 +13,7 @@ use crate::{seal::Sealed, Scalar, WithSimd};
 
 use super::{
     arch::{impl_simd, NullaryFnOnce},
-    cast, impl_cmp_scalar, wrapping_mul, Simd, VRegister, Vector,
+    cast, impl_cmp_scalar, wrapping_mul, RoundTiesEven, Simd, VRegister, Vector,
 };
 
 impl Sealed for v128 {}
@@ -261,6 +261,14 @@ where
     impl_unop_scalar!(recip, recip, f16, f32, f64);
     impl_unop!(sqrt, sqrt, f32 x 4, f64 x 2);
     impl_unop_scalar!(sqrt, sqrt, f16);
+    impl_unop!(floor, floor, f32 x 4, f64 x 2);
+    impl_unop!(ceil, ceil, f32 x 4, f64 x 2);
+    impl_unop!(trunc, trunc, f32 x 4, f64 x 2);
+    impl_unop!(round_ties_even, nearest, f32 x 4, f64 x 2);
+    impl_unop_scalar!(floor, floor, f16);
+    impl_unop_scalar!(ceil, ceil, f16);
+    impl_unop_scalar!(trunc, trunc, f16);
+    impl_unop_scalar!(round_ties_even, round_ties_even_soft, f16);
 
     impl_reduce_scalar!(
         reduce_add,

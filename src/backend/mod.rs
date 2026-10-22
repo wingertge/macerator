@@ -49,6 +49,34 @@ pub(crate) fn wrapping_mul<T: WrappingMul>(a: T, b: T) -> T {
     a.wrapping_mul(&b)
 }
 
+/// Rounding half to even for lanes without a rounding instruction. `std` has
+/// `round_ties_even`, but `core` and `num-traits` only round ties away from zero.
+pub(crate) trait RoundTiesEven {
+    fn round_ties_even_soft(self) -> Self;
+}
+
+impl<T: num_traits::Float> RoundTiesEven for T {
+    #[inline(always)]
+    fn round_ties_even_soft(self) -> Self {
+        let a = self.abs();
+        let r = a.round();
+        let two = T::one() + T::one();
+        // `round` sends a tie up; when that lands on an odd integer, the even
+        // neighbour is one below. Both subtractions are exact.
+        let rounded = if r - a == T::one() / two && (r / two).fract() != T::zero() {
+            r - T::one()
+        } else {
+            r
+        };
+        // Negating keeps the sign of zero: `-0.5` rounds to `-0.0`.
+        if self.is_sign_negative() {
+            -rounded
+        } else {
+            rounded
+        }
+    }
+}
+
 macro_rules! cast {
     ($v: expr) => {
         unsafe { core::mem::transmute($v) }
@@ -452,6 +480,10 @@ pub trait Simd: Sized + seal::Sealed + 'static {
 
     declare_unop!(recip, f16, f32, f64);
     declare_unop!(sqrt, f16, f32, f64);
+    declare_unop!(floor, f16, f32, f64);
+    declare_unop!(ceil, f16, f32, f64);
+    declare_unop!(trunc, f16, f32, f64);
+    declare_unop!(round_ties_even, f16, f32, f64);
     declare_unop!(abs, i8, i16, i32, i64, f16, f32, f64);
 
     declare_reduction!(reduce_add, i8, i16, i32, i64, u8, u16, u32, u64, f16, f32, f64);

@@ -256,6 +256,23 @@ macro_rules! impl_select_bitwise {
     };
 }
 
+/// Shifts with a per-lane count register; every lane gets the same count.
+macro_rules! impl_shift {
+    ($func: ident, $intrinsic: ident, $($ty: ty: $bits: literal),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<$func _ $ty>](a: Self::Register, n: u32) -> Self::Register {
+                let count = Self::[<splat_i $bits>](n as _);
+                cast!(with_ty_signless!($intrinsic, $ty)(cast!(a), cast!(count)))
+            }
+            #[inline(always)]
+            fn [<$func _ $ty _supported>]() -> bool {
+                true
+            }
+        })*
+    };
+}
+
 pub(crate) use impl_select_bitwise;
 
 /// Any and all for masks held as vectors of all-ones or all-zero lanes: `bnz.v`
@@ -283,3 +300,5 @@ macro_rules! impl_mask_reduce {
     };
 }
 pub(crate) use impl_mask_reduce;
+
+pub(crate) use impl_shift;

@@ -358,6 +358,32 @@ macro_rules! impl_mask_reduce {
         })*
     };
 }
+
+/// `vshl` shifts by a signed count per lane: negative counts shift right,
+/// logically for unsigned lanes and arithmetically for signed ones. Unlike
+/// `vshr_n`, it accepts a count of zero.
+macro_rules! impl_shift {
+    ($($ty: ty: $count: ident),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<shl_ $ty>](a: Self::Register, n: u32) -> Self::Register {
+                cast!(with_ty!(vshlq, $ty)(cast!(a), [<vdupq_n_ $count>](n as _)))
+            }
+            #[inline(always)]
+            fn [<shl_ $ty _supported>]() -> bool {
+                true
+            }
+            #[inline(always)]
+            fn [<shr_ $ty>](a: Self::Register, n: u32) -> Self::Register {
+                cast!(with_ty!(vshlq, $ty)(cast!(a), [<vdupq_n_ $count>](-(n as i64) as _)))
+            }
+            #[inline(always)]
+            fn [<shr_ $ty _supported>]() -> bool {
+                true
+            }
+        })*
+    };
+}
 macro_rules! lanes {
     ($($bits: literal),*) => {
         $(paste! {
@@ -651,6 +677,8 @@ where
     fn from_int_f64_supported() -> bool {
         true
     }
+
+    impl_shift!(u16: s16, i16: s16, u32: s32, i32: s32, u64: s64, i64: s64);
 
     impl_cmp!(equals, vceqq, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64);
     impl_cmp!(less_than, vcltq, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64);

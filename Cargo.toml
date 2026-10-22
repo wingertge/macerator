@@ -37,7 +37,9 @@ half = { version = "2.5.0", default-features = false, features = [
 macerator-macros = { version = "0.3.2", path = "crates/macerator-macros" }
 moddef = "0.3"
 num-traits = { version = "0.2.0", default-features = false, features = ["libm"] }
-paste = "1"
+# pastey is the maintained successor of paste (RUSTSEC-2024-0436), with the same
+# macro, so the code keeps the name `paste`.
+paste = { package = "pastey", version = "0.2" }
 
 [dev-dependencies]
 half = { version = "2.4", features = ["bytemuck", "num-traits", "rand_distr"] }

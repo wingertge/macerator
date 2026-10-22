@@ -604,6 +604,29 @@ where
     impl_unop!(round_ties_even, vrndnq, f32, f64);
     delegate_fp16!(unop floor, ceil, trunc, round_ties_even);
 
+
+    // `fcvtzs` and `fcvtns` saturate and map NaN to 0, as Rust's `as` does.
+    impl_unop!(trunc_to_int, vcvtq_s32, f32);
+    impl_unop!(round_to_int, vcvtnq_s32, f32);
+    impl_unop!(trunc_to_int, vcvtq_s64, f64);
+    impl_unop!(round_to_int, vcvtnq_s64, f64);
+    #[inline(always)]
+    fn from_int_f32(a: Self::Register) -> Self::Register {
+        cast!(vcvtq_f32_s32(cast!(a)))
+    }
+    #[inline(always)]
+    fn from_int_f32_supported() -> bool {
+        true
+    }
+    #[inline(always)]
+    fn from_int_f64(a: Self::Register) -> Self::Register {
+        cast!(vcvtq_f64_s64(cast!(a)))
+    }
+    #[inline(always)]
+    fn from_int_f64_supported() -> bool {
+        true
+    }
+
     impl_cmp!(equals, vceqq, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64);
     impl_cmp!(less_than, vcltq, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64);
     impl_cmp!(

@@ -13,7 +13,8 @@ use crate::{seal::Sealed, Scalar, WithSimd};
 
 use super::{
     arch::{impl_simd, NullaryFnOnce},
-    cast, impl_cmp_scalar, wrapping_mul, RoundTiesEven, Simd, VRegister, Vector,
+    cast, impl_cmp_scalar, impl_convert_scalar, wrapping_mul, RoundTiesEven, Simd, VRegister,
+    Vector,
 };
 
 impl Sealed for v128 {}
@@ -476,6 +477,34 @@ where
     }
 
     impl_select_bitwise!(8, 16, 32, 64);
+
+    // `trunc_sat` saturates and maps NaN to 0, as Rust's `as` does.
+    #[inline(always)]
+    fn trunc_to_int_f32(a: Self::Register) -> Self::Register {
+        unsafe { i32x4_trunc_sat_f32x4(a) }
+    }
+    #[inline(always)]
+    fn trunc_to_int_f32_supported() -> bool {
+        true
+    }
+    #[inline(always)]
+    fn round_to_int_f32(a: Self::Register) -> Self::Register {
+        unsafe { i32x4_trunc_sat_f32x4(f32x4_nearest(a)) }
+    }
+    #[inline(always)]
+    fn round_to_int_f32_supported() -> bool {
+        true
+    }
+    #[inline(always)]
+    fn from_int_f32(a: Self::Register) -> Self::Register {
+        unsafe { f32x4_convert_i32x4(a) }
+    }
+    #[inline(always)]
+    fn from_int_f32_supported() -> bool {
+        true
+    }
+    // wasm SIMD has no 64-bit float and integer conversion.
+    impl_convert_scalar!(16, f64: i64);
     #[inline(always)]
     fn bitnot(a: Self::Register) -> Self::Register {
         unsafe { v128_not(a) }

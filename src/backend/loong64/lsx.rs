@@ -11,7 +11,10 @@ use paste::paste;
 
 use crate::{backend::arch::NullaryFnOnce, impl_cmp_scalar, Scalar, WithSimd};
 
-use crate::backend::{arch::impl_simd, cast, seal::Sealed, RoundTiesEven, Simd, VRegister, Vector};
+use crate::backend::{
+    arch::impl_simd, cast, saturate_f32_i32, saturate_f64_i64, seal::Sealed, RoundTiesEven, Simd,
+    VRegister, Vector,
+};
 
 use super::*;
 
@@ -96,6 +99,56 @@ impl Simd for Lsx {
     impl_binop_untyped!(bitxor, lsx_vxor_v);
 
     impl_select_bitwise!(lsx_vbitsel_v, 8, 16, 32, 64);
+
+    // The fixups give Rust's `as` results for NaN and out-of-range lanes.
+    #[inline(always)]
+    fn trunc_to_int_f32(a: Self::Register) -> Self::Register {
+        saturate_f32_i32::<Self>(a, cast!(lsx_vftintrz_w_s(cast!(a))))
+    }
+    #[inline(always)]
+    fn trunc_to_int_f32_supported() -> bool {
+        true
+    }
+    #[inline(always)]
+    fn round_to_int_f32(a: Self::Register) -> Self::Register {
+        saturate_f32_i32::<Self>(a, cast!(lsx_vftintrne_w_s(cast!(a))))
+    }
+    #[inline(always)]
+    fn round_to_int_f32_supported() -> bool {
+        true
+    }
+    #[inline(always)]
+    fn from_int_f32(a: Self::Register) -> Self::Register {
+        cast!(lsx_vffint_s_w(cast!(a)))
+    }
+    #[inline(always)]
+    fn from_int_f32_supported() -> bool {
+        true
+    }
+    #[inline(always)]
+    fn trunc_to_int_f64(a: Self::Register) -> Self::Register {
+        saturate_f64_i64::<Self>(a, cast!(lsx_vftintrz_l_d(cast!(a))))
+    }
+    #[inline(always)]
+    fn trunc_to_int_f64_supported() -> bool {
+        true
+    }
+    #[inline(always)]
+    fn round_to_int_f64(a: Self::Register) -> Self::Register {
+        saturate_f64_i64::<Self>(a, cast!(lsx_vftintrne_l_d(cast!(a))))
+    }
+    #[inline(always)]
+    fn round_to_int_f64_supported() -> bool {
+        true
+    }
+    #[inline(always)]
+    fn from_int_f64(a: Self::Register) -> Self::Register {
+        cast!(lsx_vffint_d_l(cast!(a)))
+    }
+    #[inline(always)]
+    fn from_int_f64_supported() -> bool {
+        true
+    }
 
     impl_unop!(recip, lsx_vfrecip, f32, f64);
     impl_unop_scalar!(recip, recip, f16);

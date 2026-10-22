@@ -511,6 +511,12 @@ pub trait Simd: Sized + seal::Sealed + 'static {
     declare_unop!(ceil, f16, f32, f64);
     declare_unop!(trunc, f16, f32, f64);
     declare_unop!(round_ties_even, f16, f32, f64);
+
+    // Conversions between f32 and i32 lanes and between f64 and i64 lanes, with
+    // the results of Rust's `as`: float to int saturates and maps NaN to 0.
+    declare_unop!(trunc_to_int, f32, f64);
+    declare_unop!(round_to_int, f32, f64);
+    declare_unop!(from_int, f32, f64);
     declare_unop!(abs, i8, i16, i32, i64, f16, f32, f64);
 
     declare_reduction!(reduce_add, i8, i16, i32, i64, u8, u16, u32, u64, f16, f32, f64);
@@ -544,6 +550,82 @@ macro_rules! impl_cmp_scalar {
 
 #[cfg(any(x86, loong64, wasm32))]
 pub(crate) use impl_cmp_scalar;
+
+/// Corrects a float-to-int conversion to the result of Rust's `as`: lanes at
+/// or above 2^31 become `i32::MAX`, lanes below -2^31 `i32::MIN`, and NaN lanes
+/// 0, whatever the instruction produced for them.
+#[cfg(any(x86, loong64))]
+#[inline(always)]
+pub(crate) fn saturate_f32_i32<S: Simd>(x: S::Register, converted: S::Register) -> S::Register {
+    let too_high = S::greater_than_or_equal_f32(x, S::splat_f32(2147483648.0));
+    let too_low = S::less_than_f32(x, S::splat_f32(-2147483648.0));
+    let r = S::select_32(too_high, S::splat_i32(i32::MAX), converted);
+    let r = S::select_32(too_low, S::splat_i32(i32::MIN), r);
+    S::select_32(S::equals_f32(x, x), r, S::splat_i32(0))
+}
+
+/// As [`saturate_f32_i32`], for f64 and i64 lanes and the bounds ±2^63.
+#[cfg(any(x86, loong64))]
+#[inline(always)]
+pub(crate) fn saturate_f64_i64<S: Simd>(x: S::Register, converted: S::Register) -> S::Register {
+    let too_high = S::greater_than_or_equal_f64(x, S::splat_f64(9223372036854775808.0));
+    let too_low = S::less_than_f64(x, S::splat_f64(-9223372036854775808.0));
+    let r = S::select_64(too_high, S::splat_i64(i64::MAX), converted);
+    let r = S::select_64(too_low, S::splat_i64(i64::MIN), r);
+    S::select_64(S::equals_f64(x, x), r, S::splat_i64(0))
+}
+
+/// Float and integer conversion one lane at a time, for registers of `$bytes`
+/// bytes.
+macro_rules! impl_convert_scalar {
+    ($bytes: literal, $($ty: ty: $int: ty),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<trunc_to_int_ $ty>](a: Self::Register) -> Self::Register {
+                const LANES: usize = $bytes / size_of::<$ty>();
+                let a: [$ty; LANES] = cast!(a);
+                let mut out = [0 as $int; LANES];
+                for i in 0..LANES {
+                    out[i] = a[i] as $int;
+                }
+                cast!(out)
+            }
+            #[inline(always)]
+            fn [<trunc_to_int_ $ty _supported>]() -> bool {
+                false
+            }
+            #[inline(always)]
+            fn [<round_to_int_ $ty>](a: Self::Register) -> Self::Register {
+                const LANES: usize = $bytes / size_of::<$ty>();
+                let a: [$ty; LANES] = cast!(a);
+                let mut out = [0 as $int; LANES];
+                for i in 0..LANES {
+                    out[i] = a[i].round_ties_even_soft() as $int;
+                }
+                cast!(out)
+            }
+            #[inline(always)]
+            fn [<round_to_int_ $ty _supported>]() -> bool {
+                false
+            }
+            #[inline(always)]
+            fn [<from_int_ $ty>](a: Self::Register) -> Self::Register {
+                const LANES: usize = $bytes / size_of::<$ty>();
+                let a: [$int; LANES] = cast!(a);
+                let mut out = [0 as $ty; LANES];
+                for i in 0..LANES {
+                    out[i] = a[i] as $ty;
+                }
+                cast!(out)
+            }
+            #[inline(always)]
+            fn [<from_int_ $ty _supported>]() -> bool {
+                false
+            }
+        })*
+    };
+}
+pub(crate) use impl_convert_scalar;
 
 /// Tests that type inference works properly
 #[cfg(test)]

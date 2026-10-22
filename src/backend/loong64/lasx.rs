@@ -8,7 +8,10 @@ use paste::paste;
 
 use crate::{backend::arch::NullaryFnOnce, impl_cmp_scalar, Scalar, WithSimd};
 
-use crate::backend::{arch::impl_simd, cast, seal::Sealed, RoundTiesEven, Simd, VRegister, Vector};
+use crate::backend::{
+    arch::impl_simd, cast, saturate_f32_i32, saturate_f64_i64, seal::Sealed, RoundTiesEven, Simd,
+    VRegister, Vector,
+};
 
 use super::*;
 
@@ -93,6 +96,56 @@ impl Simd for Lasx {
     impl_binop_untyped!(bitxor, lasx_xvxor_v);
 
     impl_select_bitwise!(lasx_xvbitsel_v, 8, 16, 32, 64);
+
+    // The fixups give Rust's `as` results for NaN and out-of-range lanes.
+    #[inline(always)]
+    fn trunc_to_int_f32(a: Self::Register) -> Self::Register {
+        saturate_f32_i32::<Self>(a, cast!(lasx_xvftintrz_w_s(cast!(a))))
+    }
+    #[inline(always)]
+    fn trunc_to_int_f32_supported() -> bool {
+        true
+    }
+    #[inline(always)]
+    fn round_to_int_f32(a: Self::Register) -> Self::Register {
+        saturate_f32_i32::<Self>(a, cast!(lasx_xvftintrne_w_s(cast!(a))))
+    }
+    #[inline(always)]
+    fn round_to_int_f32_supported() -> bool {
+        true
+    }
+    #[inline(always)]
+    fn from_int_f32(a: Self::Register) -> Self::Register {
+        cast!(lasx_xvffint_s_w(cast!(a)))
+    }
+    #[inline(always)]
+    fn from_int_f32_supported() -> bool {
+        true
+    }
+    #[inline(always)]
+    fn trunc_to_int_f64(a: Self::Register) -> Self::Register {
+        saturate_f64_i64::<Self>(a, cast!(lasx_xvftintrz_l_d(cast!(a))))
+    }
+    #[inline(always)]
+    fn trunc_to_int_f64_supported() -> bool {
+        true
+    }
+    #[inline(always)]
+    fn round_to_int_f64(a: Self::Register) -> Self::Register {
+        saturate_f64_i64::<Self>(a, cast!(lasx_xvftintrne_l_d(cast!(a))))
+    }
+    #[inline(always)]
+    fn round_to_int_f64_supported() -> bool {
+        true
+    }
+    #[inline(always)]
+    fn from_int_f64(a: Self::Register) -> Self::Register {
+        cast!(lasx_xvffint_d_l(cast!(a)))
+    }
+    #[inline(always)]
+    fn from_int_f64_supported() -> bool {
+        true
+    }
 
     impl_unop!(recip, lasx_xvfrecip, f32, f64);
     impl_unop_scalar!(recip, recip, f16);

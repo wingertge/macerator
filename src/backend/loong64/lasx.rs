@@ -8,7 +8,7 @@ use paste::paste;
 
 use crate::{backend::arch::NullaryFnOnce, impl_cmp_scalar, Scalar, WithSimd};
 
-use crate::backend::{arch::impl_simd, cast, seal::Sealed, Simd, VRegister, Vector};
+use crate::backend::{arch::impl_simd, cast, seal::Sealed, RoundTiesEven, Simd, VRegister, Vector};
 
 use super::*;
 
@@ -98,6 +98,14 @@ impl Simd for Lasx {
     impl_unop_scalar!(recip, recip, f16);
     impl_unop!(sqrt, lasx_xvfsqrt, f32, f64);
     impl_unop_scalar!(sqrt, sqrt, f16);
+    impl_unop!(floor, lasx_xvfrintrm, f32, f64);
+    impl_unop!(ceil, lasx_xvfrintrp, f32, f64);
+    impl_unop!(trunc, lasx_xvfrintrz, f32, f64);
+    impl_unop!(round_ties_even, lasx_xvfrintrne, f32, f64);
+    impl_unop_scalar!(floor, floor, f16);
+    impl_unop_scalar!(ceil, ceil, f16);
+    impl_unop_scalar!(trunc, trunc, f16);
+    impl_unop_scalar!(round_ties_even, round_ties_even_soft, f16);
 
     impl_cmp_signless!(equals, lasx_xvseq, u8, i8, u16, i16, u32, i32, u64, i64);
     impl_cmp_signless!(equals, lasx_xvfcmp_ceq, f32, f64);

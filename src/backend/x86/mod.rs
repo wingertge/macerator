@@ -271,3 +271,46 @@ macro_rules! impl_select_blendv {
     };
 }
 pub(crate) use impl_select_blendv;
+
+/// Rounding with an immediate mode. SSE4.1 `round` and AVX-512 `roundscale`
+/// share the encoding: bits 1:0 select the mode, bit 3 suppresses the inexact
+/// exception, and the `roundscale` scale in bits 7:4 is zero.
+macro_rules! impl_round {
+    ($intrinsic: ident, $($ty: ident: $suffix: ident),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<floor_ $ty>](a: Self::Register) -> Self::Register {
+                cast!([<$intrinsic _ $suffix>]::<{ _MM_FROUND_TO_NEG_INF | _MM_FROUND_NO_EXC }>(cast!(a)))
+            }
+            #[inline(always)]
+            fn [<floor_ $ty _supported>]() -> bool {
+                true
+            }
+            #[inline(always)]
+            fn [<ceil_ $ty>](a: Self::Register) -> Self::Register {
+                cast!([<$intrinsic _ $suffix>]::<{ _MM_FROUND_TO_POS_INF | _MM_FROUND_NO_EXC }>(cast!(a)))
+            }
+            #[inline(always)]
+            fn [<ceil_ $ty _supported>]() -> bool {
+                true
+            }
+            #[inline(always)]
+            fn [<trunc_ $ty>](a: Self::Register) -> Self::Register {
+                cast!([<$intrinsic _ $suffix>]::<{ _MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC }>(cast!(a)))
+            }
+            #[inline(always)]
+            fn [<trunc_ $ty _supported>]() -> bool {
+                true
+            }
+            #[inline(always)]
+            fn [<round_ties_even_ $ty>](a: Self::Register) -> Self::Register {
+                cast!([<$intrinsic _ $suffix>]::<{ _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC }>(cast!(a)))
+            }
+            #[inline(always)]
+            fn [<round_ties_even_ $ty _supported>]() -> bool {
+                true
+            }
+        })*
+    };
+}
+pub(crate) use impl_round;

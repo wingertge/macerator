@@ -9,7 +9,7 @@ use num_traits::real::Real;
 use paste::paste;
 
 use crate::{
-    backend::{arch::*, wrapping_mul},
+    backend::{arch::*, wrapping_mul, RoundTiesEven},
     cast,
     seal::Sealed,
     MaskOps, Scalar, Simd, VRegister, Vector,
@@ -155,6 +155,14 @@ pub trait FP16Ext: Sealed + 'static {
     fn recip_f16_supported() -> bool;
     fn sqrt_f16(a: __m512) -> __m512;
     fn sqrt_f16_supported() -> bool;
+    fn floor_f16(a: __m512) -> __m512;
+    fn floor_f16_supported() -> bool;
+    fn ceil_f16(a: __m512) -> __m512;
+    fn ceil_f16_supported() -> bool;
+    fn trunc_f16(a: __m512) -> __m512;
+    fn trunc_f16_supported() -> bool;
+    fn round_ties_even_f16(a: __m512) -> __m512;
+    fn round_ties_even_f16_supported() -> bool;
 
     fn reduce_add_f16(a: __m512) -> f16;
     fn reduce_add_f16_supported() -> bool;
@@ -188,6 +196,10 @@ impl FP16Ext for FP16Fallback {
     impl_unop_scalar!(abs, abs, f16);
     impl_unop_scalar!(recip, recip, f16);
     impl_unop_scalar!(sqrt, sqrt, f16);
+    impl_unop_scalar!(floor, floor, f16);
+    impl_unop_scalar!(ceil, ceil, f16);
+    impl_unop_scalar!(trunc, trunc, f16);
+    impl_unop_scalar!(round_ties_even, round_ties_even_soft, f16);
 
     impl_reduce_scalar!(reduce_add, add, f16);
     impl_reduce_scalar!(reduce_min, min, f16);
@@ -234,6 +246,7 @@ impl FP16Ext for FP16Intrinsic {
     impl_unop!(abs, _mm512_abs, f16);
     impl_unop!(recip, _mm512_rcp, f16);
     impl_unop!(sqrt, _mm512_sqrt, f16);
+    impl_round!(_mm512_roundscale, f16: ph);
 
     impl_reduce!(reduce_add, _mm512_reduce_add, f16);
     impl_reduce!(reduce_min, _mm512_reduce_min, f16);
@@ -254,6 +267,18 @@ pub struct V4Impl<FP16: FP16Ext>(PhantomData<FP16>);
 impl<FP16: FP16Ext> Sealed for V4Impl<FP16> {}
 
 macro_rules! delegate_fp16 {
+    (unop $($func: ident),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<$func _f16>](a: Self::Register) -> Self::Register {
+                FP16::[<$func _f16>](a)
+            }
+            #[inline(always)]
+            fn [<$func _f16_supported>]() -> bool {
+                FP16::[<$func _f16_supported>]()
+            }
+        })*
+    };
     (cmp $($func: ident),*) => {
         $(paste! {
             #[inline(always)]
@@ -433,6 +458,8 @@ where
     }
     impl_unop!(abs, _mm512_abs, i8, i16, i32, i64, f32, f64);
     impl_unop!(sqrt, _mm512_sqrt, f32, f64);
+    impl_round!(_mm512_roundscale, f32: ps, f64: pd);
+    delegate_fp16!(unop floor, ceil, trunc, round_ties_even);
 
     impl_reduce_signless!(reduce_add, _mm512_reduce_add, u32, i32, u64, i64, f32, f64);
     impl_reduce!(reduce_min, _mm512_reduce_min, u32, i32, u64, i64, f32, f64);

@@ -389,6 +389,22 @@ impl Simd for Lasx {
         true
     }
     #[inline(always)]
+    fn fma_f32(a: Self::Register, b: Self::Register, c: Self::Register) -> Self::Register {
+        cast!(lasx_xvfmadd_s(cast!(a), cast!(b), cast!(c)))
+    }
+    #[inline(always)]
+    fn fma_f32_supported() -> bool {
+        true
+    }
+    #[inline(always)]
+    fn fma_f64(a: Self::Register, b: Self::Register, c: Self::Register) -> Self::Register {
+        cast!(lasx_xvfmadd_d(cast!(a), cast!(b), cast!(c)))
+    }
+    #[inline(always)]
+    fn fma_f64_supported() -> bool {
+        true
+    }
+    #[inline(always)]
     fn bitnot(a: Self::Register) -> Self::Register {
         Self::bitxor(a, Self::splat_i64(-1))
     }

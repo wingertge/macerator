@@ -518,6 +518,12 @@ pub trait Simd: Sized + seal::Sealed + 'static {
     fn mul_add_f64(a: Self::Register, b: Self::Register, c: Self::Register) -> Self::Register;
     fn mul_add_f64_supported() -> bool;
 
+    /// `a * b + c` with a single rounding.
+    fn fma_f32(a: Self::Register, b: Self::Register, c: Self::Register) -> Self::Register;
+    fn fma_f32_supported() -> bool;
+    fn fma_f64(a: Self::Register, b: Self::Register, c: Self::Register) -> Self::Register;
+    fn fma_f64_supported() -> bool;
+
     declare_unop!(recip, f16, f32, f64);
     declare_unop!(sqrt, f16, f32, f64);
     declare_unop!(floor, f16, f32, f64);
@@ -638,8 +644,34 @@ macro_rules! impl_convert_scalar {
         })*
     };
 }
+
+/// Fused multiply-add one lane at a time, for registers of `$bytes` bytes.
+/// `mul_add` rounds once in `std` and in `libm`.
+macro_rules! impl_fma_scalar {
+    ($bytes: literal, $($ty: ty),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<fma_ $ty>](a: Self::Register, b: Self::Register, c: Self::Register) -> Self::Register {
+                const LANES: usize = $bytes / size_of::<$ty>();
+                let a: [$ty; LANES] = cast!(a);
+                let b: [$ty; LANES] = cast!(b);
+                let c: [$ty; LANES] = cast!(c);
+                let mut out = [0 as $ty; LANES];
+                for i in 0..LANES {
+                    out[i] = num_traits::Float::mul_add(a[i], b[i], c[i]);
+                }
+                cast!(out)
+            }
+            #[inline(always)]
+            fn [<fma_ $ty _supported>]() -> bool {
+                false
+            }
+        })*
+    };
+}
 pub(crate) use impl_convert_scalar;
 
+pub(crate) use impl_fma_scalar;
 /// Tests that type inference works properly
 #[cfg(test)]
 mod test_inference {

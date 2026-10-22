@@ -15,6 +15,8 @@ mod base;
 mod bitwise;
 mod convert;
 mod mask_reduce;
+
+mod fma;
 mod ord;
 mod reduce;
 mod select;
@@ -29,6 +31,8 @@ pub use base::*;
 pub use bitwise::*;
 pub use convert::*;
 pub use mask_reduce::*;
+
+pub use fma::*;
 pub use ord::*;
 pub use reduce::*;
 pub use select::*;

@@ -390,6 +390,22 @@ impl Simd for Lsx {
         true
     }
     #[inline(always)]
+    fn fma_f32(a: Self::Register, b: Self::Register, c: Self::Register) -> Self::Register {
+        cast!(lsx_vfmadd_s(cast!(a), cast!(b), cast!(c)))
+    }
+    #[inline(always)]
+    fn fma_f32_supported() -> bool {
+        true
+    }
+    #[inline(always)]
+    fn fma_f64(a: Self::Register, b: Self::Register, c: Self::Register) -> Self::Register {
+        cast!(lsx_vfmadd_d(cast!(a), cast!(b), cast!(c)))
+    }
+    #[inline(always)]
+    fn fma_f64_supported() -> bool {
+        true
+    }
+    #[inline(always)]
     fn bitnot(a: Self::Register) -> Self::Register {
         Self::bitxor(a, Self::splat_i64(-1))
     }

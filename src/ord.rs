@@ -79,11 +79,22 @@ impl<S: Simd, T: VOrd> Vector<S, T> {
         T::vge(self, b)
     }
     /// Apply elementwise [`Ord::min`] to two vectors
+    ///
+    /// For floats, which operand comes back when they compare equal but
+    /// differ (`-0.0` and `0.0`), or when either is NaN, depends on the backend:
+    /// for f32 and f64, x86 returns `b`, NEON and wasm return
+    /// `-0.0` for `min` and `0.0` for `max` and propagate NaN, and the scalar
+    /// fallback follows [`f32::min`], which returns the operand that is not
+    /// NaN. Do not rely on either case where results must agree across
+    /// backends.
     #[inline(always)]
     pub fn min(self, b: Self) -> Self {
         T::vmin(self, b)
     }
     /// Apply elementwise [`Ord::max`] on two vectors
+    ///
+    /// For floats, signed zeros and NaN behave as described for
+    /// [`min`](Self::min).
     #[inline(always)]
     pub fn max(self, b: Self) -> Self {
         T::vmax(self, b)

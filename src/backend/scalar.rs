@@ -13,8 +13,7 @@ use paste::paste;
 use crate::{MaskOps, Scalar};
 
 use super::{
-    cast, impl_convert_scalar, wrapping_add, wrapping_mul, wrapping_sub, RoundTiesEven, Simd,
-    VRegister, WithSimd,
+    cast, impl_convert_scalar, wrapping_add, wrapping_mul, wrapping_sub, RoundTiesEven, Simd, VRegister, WithSimd, impl_fma_scalar,
 };
 
 impl VRegister for u64 {}
@@ -502,6 +501,7 @@ impl Simd for Fallback {
     fn mul_add_f64_supported() -> bool {
         false
     }
+    impl_fma_scalar!(8, f32, f64);
 
     fn bitnot(a: Self::Register) -> Self::Register {
         !a

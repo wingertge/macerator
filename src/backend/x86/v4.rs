@@ -707,6 +707,22 @@ where
         true
     }
     #[inline(always)]
+    fn fma_f32(a: Self::Register, b: Self::Register, c: Self::Register) -> Self::Register {
+        cast!(_mm512_fmadd_ps(cast!(a), cast!(b), cast!(c)))
+    }
+    #[inline(always)]
+    fn fma_f32_supported() -> bool {
+        true
+    }
+    #[inline(always)]
+    fn fma_f64(a: Self::Register, b: Self::Register, c: Self::Register) -> Self::Register {
+        cast!(_mm512_fmadd_pd(cast!(a), cast!(b), cast!(c)))
+    }
+    #[inline(always)]
+    fn fma_f64_supported() -> bool {
+        true
+    }
+    #[inline(always)]
     fn recip_f16(a: Self::Register) -> Self::Register {
         FP16::recip_f16(a)
     }

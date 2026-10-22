@@ -12,8 +12,8 @@ use paste::paste;
 use crate::{backend::arch::NullaryFnOnce, impl_cmp_scalar, Scalar, WithSimd};
 
 use crate::backend::{
-    arch::impl_simd, cast, impl_convert_scalar, saturate_f32_i32, seal::Sealed, wrapping_mul,
-    RoundTiesEven, Simd, VRegister, Vector,
+    arch::impl_simd, cast, impl_convert_scalar, impl_fma_scalar, saturate_f32_i32, seal::Sealed,
+    wrapping_mul, RoundTiesEven, Simd, VRegister, Vector,
 };
 
 use super::*;
@@ -449,6 +449,8 @@ impl Simd for V2 {
     fn mul_add_f64_supported() -> bool {
         true
     }
+    // x86-64 v2 has no fused multiply-add.
+    impl_fma_scalar!(16, f32, f64);
     #[inline(always)]
     fn bitnot(a: Self::Register) -> Self::Register {
         cast!(_mm_xor_si128(cast!(a), cast!(Self::splat_i64(-1))))

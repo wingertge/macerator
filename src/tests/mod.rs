@@ -17,6 +17,8 @@ mod approx;
 mod arithmetic;
 mod bitwise;
 mod convert;
+
+mod fma;
 mod half;
 mod macro_tests;
 mod mask_reduce;

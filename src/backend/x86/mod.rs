@@ -271,3 +271,29 @@ macro_rules! impl_select_blendv {
     };
 }
 pub(crate) use impl_select_blendv;
+
+/// Any and all for masks held as vectors of all-ones or all-zero lanes: every
+/// byte of a set lane is set, so the byte mask answers for every lane width.
+macro_rules! impl_mask_reduce_movemask {
+    ($movemask: ident, $all: expr, $($bits: literal),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<mask_any_ $bits>](mask: Self::[<Mask $bits>]) -> bool {
+                unsafe { $movemask(cast!(mask)) != 0 }
+            }
+            #[inline(always)]
+            fn [<mask_any_ $bits _supported>]() -> bool {
+                true
+            }
+            #[inline(always)]
+            fn [<mask_all_ $bits>](mask: Self::[<Mask $bits>]) -> bool {
+                unsafe { $movemask(cast!(mask)) == $all }
+            }
+            #[inline(always)]
+            fn [<mask_all_ $bits _supported>]() -> bool {
+                true
+            }
+        })*
+    };
+}
+pub(crate) use impl_mask_reduce_movemask;

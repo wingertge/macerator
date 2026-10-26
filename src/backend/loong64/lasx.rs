@@ -146,6 +146,7 @@ impl Simd for Lasx {
     fn from_int_f64_supported() -> bool {
         true
     }
+    impl_mask_reduce!(lasx_xbnz_v, lasx_xbnz_b, 8, 16, 32, 64);
 
     impl_unop!(recip, lasx_xvfrecip, f32, f64);
     impl_unop_scalar!(recip, recip, f16);

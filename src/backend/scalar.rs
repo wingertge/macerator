@@ -112,6 +112,29 @@ macro_rules! impl_select_scalar {
     };
 }
 
+
+macro_rules! impl_mask_reduce_scalar {
+    ($($bits: literal),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<mask_any_ $bits>](mask: Self::[<Mask $bits>]) -> bool {
+                mask.0.iter().any(|lane| lane & 1 != 0)
+            }
+            #[inline(always)]
+            fn [<mask_any_ $bits _supported>]() -> bool {
+                false
+            }
+            #[inline(always)]
+            fn [<mask_all_ $bits>](mask: Self::[<Mask $bits>]) -> bool {
+                mask.0.iter().all(|lane| lane & 1 != 0)
+            }
+            #[inline(always)]
+            fn [<mask_all_ $bits _supported>]() -> bool {
+                false
+            }
+        })*
+    };
+}
 macro_rules! impl_cmp_scalar {
     ($func: ident, $intrinsic: path, $($ty: ty),*) => {
         $(paste! {
@@ -263,6 +286,7 @@ impl Simd for Fallback {
 
     impl_select_scalar!(8: u8, 16: u16, 32: u32, 64: u64);
     impl_convert_scalar!(8, f32: i32, f64: i64);
+    impl_mask_reduce_scalar!(8, 16, 32, 64);
 
     impl_unop_scalar!(recip, recip, f16, f32, f64);
     impl_unop_scalar!(abs, wrapping_abs, i8, i16, i32, i64);

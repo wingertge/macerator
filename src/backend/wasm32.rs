@@ -157,6 +157,31 @@ macro_rules! impl_select_bitwise {
     };
 }
 
+
+/// Any and all for masks held as vectors of all-ones or all-zero lanes: every
+/// byte of a set lane is set, so byte reductions answer for every lane width.
+macro_rules! impl_mask_reduce {
+    ($($bits: literal),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<mask_any_ $bits>](mask: Self::[<Mask $bits>]) -> bool {
+                unsafe { v128_any_true(cast!(mask)) }
+            }
+            #[inline(always)]
+            fn [<mask_any_ $bits _supported>]() -> bool {
+                true
+            }
+            #[inline(always)]
+            fn [<mask_all_ $bits>](mask: Self::[<Mask $bits>]) -> bool {
+                unsafe { i8x16_all_true(cast!(mask)) }
+            }
+            #[inline(always)]
+            fn [<mask_all_ $bits _supported>]() -> bool {
+                true
+            }
+        })*
+    };
+}
 macro_rules! lanes {
     ($($bits: literal),*) => {
         $(paste! {
@@ -505,6 +530,7 @@ where
     }
     // wasm SIMD has no 64-bit float and integer conversion.
     impl_convert_scalar!(16, f64: i64);
+    impl_mask_reduce!(8, 16, 32, 64);
     #[inline(always)]
     fn bitnot(a: Self::Register) -> Self::Register {
         unsafe { v128_not(a) }

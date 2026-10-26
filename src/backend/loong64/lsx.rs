@@ -149,6 +149,7 @@ impl Simd for Lsx {
     fn from_int_f64_supported() -> bool {
         true
     }
+    impl_mask_reduce!(lsx_bnz_v, lsx_bnz_b, 8, 16, 32, 64);
 
     impl_unop!(recip, lsx_vfrecip, f32, f64);
     impl_unop_scalar!(recip, recip, f16);

@@ -5,9 +5,7 @@ use half::f16;
 use num_traits::Float;
 use rand::Rng;
 
-use crate::{
-    tests::for_each_backend, vload_unaligned, vstore_unaligned, Scalar, Simd, VRound, Vector,
-};
+use crate::{tests::for_each_backend, vload_unaligned, vstore_unaligned, Scalar, Simd, Vector};
 
 /// Values where rounding is easy to get wrong, then random ones.
 fn inputs<T: Float + Scalar + Bits>() -> Vec<T> {
@@ -107,7 +105,7 @@ fn assert_same<T: Float + Debug>(input: &[T], want: &[T], got: &[T], op: &str) {
 }
 
 #[inline(always)]
-fn apply<S: Simd, T: VRound>(a: &[T], op: impl Fn(Vector<S, T>) -> Vector<S, T>) -> Vec<T> {
+fn apply<S: Simd, T: Scalar>(a: &[T], op: impl Fn(Vector<S, T>) -> Vector<S, T>) -> Vec<T> {
     let lanes = T::lanes::<S>();
     let mut out = vec![T::zeroed(); a.len()];
     for (a, out) in a.chunks_exact(lanes).zip(out.chunks_exact_mut(lanes)) {
@@ -121,7 +119,7 @@ macro_rules! testgen_round {
     ($op: ident, $reference: expr, $($(#[$meta:meta])* $ty: ty),*) => {
         $(::paste::paste! {
             #[inline(always)]
-            fn [<test_ $op _ $ty _impl>]<S: Simd, T: VRound>(a: &[T]) -> Vec<T> {
+            fn [<test_ $op _ $ty _impl>]<S: Simd, T: crate::[<V $op:camel>]>(a: &[T]) -> Vec<T> {
                 apply::<S, T>(a, |v| v.$op())
             }
 

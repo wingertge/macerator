@@ -1,87 +1,65 @@
+use core::ops::{Shl, Shr};
+
 use paste::paste;
 
 use crate::{Scalar, Simd, Vector};
 
-pub trait VShift: Scalar {
-    fn vshl<S: Simd, const N: u32>(input: Vector<S, Self>) -> Vector<S, Self>;
-    fn vshr<S: Simd, const N: u32>(input: Vector<S, Self>) -> Vector<S, Self>;
-    fn is_accelerated<S: Simd>() -> bool;
-}
-
-/// Shifts by a constant, as Rust's `<<` and `>>`: right shifts are logical
-/// for unsigned lanes and arithmetic for signed ones. `N` must be less than
-/// the lane width, which is checked at compile time, because backends
-/// disagree about larger shifts.
-///
-/// ```
-/// # use macerator::{Simd, Vector};
-/// // The biased exponent and sign of f32 values, given their bits.
-/// fn exponent_bits<S: Simd>(bits: Vector<S, u32>) -> Vector<S, u32> {
-///     bits.shr::<23>()
-/// }
-/// ```
-impl<S: Simd, T: VShift> Vector<S, T> {
-    /// Elementwise shift left by `N` bits, shifting in zeros.
-    ///
-    /// ```no_run
-    /// # use macerator::{with_simd, Scalar, Simd};
-    /// #[with_simd]
-    /// fn top_bit<S: Simd>(x: u32) -> bool {
-    ///     let mut out = [0u32; 16];
-    ///     let v = x.splat::<S>().shl::<31>();
-    ///     unsafe { macerator::vstore_unaligned(out.as_mut_ptr(), v) };
-    ///     out[0] == 1 << 31
-    /// }
-    /// assert!(top_bit(1));
-    /// ```
-    ///
-    /// A shift by the lane width or more does not compile:
-    ///
-    /// ```compile_fail
-    /// # use macerator::{with_simd, Scalar, Simd};
-    /// #[with_simd]
-    /// fn top_bit<S: Simd>(x: u32) -> bool {
-    ///     let mut out = [0u32; 16];
-    ///     let v = x.splat::<S>().shl::<32>();
-    ///     unsafe { macerator::vstore_unaligned(out.as_mut_ptr(), v) };
-    ///     out[0] == 1 << 31
-    /// }
-    /// assert!(top_bit(1));
-    /// ```
-    #[inline(always)]
-    pub fn shl<const N: u32>(self) -> Self {
-        T::vshl::<S, N>(self)
-    }
-
-    /// Elementwise shift right by `N` bits: zeros shift in for unsigned
-    /// lanes, copies of the sign bit for signed lanes.
-    #[inline(always)]
-    pub fn shr<const N: u32>(self) -> Self {
-        T::vshr::<S, N>(self)
-    }
-}
-
 macro_rules! impl_shift {
-    ($($ty: ty),*) => {
-        $(paste! {
-            impl VShift for $ty {
+    ($(#[$attr: meta])* $trait: ident, $std_trait: ident, $name: ident, $($ty: ty),*) => {
+        paste!{
+            $(#[$attr])*
+            pub trait $trait: Scalar + $std_trait<u32, Output = Self> {
+                fn [<$trait:lower>]<S: Simd>(lhs: Vector<S, Self>, n: u32) -> Vector<S, Self>;
+                fn is_accelerated<S: Simd>() -> bool;
+            }
+            $(impl $trait for $ty {
                 #[inline(always)]
-                fn vshl<S: Simd, const N: u32>(input: Vector<S, Self>) -> Vector<S, Self> {
-                    const { assert!(N < <$ty>::BITS, "shift must be less than the lane width") };
-                    S::typed(S::[<shl_ $ty>](*input, N))
-                }
-                #[inline(always)]
-                fn vshr<S: Simd, const N: u32>(input: Vector<S, Self>) -> Vector<S, Self> {
-                    const { assert!(N < <$ty>::BITS, "shift must be less than the lane width") };
-                    S::typed(S::[<shr_ $ty>](*input, N))
+                fn [<$trait:lower>]<S: Simd>(lhs: Vector<S, Self>, n: u32) -> Vector<S, Self> {
+                    debug_assert!(n < <$ty>::BITS, "shift must be less than the lane width");
+                    // Backends disagree about larger counts, so wrap as release builds of `<<` do.
+                    S::typed(S::[<$name _ $ty>](*lhs, n & (<$ty>::BITS - 1)))
                 }
                 #[inline(always)]
                 fn is_accelerated<S: Simd>() -> bool {
-                    S::[<shl_ $ty _supported>]() && S::[<shr_ $ty _supported>]()
+                    S::[<$name _ $ty _supported>]()
+                }
+            })*
+            impl<S: Simd, T: $trait> $std_trait<u32> for Vector<S, T> {
+                type Output = Self;
+
+                #[inline(always)]
+                fn $name(self, n: u32) -> Self::Output {
+                    T::[<$trait:lower>](self, n)
                 }
             }
-        })*
+            impl<S: Simd, T: $trait> ::core::ops::[<$std_trait Assign>]<u32> for Vector<S, T> {
+                #[inline(always)]
+                fn [<$name _assign>](&mut self, n: u32) {
+                    *self = T::[<$trait:lower>](*self, n)
+                }
+            }
+        }
     };
 }
 
-impl_shift!(u16, i16, u32, i32, u64, i64);
+impl_shift!(
+    /// Elementwise `<<` by `n` bits, shifting in zeros. Like the scalar
+    /// operator, a shift by the lane width or more panics with debug
+    /// assertions on and is taken modulo the lane width otherwise.
+    VShl, Shl, shl, u16, i16, u32, i32, u64, i64
+);
+impl_shift!(
+    /// Elementwise `>>` by `n` bits: logical for unsigned lanes, arithmetic
+    /// for signed ones. Like the scalar operator, a shift by the lane width or
+    /// more panics with debug assertions on and is taken modulo the lane width
+    /// otherwise.
+    ///
+    /// ```
+    /// # use macerator::{Simd, Vector};
+    /// // The biased exponent and sign of f32 values, given their bits.
+    /// fn exponent_bits<S: Simd>(bits: Vector<S, u32>) -> Vector<S, u32> {
+    ///     bits >> 23
+    /// }
+    /// ```
+    VShr, Shr, shr, u16, i16, u32, i32, u64, i64
+);

@@ -2,10 +2,12 @@ use std::{vec, vec::Vec};
 
 use rand::Rng;
 
-use crate::{tests::for_each_backend, vload_unaligned, vstore_unaligned, Simd, VConvert, Vector};
+use crate::{
+    tests::for_each_backend, vload_unaligned, vstore_unaligned, Simd, VRoundToInt, VToFloat, Vector,
+};
 
 #[inline(always)]
-fn apply<S: Simd, A: VConvert, B: crate::Scalar>(
+fn apply<S: Simd, A: crate::Scalar, B: crate::Scalar>(
     a: &[A],
     op: impl Fn(Vector<S, A>) -> Vector<S, B>,
 ) -> Vec<B> {
@@ -20,21 +22,15 @@ fn apply<S: Simd, A: VConvert, B: crate::Scalar>(
 
 /// Truncated results, then rounded ones.
 #[inline(always)]
-fn test_to_int_impl<S: Simd, T: VConvert>(a: &[T]) -> Vec<T::Int> {
+fn test_to_int_impl<S: Simd, T: VRoundToInt>(a: &[T]) -> Vec<T::Int> {
     let mut out = apply::<S, T, T::Int>(a, |v| v.trunc_to_int());
     out.extend(apply::<S, T, T::Int>(a, |v| v.round_to_int()));
     out
 }
 
 #[inline(always)]
-fn test_from_int_impl<S: Simd, T: VConvert>(a: &[T::Int]) -> Vec<T> {
-    let lanes = T::lanes::<S>();
-    let mut out = vec![T::default(); a.len()];
-    for (a, out) in a.chunks_exact(lanes).zip(out.chunks_exact_mut(lanes)) {
-        let a = unsafe { vload_unaligned::<S, T::Int>(a.as_ptr()) };
-        unsafe { vstore_unaligned(out.as_mut_ptr(), Vector::<S, T>::from_int(a)) };
-    }
-    out
+fn test_from_int_impl<S: Simd, T: VToFloat>(a: &[T]) -> Vec<T::Float> {
+    apply::<S, T, T::Float>(a, |v| v.to_float())
 }
 
 macro_rules! testgen_convert {
@@ -90,9 +86,9 @@ macro_rules! testgen_convert {
                     a.push(rng.random());
                 }
                 let want: Vec<$ty> = a.iter().map(|&x| x as $ty).collect();
-                for_each_backend!(test_from_int_impl, $ty, &a[..], |out: &[$ty]| {
+                for_each_backend!(test_from_int_impl, $int, &a[..], |out: &[$ty]| {
                     for ((x, w), g) in a.iter().zip(&want).zip(out) {
-                        assert_eq!(w.to_bits(), g.to_bits(), "from_int({x})");
+                        assert_eq!(w.to_bits(), g.to_bits(), "to_float({x})");
                     }
                 });
             }
@@ -101,7 +97,7 @@ macro_rules! testgen_convert {
 }
 
 testgen_convert!(
-    f32: i32: u32: [2147483520.0, -2147483904.0, 4294967296.0, 16777217.0],
+    f32: i32: u32: [2147483520.0, -2147483904.0, 4294967296.0, 8388607.5],
     // Miri does not implement AVX-512 i64 to f64 conversion.
     #[cfg_attr(all(miri, x86_v4), ignore)]
     f64: i64: u64: [

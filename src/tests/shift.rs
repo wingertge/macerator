@@ -78,6 +78,8 @@ fn test_shift_wraps_impl<S: Simd, T: VShl + VShr>(a: &[T]) -> Vec<T> {
 
 /// A count of the lane width or more panics with debug assertions on and wraps
 /// otherwise, like the scalar operators.
+// Same Miri gap as above.
+#[cfg_attr(all(miri, any(aarch64, x86_v4)), ignore)]
 #[cfg_attr(
     debug_assertions,
     should_panic(expected = "shift must be less than the lane width")

@@ -17,7 +17,6 @@ mod convert;
 mod mask_reduce;
 mod ord;
 mod reduce;
-mod round;
 mod select;
 mod unary;
 
@@ -32,7 +31,6 @@ pub use convert::*;
 pub use mask_reduce::*;
 pub use ord::*;
 pub use reduce::*;
-pub use round::*;
 pub use select::*;
 pub use unary::*;
 

@@ -99,6 +99,8 @@ impl Simd for V3 {
     impl_binop_untyped!(bitor, _mm256_or_si256);
     impl_binop_untyped!(bitxor, _mm256_xor_si256);
 
+    impl_mask_reduce_movemask!(_mm256_movemask_epi8, -1, 8, 16, 32, 64);
+
     #[inline(always)]
     fn recip_f32(a: Self::Register) -> Self::Register {
         unsafe {

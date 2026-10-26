@@ -201,6 +201,16 @@ macro_rules! declare_unop {
     };
 }
 
+macro_rules! declare_mask_reduce {
+    ($($bits: literal),*) => {
+        $(paste! {
+            fn [<mask_any_ $bits>](mask: Self::[<Mask $bits>]) -> bool;
+            fn [<mask_any_ $bits _supported>]() -> bool;
+            fn [<mask_all_ $bits>](mask: Self::[<Mask $bits>]) -> bool;
+            fn [<mask_all_ $bits _supported>]() -> bool;
+        })*
+    };
+}
 macro_rules! declare_reduction {
     ($name: ident, $($ty: ty),*) => {
         $(paste! {
@@ -425,6 +435,9 @@ pub trait Simd: Sized + seal::Sealed + 'static {
     fn bitxor_supported() -> bool;
     fn bitnot(a: Self::Register) -> Self::Register;
     fn bitnot_supported() -> bool;
+
+    // Whether any lane, or every lane, of a mask is set.
+    declare_mask_reduce!(8, 16, 32, 64);
 
     declare_cmp!(equals, i8, u8, i16, u16, f16, i32, u32, f32, i64, u64, f64);
     declare_cmp!(less_than, i8, u8, i16, u16, f16, i32, u32, f32, i64, u64, f64);

@@ -233,3 +233,29 @@ macro_rules! impl_cmp_signless {
     };
 }
 pub(crate) use impl_cmp_signless;
+
+/// Any and all for masks held as vectors of all-ones or all-zero lanes: `bnz.v`
+/// tests for any set bit, `bnz.b` for every byte being non-zero.
+macro_rules! impl_mask_reduce {
+    ($any: ident, $all: ident, $($bits: literal),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<mask_any_ $bits>](mask: Self::[<Mask $bits>]) -> bool {
+                unsafe { $any(cast!(mask)) != 0 }
+            }
+            #[inline(always)]
+            fn [<mask_any_ $bits _supported>]() -> bool {
+                true
+            }
+            #[inline(always)]
+            fn [<mask_all_ $bits>](mask: Self::[<Mask $bits>]) -> bool {
+                unsafe { $all(cast!(mask)) != 0 }
+            }
+            #[inline(always)]
+            fn [<mask_all_ $bits _supported>]() -> bool {
+                true
+            }
+        })*
+    };
+}
+pub(crate) use impl_mask_reduce;

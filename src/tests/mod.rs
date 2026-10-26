@@ -18,6 +18,7 @@ mod arithmetic;
 mod bitwise;
 mod half;
 mod macro_tests;
+mod mask_reduce;
 mod ord;
 mod reduce;
 mod round;

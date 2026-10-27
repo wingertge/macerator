@@ -270,6 +270,28 @@ macro_rules! delegate_fp16 {
     };
 }
 
+/// Select for masks held as vectors of all-ones or all-zero lanes: a bitwise
+/// select gives the same result for every lane width.
+macro_rules! impl_select_bitwise {
+    ($($bits: literal),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<select_ $bits>](
+                mask: Self::[<Mask $bits>],
+                if_true: Self::Register,
+                if_false: Self::Register,
+            ) -> Self::Register {
+                cast!(vbslq_s8(cast!(mask), if_true, if_false))
+            }
+            #[inline(always)]
+            fn [<select_ $bits _supported>]() -> bool {
+                true
+            }
+        })*
+    };
+}
+
+
 /// Any and all for masks held as vectors of all-ones or all-zero lanes: every
 /// byte of a set lane is set, so byte reductions answer for every lane width.
 macro_rules! impl_mask_reduce {
@@ -780,6 +802,7 @@ where
         true
     }
 
+    impl_select_bitwise!(8, 16, 32, 64);
     impl_mask_reduce!(8, 16, 32, 64);
     #[inline(always)]
     fn bitnot(a: Self::Register) -> Self::Register {

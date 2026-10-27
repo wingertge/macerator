@@ -16,6 +16,7 @@ mod bitwise;
 mod mask_reduce;
 mod ord;
 mod reduce;
+mod select;
 mod unary;
 
 #[cfg(test)]
@@ -28,6 +29,7 @@ pub use bitwise::*;
 pub use mask_reduce::*;
 pub use ord::*;
 pub use reduce::*;
+pub use select::*;
 pub use unary::*;
 
 pub use macerator_macros::*;

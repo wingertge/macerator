@@ -21,6 +21,7 @@ mod macro_tests;
 mod mask_reduce;
 mod ord;
 mod reduce;
+mod select;
 mod unary;
 
 wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);

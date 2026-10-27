@@ -250,28 +250,6 @@ macro_rules! impl_cmp {
 }
 pub(crate) use impl_cmp;
 
-/// Select for masks held as vectors of all-ones or all-zero lanes: a byte
-/// blend gives the same result for every lane width.
-macro_rules! impl_select_blendv {
-    ($intrinsic: ident, $($bits: literal),*) => {
-        $(paste! {
-            #[inline(always)]
-            fn [<select_ $bits>](
-                mask: Self::[<Mask $bits>],
-                if_true: Self::Register,
-                if_false: Self::Register,
-            ) -> Self::Register {
-                cast!($intrinsic(cast!(if_false), cast!(if_true), cast!(mask)))
-            }
-            #[inline(always)]
-            fn [<select_ $bits _supported>]() -> bool {
-                true
-            }
-        })*
-    };
-}
-pub(crate) use impl_select_blendv;
-
 /// Rounding with an immediate mode. SSE4.1 `round` and AVX-512 `roundscale`
 /// share the encoding: bits 1:0 select the mode, bit 3 suppresses the inexact
 /// exception, and the `roundscale` scale in bits 7:4 is zero.
@@ -314,6 +292,28 @@ macro_rules! impl_round {
     };
 }
 pub(crate) use impl_round;
+
+/// Select for masks held as vectors of all-ones or all-zero lanes: a byte
+/// blend gives the same result for every lane width.
+macro_rules! impl_select_blendv {
+    ($intrinsic: ident, $($bits: literal),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<select_ $bits>](
+                mask: Self::[<Mask $bits>],
+                if_true: Self::Register,
+                if_false: Self::Register,
+            ) -> Self::Register {
+                cast!($intrinsic(cast!(if_false), cast!(if_true), cast!(mask)))
+            }
+            #[inline(always)]
+            fn [<select_ $bits _supported>]() -> bool {
+                true
+            }
+        })*
+    };
+}
+pub(crate) use impl_select_blendv;
 
 /// Any and all for masks held as vectors of all-ones or all-zero lanes: every
 /// byte of a set lane is set, so the byte mask answers for every lane width.

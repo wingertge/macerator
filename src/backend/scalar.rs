@@ -82,6 +82,36 @@ macro_rules! impl_binop_scalar_full {
     };
 }
 
+/// Mask lanes are bytes whose low bit is the lane's truth value: comparisons
+/// store 0 or 1, and `Not` flips every bit.
+macro_rules! impl_select_scalar {
+    ($($bits: literal: $ty: ty),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<select_ $bits>](
+                mask: Self::[<Mask $bits>],
+                if_true: Self::Register,
+                if_false: Self::Register,
+            ) -> Self::Register {
+                const LANES: usize = 8 / size_of::<$ty>();
+                let if_true: [$ty; LANES] = cast!(if_true);
+                let if_false: [$ty; LANES] = cast!(if_false);
+                let mut out = [0; LANES];
+
+                for i in 0..LANES {
+                    out[i] = if mask.0[i] & 1 != 0 { if_true[i] } else { if_false[i] };
+                }
+                cast!(out)
+            }
+            #[inline(always)]
+            fn [<select_ $bits _supported>]() -> bool {
+                false
+            }
+        })*
+    };
+}
+
+
 macro_rules! impl_mask_reduce_scalar {
     ($($bits: literal),*) => {
         $(paste! {
@@ -253,6 +283,7 @@ impl Simd for Fallback {
     impl_binop_scalar_full!(bitor, BitOr::bitor);
     impl_binop_scalar_full!(bitxor, BitXor::bitxor);
 
+    impl_select_scalar!(8: u8, 16: u16, 32: u32, 64: u64);
     impl_mask_reduce_scalar!(8, 16, 32, 64);
 
     impl_unop_scalar!(recip, recip, f16, f32, f64);

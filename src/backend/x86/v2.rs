@@ -87,6 +87,7 @@ impl Simd for V2 {
     impl_binop_untyped!(bitor, _mm_or_si128);
     impl_binop_untyped!(bitxor, _mm_xor_si128);
 
+    impl_select_blendv!(_mm_blendv_epi8, 8, 16, 32, 64);
     impl_mask_reduce_movemask!(_mm_movemask_epi8, 0xFFFF, 8, 16, 32, 64);
 
     #[inline(always)]

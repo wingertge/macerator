@@ -80,6 +80,27 @@ macro_rules! impl_cmp_scalar {
     };
 }
 
+/// Select with an AVX-512 mask register: one bit per lane.
+macro_rules! impl_select_kmask {
+    ($($bits: literal: $intrinsic: ident),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<select_ $bits>](
+                mask: Self::[<Mask $bits>],
+                if_true: Self::Register,
+                if_false: Self::Register,
+            ) -> Self::Register {
+                cast!($intrinsic(mask, cast!(if_false), cast!(if_true)))
+            }
+            #[inline(always)]
+            fn [<select_ $bits _supported>]() -> bool {
+                true
+            }
+        })*
+    };
+}
+
+
 /// Any and all with an AVX-512 mask register, whose width matches the lane
 /// count, so every lane is set when it is all ones.
 macro_rules! impl_mask_reduce_kmask {
@@ -366,6 +387,8 @@ where
     impl_binop_untyped!(bitor, _mm512_or_si512);
     impl_binop_untyped!(bitxor, _mm512_xor_si512);
 
+    impl_select_kmask!(8: _mm512_mask_blend_epi8, 16: _mm512_mask_blend_epi16);
+    impl_select_kmask!(32: _mm512_mask_blend_epi32, 64: _mm512_mask_blend_epi64);
     impl_mask_reduce_kmask!(8: u64, 16: u32, 32: u16, 64: u8);
 
     impl_cmp!(equals, _CMP_EQ_OQ, f32, f64);

@@ -436,6 +436,33 @@ pub trait Simd: Sized + seal::Sealed + 'static {
     fn bitnot(a: Self::Register) -> Self::Register;
     fn bitnot_supported() -> bool;
 
+    /// Lanes of `if_true` where `mask` is set, lanes of `if_false` elsewhere,
+    /// for lanes of 8, 16, 32, and 64 bits.
+    fn select_8(
+        mask: Self::Mask8,
+        if_true: Self::Register,
+        if_false: Self::Register,
+    ) -> Self::Register;
+    fn select_8_supported() -> bool;
+    fn select_16(
+        mask: Self::Mask16,
+        if_true: Self::Register,
+        if_false: Self::Register,
+    ) -> Self::Register;
+    fn select_16_supported() -> bool;
+    fn select_32(
+        mask: Self::Mask32,
+        if_true: Self::Register,
+        if_false: Self::Register,
+    ) -> Self::Register;
+    fn select_32_supported() -> bool;
+    fn select_64(
+        mask: Self::Mask64,
+        if_true: Self::Register,
+        if_false: Self::Register,
+    ) -> Self::Register;
+    fn select_64_supported() -> bool;
+
     // Whether any lane, or every lane, of a mask is set.
     declare_mask_reduce!(8, 16, 32, 64);
 

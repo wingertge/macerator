@@ -234,6 +234,30 @@ macro_rules! impl_cmp_signless {
 }
 pub(crate) use impl_cmp_signless;
 
+/// Select for masks held as vectors of all-ones or all-zero lanes: a bitwise
+/// select gives the same result for every lane width. `vbitsel.v vd, vj, vk, va`
+/// takes `vk` where `va` is set and `vj` elsewhere.
+macro_rules! impl_select_bitwise {
+    ($intrinsic: ident, $($bits: literal),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<select_ $bits>](
+                mask: Self::[<Mask $bits>],
+                if_true: Self::Register,
+                if_false: Self::Register,
+            ) -> Self::Register {
+                cast!($intrinsic(cast!(if_false), cast!(if_true), cast!(mask)))
+            }
+            #[inline(always)]
+            fn [<select_ $bits _supported>]() -> bool {
+                true
+            }
+        })*
+    };
+}
+
+pub(crate) use impl_select_bitwise;
+
 /// Any and all for masks held as vectors of all-ones or all-zero lanes: `bnz.v`
 /// tests for any set bit, `bnz.b` for every byte being non-zero.
 macro_rules! impl_mask_reduce {

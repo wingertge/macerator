@@ -95,6 +95,7 @@ impl Simd for Lsx {
     impl_binop_untyped!(bitor, lsx_vor_v);
     impl_binop_untyped!(bitxor, lsx_vxor_v);
 
+    impl_select_bitwise!(lsx_vbitsel_v, 8, 16, 32, 64);
     impl_mask_reduce!(lsx_bnz_v, lsx_bnz_b, 8, 16, 32, 64);
 
     impl_unop!(recip, lsx_vfrecip, f32, f64);

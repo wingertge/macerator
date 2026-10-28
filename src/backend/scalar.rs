@@ -135,6 +135,43 @@ macro_rules! impl_mask_reduce_scalar {
         })*
     };
 }
+
+macro_rules! impl_shift_scalar {
+    ($($ty: ty),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<shl_ $ty>](a: Self::Register, n: u32) -> Self::Register {
+                const LANES: usize = 8 / size_of::<$ty>();
+                let a: [$ty; LANES] = cast!(a);
+                let mut out = [0; LANES];
+
+                for i in 0..LANES {
+                    out[i] = a[i] << n;
+                }
+                cast!(out)
+            }
+            #[inline(always)]
+            fn [<shl_ $ty _supported>]() -> bool {
+                false
+            }
+            #[inline(always)]
+            fn [<shr_ $ty>](a: Self::Register, n: u32) -> Self::Register {
+                const LANES: usize = 8 / size_of::<$ty>();
+                let a: [$ty; LANES] = cast!(a);
+                let mut out = [0; LANES];
+
+                for i in 0..LANES {
+                    out[i] = a[i] >> n;
+                }
+                cast!(out)
+            }
+            #[inline(always)]
+            fn [<shr_ $ty _supported>]() -> bool {
+                false
+            }
+        })*
+    };
+}
 macro_rules! impl_cmp_scalar {
     ($func: ident, $intrinsic: path, $($ty: ty),*) => {
         $(paste! {
@@ -287,6 +324,8 @@ impl Simd for Fallback {
     impl_select_scalar!(8: u8, 16: u16, 32: u32, 64: u64);
     impl_convert_scalar!(8, f32: i32, f64: i64);
     impl_mask_reduce_scalar!(8, 16, 32, 64);
+
+    impl_shift_scalar!(u16, i16, u32, i32, u64, i64);
 
     impl_unop_scalar!(recip, recip, f16, f32, f64);
     impl_unop_scalar!(abs, wrapping_abs, i8, i16, i32, i64);

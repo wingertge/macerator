@@ -158,6 +158,26 @@ impl Simd for V3 {
     // No 64-bit float and integer conversion before AVX-512.
     impl_convert_scalar!(32, f64: i64);
 
+    impl_shift!(shl, _mm256_sll, u16, i16, u32, i32, u64, i64);
+    impl_shift!(shr, _mm256_srl, u16, u32, u64);
+    impl_shift!(shr, _mm256_sra, i16, i32);
+    #[inline(always)]
+    fn shr_i64(a: Self::Register, n: u32) -> Self::Register {
+        // No 64-bit arithmetic shift before AVX-512: shift logically, then fill
+        // the vacated bits from the sign. A count of 64 shifts the fill out.
+        unsafe {
+            let a: __m256i = cast!(a);
+            let sign = _mm256_cmpgt_epi64(_mm256_setzero_si256(), a);
+            let low = _mm256_srl_epi64(a, _mm_cvtsi32_si128(n as i32));
+            let fill = _mm256_sll_epi64(sign, _mm_cvtsi32_si128(64 - n as i32));
+            cast!(_mm256_or_si256(low, fill))
+        }
+    }
+    #[inline(always)]
+    fn shr_i64_supported() -> bool {
+        true
+    }
+
     impl_cmp!(equals, _mm256_cmpeq, u8, i8, u16, i16, u32, i32, u64, i64);
     impl_cmp!(greater_than, _mm256_cmpgt, i8, i16, i32, i64);
     cmp_int!(u8, i8, u16, i16, u32, i32, u64, i64);

@@ -164,6 +164,10 @@ impl Simd for Lsx {
     impl_unop_scalar!(trunc, trunc, f16);
     impl_unop_scalar!(round_ties_even, round_ties_even_soft, f16);
 
+    impl_shift!(shl, lsx_vsll, u16: 16, i16: 16, u32: 32, i32: 32, u64: 64, i64: 64);
+    impl_shift!(shr, lsx_vsrl, u16: 16, u32: 32, u64: 64);
+    impl_shift!(shr, lsx_vsra, i16: 16, i32: 32, i64: 64);
+
     impl_cmp_signless!(equals, lsx_vseq, u8, i8, u16, i16, u32, i32, u64, i64);
     impl_cmp_signless!(equals, lsx_vfcmp_ceq, f32, f64);
     impl_cmp_signless!(less_than, lsx_vfcmp_clt, f32, f64);

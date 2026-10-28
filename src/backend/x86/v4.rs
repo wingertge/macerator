@@ -100,7 +100,6 @@ macro_rules! impl_select_kmask {
     };
 }
 
-
 /// Any and all with an AVX-512 mask register, whose width matches the lane
 /// count, so every lane is set when it is all ones.
 macro_rules! impl_mask_reduce_kmask {
@@ -536,6 +535,10 @@ where
         true
     }
     delegate_fp16!(unop floor, ceil, trunc, round_ties_even);
+
+    impl_shift!(shl, _mm512_sll, u16, i16, u32, i32, u64, i64);
+    impl_shift!(shr, _mm512_srl, u16, u32, u64);
+    impl_shift!(shr, _mm512_sra, i16, i32, i64);
 
     impl_reduce_signless!(reduce_add, _mm512_reduce_add, u32, i32, u64, i64, f32, f64);
     impl_reduce!(reduce_min, _mm512_reduce_min, u32, i32, u64, i64, f32, f64);

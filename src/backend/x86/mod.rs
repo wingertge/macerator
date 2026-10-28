@@ -291,6 +291,23 @@ macro_rules! impl_round {
         })*
     };
 }
+
+/// Shifts every lane by a count taken from the low 64 bits of an `__m128i`,
+/// which is how `sll`, `srl`, and `sra` take it at every width.
+macro_rules! impl_shift {
+    ($func: ident, $intrinsic: ident, $($ty: ty),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<$func _ $ty>](a: Self::Register, n: u32) -> Self::Register {
+                cast!(with_ty_signless!($intrinsic, $ty)(cast!(a), _mm_cvtsi32_si128(n as i32)))
+            }
+            #[inline(always)]
+            fn [<$func _ $ty _supported>]() -> bool {
+                true
+            }
+        })*
+    };
+}
 pub(crate) use impl_round;
 
 /// Select for masks held as vectors of all-ones or all-zero lanes: a byte
@@ -340,3 +357,5 @@ macro_rules! impl_mask_reduce_movemask {
     };
 }
 pub(crate) use impl_mask_reduce_movemask;
+
+pub(crate) use impl_shift;

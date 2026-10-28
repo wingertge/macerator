@@ -18,6 +18,8 @@ mod mask_reduce;
 mod ord;
 mod reduce;
 mod select;
+
+mod shift;
 mod unary;
 
 #[cfg(test)]
@@ -32,6 +34,8 @@ pub use mask_reduce::*;
 pub use ord::*;
 pub use reduce::*;
 pub use select::*;
+
+pub use shift::*;
 pub use unary::*;
 
 pub use macerator_macros::*;

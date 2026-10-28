@@ -157,7 +157,6 @@ macro_rules! impl_select_bitwise {
     };
 }
 
-
 /// Any and all for masks held as vectors of all-ones or all-zero lanes: every
 /// byte of a set lane is set, so byte reductions answer for every lane width.
 macro_rules! impl_mask_reduce {
@@ -177,6 +176,21 @@ macro_rules! impl_mask_reduce {
             }
             #[inline(always)]
             fn [<mask_all_ $bits _supported>]() -> bool {
+                true
+            }
+        })*
+    };
+}
+
+macro_rules! impl_shift {
+    ($func: ident, $($ty: ident: $intrinsic: ident),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<$func _ $ty>](a: Self::Register, n: u32) -> Self::Register {
+                unsafe { $intrinsic(a, n) }
+            }
+            #[inline(always)]
+            fn [<$func _ $ty _supported>]() -> bool {
                 true
             }
         })*
@@ -316,6 +330,11 @@ where
     impl_unop_scalar!(ceil, ceil, f16);
     impl_unop_scalar!(trunc, trunc, f16);
     impl_unop_scalar!(round_ties_even, round_ties_even_soft, f16);
+
+    impl_shift!(shl, u16: i16x8_shl, i16: i16x8_shl, u32: i32x4_shl, i32: i32x4_shl);
+    impl_shift!(shl, u64: i64x2_shl, i64: i64x2_shl);
+    impl_shift!(shr, u16: u16x8_shr, i16: i16x8_shr, u32: u32x4_shr, i32: i32x4_shr);
+    impl_shift!(shr, u64: u64x2_shr, i64: i64x2_shr);
 
     impl_reduce_scalar!(
         reduce_add,

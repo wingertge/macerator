@@ -10,7 +10,7 @@ use paste::paste;
 
 use crate::{backend::arch::NullaryFnOnce, cast, seal::Sealed, Scalar};
 
-use super::{arch::impl_simd, wrapping_mul, Simd, VRegister, Vector, WithSimd};
+use super::{arch::impl_simd, wrapping_mul, RoundTiesEven, Simd, VRegister, Vector, WithSimd};
 
 impl Sealed for int8x16_t {}
 impl VRegister for int8x16_t {}
@@ -64,6 +64,14 @@ where
     fn recip_f16_supported() -> bool;
     fn sqrt_f16(a: int8x16_t) -> int8x16_t;
     fn sqrt_f16_supported() -> bool;
+    fn floor_f16(a: int8x16_t) -> int8x16_t;
+    fn floor_f16_supported() -> bool;
+    fn ceil_f16(a: int8x16_t) -> int8x16_t;
+    fn ceil_f16_supported() -> bool;
+    fn trunc_f16(a: int8x16_t) -> int8x16_t;
+    fn trunc_f16_supported() -> bool;
+    fn round_ties_even_f16(a: int8x16_t) -> int8x16_t;
+    fn round_ties_even_f16_supported() -> bool;
 
     fn reduce_add_f16(a: int8x16_t) -> f16;
     fn reduce_add_f16_supported() -> bool;
@@ -186,6 +194,28 @@ macro_rules! impl_binop_scalar {
     };
 }
 
+macro_rules! impl_unop_scalar {
+    ($func: ident, $intrinsic: path, $($ty: ty),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<$func _ $ty>](a: Self::Register) -> Self::Register {
+                const LANES: usize = 16 / size_of::<$ty>();
+                let a: [$ty; LANES] = cast!(a);
+                let mut out = [$ty::default(); LANES];
+
+                for i in 0..LANES {
+                    out[i] = a[i].$intrinsic();
+                }
+                cast!(out)
+            }
+            #[inline(always)]
+            fn [<$func _ $ty _supported>]() -> bool {
+                false
+            }
+        })*
+    };
+}
+
 macro_rules! impl_reduce_scalar {
     ($func: ident, $intrinsic: path, $($ty: ty),*) => {
         $(paste! {
@@ -232,6 +262,18 @@ macro_rules! impl_cmp_scalar {
 }
 
 macro_rules! delegate_fp16 {
+    (unop $($func: ident),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<$func _f16>](a: Self::Register) -> Self::Register {
+                FP16::[<$func _f16>](a)
+            }
+            #[inline(always)]
+            fn [<$func _f16_supported>]() -> bool {
+                FP16::[<$func _f16_supported>]()
+            }
+        })*
+    };
     (cmp $($func: ident),*) => {
         $(paste! {
             #[inline(always)]
@@ -394,6 +436,10 @@ impl FP16Ext for FP16Fallback {
     fn sqrt_f16_supported() -> bool {
         false
     }
+    impl_unop_scalar!(floor, floor, f16);
+    impl_unop_scalar!(ceil, ceil, f16);
+    impl_unop_scalar!(trunc, trunc, f16);
+    impl_unop_scalar!(round_ties_even, round_ties_even_soft, f16);
 
     #[inline(always)]
     fn mul_add_f16(a: Self::Register, b: Self::Register, c: Self::Register) -> Self::Register {
@@ -433,6 +479,10 @@ impl FP16Ext for FP16Intrinsic {
 
     impl_unop!(recip, vrecpeq, f16);
     impl_unop!(sqrt, vsqrtq, f16);
+    impl_unop!(floor, vrndmq, f16);
+    impl_unop!(ceil, vrndpq, f16);
+    impl_unop!(trunc, vrndq, f16);
+    impl_unop!(round_ties_even, vrndnq, f16);
     impl_unop!(abs, vabsq, f16);
 
     impl_cmp!(equals, vceqq, f16: 16);
@@ -573,6 +623,34 @@ where
 
     impl_unop!(abs, vabsq, i8, i16, i32, i64, f32, f64);
     impl_unop!(sqrt, vsqrtq, f32, f64);
+    impl_unop!(floor, vrndmq, f32, f64);
+    impl_unop!(ceil, vrndpq, f32, f64);
+    impl_unop!(trunc, vrndq, f32, f64);
+    impl_unop!(round_ties_even, vrndnq, f32, f64);
+    delegate_fp16!(unop floor, ceil, trunc, round_ties_even);
+
+
+    // `fcvtzs` and `fcvtns` saturate and map NaN to 0, as Rust's `as` does.
+    impl_unop!(trunc_to_int, vcvtq_s32, f32);
+    impl_unop!(round_to_int, vcvtnq_s32, f32);
+    impl_unop!(trunc_to_int, vcvtq_s64, f64);
+    impl_unop!(round_to_int, vcvtnq_s64, f64);
+    #[inline(always)]
+    fn from_int_f32(a: Self::Register) -> Self::Register {
+        cast!(vcvtq_f32_s32(cast!(a)))
+    }
+    #[inline(always)]
+    fn from_int_f32_supported() -> bool {
+        true
+    }
+    #[inline(always)]
+    fn from_int_f64(a: Self::Register) -> Self::Register {
+        cast!(vcvtq_f64_s64(cast!(a)))
+    }
+    #[inline(always)]
+    fn from_int_f64_supported() -> bool {
+        true
+    }
 
     impl_cmp!(equals, vceqq, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64);
     impl_cmp!(less_than, vcltq, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64);

@@ -12,7 +12,10 @@ use paste::paste;
 
 use crate::{MaskOps, Scalar};
 
-use super::{cast, wrapping_add, wrapping_mul, wrapping_sub, Simd, VRegister, WithSimd};
+use super::{
+    cast, impl_convert_scalar, wrapping_add, wrapping_mul, wrapping_sub, RoundTiesEven, Simd,
+    VRegister, WithSimd,
+};
 
 impl VRegister for u64 {}
 
@@ -282,12 +285,17 @@ impl Simd for Fallback {
     impl_binop_scalar_full!(bitxor, BitXor::bitxor);
 
     impl_select_scalar!(8: u8, 16: u16, 32: u32, 64: u64);
+    impl_convert_scalar!(8, f32: i32, f64: i64);
     impl_mask_reduce_scalar!(8, 16, 32, 64);
 
     impl_unop_scalar!(recip, recip, f16, f32, f64);
     impl_unop_scalar!(abs, wrapping_abs, i8, i16, i32, i64);
     impl_unop_scalar!(abs, abs, f16, f32, f64);
     impl_unop_scalar!(sqrt, sqrt, f16, f32, f64);
+    impl_unop_scalar!(floor, floor, f16, f32, f64);
+    impl_unop_scalar!(ceil, ceil, f16, f32, f64);
+    impl_unop_scalar!(trunc, trunc, f16, f32, f64);
+    impl_unop_scalar!(round_ties_even, round_ties_even_soft, f16, f32, f64);
 
     impl_cmp_scalar!(equals, eq, u8, i8, u16, i16, f16, u32, i32, f32, u64, i64, f64);
     impl_cmp_scalar!(

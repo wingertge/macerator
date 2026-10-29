@@ -28,6 +28,26 @@ pub struct V3;
 
 impl Sealed for V3 {}
 
+/// Shifts by per-lane counts, reduced modulo the lane width first: the
+/// instructions give 0 (or the sign) for counts of the width or more.
+macro_rules! impl_shift_lanes {
+    ($($func: ident, $ty: ty: $intrinsic: ident, $set1: ident),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<$func _lanes_ $ty>](a: Self::Register, n: Self::Register) -> Self::Register {
+                unsafe {
+                    let n = _mm256_and_si256(cast!(n), $set1((<$ty>::BITS - 1) as _));
+                    cast!($intrinsic(cast!(a), n))
+                }
+            }
+            #[inline(always)]
+            fn [<$func _lanes_ $ty _supported>]() -> bool {
+                true
+            }
+        })*
+    };
+}
+
 macro_rules! cmp_int {
     ($($ty: ty),*) => {
         $(paste! {
@@ -161,6 +181,16 @@ impl Simd for V3 {
     impl_shift!(shl, _mm256_sll, u16, i16, u32, i32, u64, i64);
     impl_shift!(shr, _mm256_srl, u16, u32, u64);
     impl_shift!(shr, _mm256_sra, i16, i32);
+    impl_shift_lanes!(
+        shl, u32: _mm256_sllv_epi32, _mm256_set1_epi32,
+        shl, i32: _mm256_sllv_epi32, _mm256_set1_epi32,
+        shl, u64: _mm256_sllv_epi64, _mm256_set1_epi64x,
+        shl, i64: _mm256_sllv_epi64, _mm256_set1_epi64x,
+        shr, u32: _mm256_srlv_epi32, _mm256_set1_epi32,
+        shr, i32: _mm256_srav_epi32, _mm256_set1_epi32,
+        shr, u64: _mm256_srlv_epi64, _mm256_set1_epi64x
+    );
+
     #[inline(always)]
     fn shr_i64(a: Self::Register, n: u32) -> Self::Register {
         // No 64-bit arithmetic shift before AVX-512: shift logically, then fill

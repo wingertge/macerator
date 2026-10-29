@@ -161,9 +161,12 @@ impl Simd for Lasx {
     impl_unop_scalar!(trunc, trunc, f16);
     impl_unop_scalar!(round_ties_even, round_ties_even_soft, f16);
 
-    impl_shift!(shl, lasx_xvsll, u16: 16, i16: 16, u32: 32, i32: 32, u64: 64, i64: 64);
-    impl_shift!(shr, lasx_xvsrl, u16: 16, u32: 32, u64: 64);
-    impl_shift!(shr, lasx_xvsra, i16: 16, i32: 32, i64: 64);
+    impl_shift!(shl, lasx_xvsll, u8: 8, i8: 8, u16: 16, i16: 16, u32: 32, i32: 32, u64: 64, i64: 64);
+    impl_shift!(shr, lasx_xvsrl, u8: 8, u16: 16, u32: 32, u64: 64);
+    impl_shift!(shr, lasx_xvsra, i8: 8, i16: 16, i32: 32, i64: 64);
+    impl_shift_lanes!(shl_lanes, lasx_xvsll, u8, i8, u16, i16, u32, i32, u64, i64);
+    impl_shift_lanes!(shr_lanes, lasx_xvsrl, u8, u16, u32, u64);
+    impl_shift_lanes!(shr_lanes, lasx_xvsra, i8, i16, i32, i64);
 
     impl_cmp_signless!(equals, lasx_xvseq, u8, i8, u16, i16, u32, i32, u64, i64);
     impl_cmp_signless!(equals, lasx_xvfcmp_ceq, f32, f64);

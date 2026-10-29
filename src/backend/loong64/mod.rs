@@ -273,6 +273,23 @@ macro_rules! impl_shift {
     };
 }
 
+/// Shifts by a count per lane, which `vsll`, `vsrl` and `vsra` take modulo the
+/// lane width.
+macro_rules! impl_shift_lanes {
+    ($func: ident, $intrinsic: ident, $($ty: ty),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<$func _ $ty>](a: Self::Register, n: Self::Register) -> Self::Register {
+                cast!(with_ty_signless!($intrinsic, $ty)(cast!(a), cast!(n)))
+            }
+            #[inline(always)]
+            fn [<$func _ $ty _supported>]() -> bool {
+                true
+            }
+        })*
+    };
+}
+
 pub(crate) use impl_select_bitwise;
 
 /// Any and all for masks held as vectors of all-ones or all-zero lanes: `bnz.v`
@@ -302,3 +319,4 @@ macro_rules! impl_mask_reduce {
 pub(crate) use impl_mask_reduce;
 
 pub(crate) use impl_shift;
+pub(crate) use impl_shift_lanes;

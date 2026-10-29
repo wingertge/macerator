@@ -26,6 +26,26 @@ impl VRegister for __m512 {}
 
 const WIDTH: usize = size_of::<<V4 as Simd>::Register>() * 8;
 
+/// Shifts by per-lane counts, reduced modulo the lane width first: the
+/// instructions give 0 (or the sign) for counts of the width or more.
+macro_rules! impl_shift_lanes {
+    ($($func: ident, $ty: ty: $intrinsic: ident, $set1: ident),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<$func _lanes_ $ty>](a: Self::Register, n: Self::Register) -> Self::Register {
+                unsafe {
+                    let n = _mm512_and_si512(cast!(n), $set1((<$ty>::BITS - 1) as _));
+                    cast!($intrinsic(cast!(a), n))
+                }
+            }
+            #[inline(always)]
+            fn [<$func _lanes_ $ty _supported>]() -> bool {
+                true
+            }
+        })*
+    };
+}
+
 macro_rules! with_ty_cmp {
     ($func: ident, f16, $op: expr) => {
         paste!([<$func _ph_mask>]::<$op>)
@@ -539,6 +559,20 @@ where
     impl_shift!(shl, _mm512_sll, u16, i16, u32, i32, u64, i64);
     impl_shift!(shr, _mm512_srl, u16, u32, u64);
     impl_shift!(shr, _mm512_sra, i16, i32, i64);
+    impl_shift_lanes!(
+        shl, u16: _mm512_sllv_epi16, _mm512_set1_epi16,
+        shl, i16: _mm512_sllv_epi16, _mm512_set1_epi16,
+        shl, u32: _mm512_sllv_epi32, _mm512_set1_epi32,
+        shl, i32: _mm512_sllv_epi32, _mm512_set1_epi32,
+        shl, u64: _mm512_sllv_epi64, _mm512_set1_epi64,
+        shl, i64: _mm512_sllv_epi64, _mm512_set1_epi64,
+        shr, u16: _mm512_srlv_epi16, _mm512_set1_epi16,
+        shr, i16: _mm512_srav_epi16, _mm512_set1_epi16,
+        shr, u32: _mm512_srlv_epi32, _mm512_set1_epi32,
+        shr, i32: _mm512_srav_epi32, _mm512_set1_epi32,
+        shr, u64: _mm512_srlv_epi64, _mm512_set1_epi64,
+        shr, i64: _mm512_srav_epi64, _mm512_set1_epi64
+    );
 
     impl_reduce_signless!(reduce_add, _mm512_reduce_add, u32, i32, u64, i64, f32, f64);
     impl_reduce!(reduce_min, _mm512_reduce_min, u32, i32, u64, i64, f32, f64);

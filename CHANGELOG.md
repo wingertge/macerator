@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.2](https://github.com/wingertge/macerator/compare/macerator-v0.5.1...macerator-v0.5.2) - 2026-10-29
+
+### Added
+
+- add fma, a multiply-add fused on every backend ([#74](https://github.com/wingertge/macerator/pull/74))
+- add shifts for 16-, 32-, and 64-bit lanes ([#71](https://github.com/wingertge/macerator/pull/71))
+- add conversion between float and integer lanes ([#75](https://github.com/wingertge/macerator/pull/75))
+- add Mask::select and Vector::reinterpret ([#69](https://github.com/wingertge/macerator/pull/69))
+- add Mask::any and Mask::all ([#73](https://github.com/wingertge/macerator/pull/73))
+
+### Other
+
+- reduce float sums as a tree on SSE4.2, AVX2 and wasm ([#57](https://github.com/wingertge/macerator/pull/57))
+
 ## [0.5.1](https://github.com/wingertge/macerator/compare/macerator-v0.5.0...macerator-v0.5.1) - 2026-09-27
 
 ### Fixed

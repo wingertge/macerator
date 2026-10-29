@@ -195,6 +195,36 @@ macro_rules! impl_shift {
         })*
     };
 }
+macro_rules! impl_widen {
+    ($ty: ty: $low: ident, $high: ident) => {
+        paste! {
+            #[inline(always)]
+            fn [<widen_ $ty>](a: Self::Register) -> [Self::Register; 2] {
+                [$low(a), $high(a)]
+            }
+            #[inline(always)]
+            fn [<widen_ $ty _supported>]() -> bool {
+                true
+            }
+        }
+    };
+}
+
+macro_rules! impl_narrow {
+    ($($ty: ty),*: $shuffle: expr) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<narrow_ $ty>](lo: Self::Register, hi: Self::Register) -> Self::Register {
+                $shuffle(lo, hi)
+            }
+            #[inline(always)]
+            fn [<narrow_ $ty _supported>]() -> bool {
+                true
+            }
+        })*
+    };
+}
+
 macro_rules! lanes {
     ($($bits: literal),*) => {
         $(paste! {
@@ -334,6 +364,38 @@ where
     impl_shift!(shl, u64: i64x2_shl, i64: i64x2_shl);
     impl_shift!(shr, u16: u16x8_shr, i16: i16x8_shr, u32: u32x4_shr, i32: i32x4_shr);
     impl_shift!(shr, u64: u64x2_shr, i64: i64x2_shr);
+
+    impl_widen!(u8: u16x8_extend_low_u8x16, u16x8_extend_high_u8x16);
+    impl_widen!(i8: i16x8_extend_low_i8x16, i16x8_extend_high_i8x16);
+    impl_widen!(u16: u32x4_extend_low_u16x8, u32x4_extend_high_u16x8);
+    impl_widen!(i16: i32x4_extend_low_i16x8, i32x4_extend_high_i16x8);
+    impl_widen!(u32: u64x2_extend_low_u32x4, u64x2_extend_high_u32x4);
+    impl_widen!(i32: i64x2_extend_low_i32x4, i64x2_extend_high_i32x4);
+    // The even lanes are the low half of each wide lane.
+    impl_narrow!(u8, i8: i8x16_shuffle::<0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30>);
+    impl_narrow!(u16, i16: i16x8_shuffle::<0, 2, 4, 6, 8, 10, 12, 14>);
+    impl_narrow!(u32, i32: i32x4_shuffle::<0, 2, 4, 6>);
+    #[inline(always)]
+    fn widen_f32(a: Self::Register) -> [Self::Register; 2] {
+        [
+            f64x2_promote_low_f32x4(a),
+            f64x2_promote_low_f32x4(i64x2_shuffle::<1, 1>(a, a)),
+        ]
+    }
+    #[inline(always)]
+    fn widen_f32_supported() -> bool {
+        true
+    }
+    #[inline(always)]
+    fn narrow_f32(lo: Self::Register, hi: Self::Register) -> Self::Register {
+        let lo = f32x4_demote_f64x2_zero(lo);
+        let hi = f32x4_demote_f64x2_zero(hi);
+        i64x2_shuffle::<0, 2>(lo, hi)
+    }
+    #[inline(always)]
+    fn narrow_f32_supported() -> bool {
+        true
+    }
 
     impl_reduce_scalar!(
         reduce_add,

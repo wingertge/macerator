@@ -148,5 +148,7 @@ testgen_widen_float!(
     // float compare bf16 goes through.
     #[cfg_attr(all(miri, any(aarch64, x86_v4, loong64)), ignore)]
     bf16 => f32: u16, u32, bf16::to_f32, bf16::from_f32,
+    // Miri does not implement the AVX-512 conversions.
+    #[cfg_attr(all(miri, x86_v4), ignore)]
     f32 => f64: u32, u64, |x: f32| x as f64, |x: f64| x as f32
 );

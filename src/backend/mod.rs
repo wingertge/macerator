@@ -660,6 +660,83 @@ macro_rules! impl_convert_scalar {
     };
 }
 
+/// i64 to f64 lanes with the single rounding of `as`, from 64-bit integer and
+/// f64 operations alone. The low 32 bits go under the exponent of 2^52 and the
+/// high 32, offset by 2^31 to be unsigned, under that of 2^84. Taking those
+/// exponents and the offset off the high part is exact, so only the final add
+/// rounds.
+#[cfg(any(x86, wasm32))]
+#[inline(always)]
+pub(crate) fn i64_to_f64<S: Simd>(x: S::Register) -> S::Register {
+    let two_52 = S::splat_f64(4503599627370496.0);
+    let two_84 = S::splat_f64(19342813113834066795298816.0);
+    // 2^84 + 2^63 + 2^52
+    let offset = S::splat_f64(f64::from_bits(0x4530_0000_8010_0000));
+    let low = S::bitor(S::bitand(x, S::splat_u64(0xffff_ffff)), two_52);
+    let high = S::bitxor(S::shr_u64(x, 32), S::splat_u64(0x8000_0000));
+    let high = S::bitor(high, two_84);
+    S::add_f64(S::sub_f64(high, offset), low)
+}
+
+/// f64 to i64 lanes as `as` gives, rounding each lane to nearest even first;
+/// for truncation, pass lanes already truncated. Below 2^51 in magnitude
+/// `x + 1.5 * 2^52` has a unit in the last place of 1, so the add rounds and
+/// its bits less those of the constant are the integer. If any lane is larger
+/// or NaN, every lane goes through `as` one at a time.
+#[cfg(any(x86, wasm32))]
+#[inline(always)]
+pub(crate) fn f64_to_i64<S: Simd>(x: S::Register) -> S::Register {
+    let two_51 = S::splat_f64(2251799813685248.0);
+    let small = S::less_than_f64(S::abs_f64(x), two_51);
+    if !S::mask_all_64(small) {
+        // Eight lanes fill the widest register of any backend.
+        let mut lanes = [0f64; 8];
+        let mut out = [0i64; 8];
+        unsafe { S::store_unaligned(lanes.as_mut_ptr(), S::typed::<f64>(x)) };
+        for i in 0..f64::lanes::<S>() {
+            out[i] = lanes[i].round_ties_even_soft() as i64;
+        }
+        return unsafe { *S::load_unaligned(out.as_ptr()) };
+    }
+    // 1.5 * 2^52
+    let magic = S::splat_f64(6755399441055744.0);
+    S::sub_i64(S::add_f64(x, magic), magic)
+}
+
+/// f64 and i64 conversion through [`i64_to_f64`] and [`f64_to_i64`], for
+/// backends with 64-bit lanes but no instruction between the two.
+#[cfg(any(x86, wasm32))]
+macro_rules! impl_convert_f64_emulated {
+    () => {
+        #[inline(always)]
+        fn trunc_to_int_f64(a: Self::Register) -> Self::Register {
+            $crate::backend::f64_to_i64::<Self>(Self::trunc_f64(a))
+        }
+        #[inline(always)]
+        fn trunc_to_int_f64_supported() -> bool {
+            true
+        }
+        #[inline(always)]
+        fn round_to_int_f64(a: Self::Register) -> Self::Register {
+            $crate::backend::f64_to_i64::<Self>(a)
+        }
+        #[inline(always)]
+        fn round_to_int_f64_supported() -> bool {
+            true
+        }
+        #[inline(always)]
+        fn from_int_f64(a: Self::Register) -> Self::Register {
+            $crate::backend::i64_to_f64::<Self>(a)
+        }
+        #[inline(always)]
+        fn from_int_f64_supported() -> bool {
+            true
+        }
+    };
+}
+#[cfg(any(x86, wasm32))]
+pub(crate) use impl_convert_f64_emulated;
+
 /// Fused multiply-add one lane at a time, for registers of `$bytes` bytes.
 /// `mul_add` rounds once in `std` and in `libm`.
 macro_rules! impl_fma_scalar {

@@ -59,6 +59,21 @@ macro_rules! testgen_convert {
                 while a.len() % 64 != 0 {
                     a.push(0.0);
                 }
+                // Whole vectors within 2^51, some ties, for backends that
+                // convert small lanes differently from large ones.
+                let small = bound.min(2251799813685248.0);
+                for i in 0..64 {
+                    let x = rng.random_range(-small..small);
+                    a.push(if i % 4 == 0 { x.trunc() + 0.5 } else { x });
+                }
+                // Whole vectors just past 2^51, where adding 1.5 * 2^52 no
+                // longer rounds to an integer, to pin where the small path ends.
+                let two_51 = 2251799813685248.0f64;
+                let past = [two_51, two_51 + 0.5, two_51 + 1.0, two_51 + 3.0, 2.0 * two_51 - 0.5];
+                for i in 0..64 {
+                    let x = past[i % past.len()];
+                    a.push((if i % 2 == 0 { x } else { -x }) as $ty);
+                }
                 let mut want: Vec<$int> = a.iter().map(|&x| x as $int).collect();
                 want.extend(a.iter().map(|&x| x.round_ties_even() as $int));
                 for_each_backend!(test_to_int_impl, $ty, &a[..], |out: &[$int]| {

@@ -42,11 +42,47 @@ macro_rules! impl_shift {
     };
 }
 
+macro_rules! impl_shift_lanes {
+    ($(#[$attr: meta])* $trait: ident, $std_trait: ident, $name: ident, $($ty: ty),*) => {
+        paste!{
+            $(#[$attr])*
+            pub trait $trait: Scalar + $std_trait<Self, Output = Self> {
+                fn [<v $name _lanes>]<S: Simd>(lhs: Vector<S, Self>, n: Vector<S, Self>) -> Vector<S, Self>;
+                fn is_accelerated<S: Simd>() -> bool;
+            }
+            $(impl $trait for $ty {
+                #[inline(always)]
+                fn [<v $name _lanes>]<S: Simd>(lhs: Vector<S, Self>, n: Vector<S, Self>) -> Vector<S, Self> {
+                    S::typed(S::[<$name _lanes_ $ty>](*lhs, *n))
+                }
+                #[inline(always)]
+                fn is_accelerated<S: Simd>() -> bool {
+                    S::[<$name _lanes_ $ty _supported>]()
+                }
+            })*
+            impl<S: Simd, T: $trait> $std_trait<Self> for Vector<S, T> {
+                type Output = Self;
+
+                #[inline(always)]
+                fn $name(self, n: Self) -> Self::Output {
+                    T::[<v $name _lanes>](self, n)
+                }
+            }
+            impl<S: Simd, T: $trait> ::core::ops::[<$std_trait Assign>]<Self> for Vector<S, T> {
+                #[inline(always)]
+                fn [<$name _assign>](&mut self, n: Self) {
+                    *self = T::[<v $name _lanes>](*self, n)
+                }
+            }
+        }
+    };
+}
+
 impl_shift!(
     /// Elementwise `<<` by `n` bits, shifting in zeros. Like the scalar
     /// operator, a shift by the lane width or more panics with debug
     /// assertions on and is taken modulo the lane width otherwise.
-    VShl, Shl, shl, u16, i16, u32, i32, u64, i64
+    VShl, Shl, shl, u8, i8, u16, i16, u32, i32, u64, i64
 );
 impl_shift!(
     /// Elementwise `>>` by `n` bits: logical for unsigned lanes, arithmetic
@@ -61,5 +97,18 @@ impl_shift!(
     ///     bits >> 23
     /// }
     /// ```
-    VShr, Shr, shr, u16, i16, u32, i32, u64, i64
+    VShr, Shr, shr, u8, i8, u16, i16, u32, i32, u64, i64
+);
+impl_shift_lanes!(
+    /// Elementwise `<<` by per-lane counts: `a << n` with a vector `n` shifts
+    /// each lane by the matching lane of `n`, shifting in zeros. Counts are
+    /// taken modulo the lane width without a check, so a negative count shifts
+    /// by its low bits.
+    VShlLanes, Shl, shl, u8, i8, u16, i16, u32, i32, u64, i64
+);
+impl_shift_lanes!(
+    /// Elementwise `>>` by per-lane counts: logical for unsigned lanes,
+    /// arithmetic for signed ones, with counts taken modulo the lane width as
+    /// for [`VShlLanes`].
+    VShrLanes, Shr, shr, u8, i8, u16, i16, u32, i32, u64, i64
 );

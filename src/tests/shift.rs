@@ -3,7 +3,8 @@ use std::{vec, vec::Vec};
 use rand::Rng;
 
 use crate::{
-    tests::for_each_backend, vload_unaligned, vstore_unaligned, Scalar, Simd, VShl, VShr, Vector,
+    tests::for_each_backend, vload_unaligned, vstore_unaligned, Scalar, Simd, VShl, VShlLanes,
+    VShr, VShrLanes, Vector,
 };
 
 #[inline(always)]
@@ -60,6 +61,8 @@ macro_rules! testgen_shift {
 }
 
 testgen_shift!(
+    u8: [0, 1, 3, 7],
+    i8: [0, 1, 3, 7],
     u16: [0, 1, 5, 8, 15],
     i16: [0, 1, 5, 8, 15],
     u32: [0, 1, 7, 23, 31],
@@ -95,3 +98,50 @@ fn test_shift_wraps() {
         assert_eq!(&want[..], out)
     });
 }
+
+/// Left then right shifts of each lane of `a` by the matching lane of `n`.
+#[inline(always)]
+fn test_shift_lanes_impl<S: Simd, T: VShlLanes + VShrLanes>((a, n): (&[T], &[T])) -> Vec<T> {
+    let lanes = T::lanes::<S>();
+    let mut out = vec![T::default(); a.len() * 2];
+    let (left, right) = out.split_at_mut(a.len());
+    for (i, (l, r)) in left
+        .chunks_exact_mut(lanes)
+        .zip(right.chunks_exact_mut(lanes))
+        .enumerate()
+    {
+        let range = i * lanes..(i + 1) * lanes;
+        let x = Vector::<S, T>::load(&a[range.clone()]);
+        let n = Vector::<S, T>::load(&n[range]);
+        (x << n).store(l);
+        (x >> n).store(r);
+    }
+    out
+}
+
+macro_rules! testgen_shift_lanes {
+    ($($ty: ty),*) => {
+        $(::paste::paste! {
+            // Same Miri gap as above.
+            #[cfg_attr(all(miri, any(aarch64, x86_v4)), ignore)]
+            #[::wasm_bindgen_test::wasm_bindgen_test(unsupported = test)]
+            fn [<test_shift_lanes_ $ty>]() {
+                let mut rng = rand::rng();
+                let a: Vec<$ty> = (0..crate::tests::SIZE).map(|_| rng.random()).collect();
+                // Counts in range, then any value, which wraps.
+                let mut n: Vec<$ty> = (0..crate::tests::SIZE / 2)
+                    .map(|_| rng.random_range(0..<$ty>::BITS) as $ty)
+                    .collect();
+                n.extend((0..crate::tests::SIZE / 2).map(|_| rng.random::<$ty>()));
+                let mut want: Vec<$ty> =
+                    a.iter().zip(&n).map(|(x, n)| x.wrapping_shl(*n as u32)).collect();
+                want.extend(a.iter().zip(&n).map(|(x, n)| x.wrapping_shr(*n as u32)));
+                for_each_backend!(test_shift_lanes_impl, $ty, (&a[..], &n[..]), |out: &[$ty]| {
+                    assert_eq!(&want[..], out)
+                });
+            }
+        })*
+    };
+}
+
+testgen_shift_lanes!(u8, i8, u16, i16, u32, i32, u64, i64);

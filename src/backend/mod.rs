@@ -235,6 +235,33 @@ macro_rules! declare_reduction {
     };
 }
 
+macro_rules! declare_widen {
+    ($($ty: ty => $wide: ty),*) => {
+        $(paste! {
+            /// Lanes `0..n/2` and `n/2..n` of `a`, widened to the next lane
+            /// width. The default converts one lane at a time.
+            #[inline(always)]
+            fn [<widen_ $ty>](a: Self::Register) -> [Self::Register; 2] {
+                widen_lanes::<Self, $ty>(a)
+            }
+            #[inline(always)]
+            fn [<widen_ $ty _supported>]() -> bool {
+                false
+            }
+            /// The lanes of `lo`, then those of `hi`, narrowed from the next
+            /// lane width. The default converts one lane at a time.
+            #[inline(always)]
+            fn [<narrow_ $ty>](lo: Self::Register, hi: Self::Register) -> Self::Register {
+                narrow_lanes::<Self, $ty>(lo, hi)
+            }
+            #[inline(always)]
+            fn [<narrow_ $ty _supported>]() -> bool {
+                false
+            }
+        })*
+    };
+}
+
 macro_rules! declare_cmp {
     ($name: ident, $($ty: ty),*) => {
         $(paste! {
@@ -559,6 +586,12 @@ pub trait Simd: Sized + seal::Sealed + 'static {
     declare_shift!(shr, u16, i16, u32, i32, u64, i64);
     declare_unop!(abs, i8, i16, i32, i64, f16, f32, f64);
 
+    // Lane widening and narrowing, named after the narrow lane type. Unsigned
+    // integers zero-extend and signed ones sign-extend; integers narrow by
+    // keeping the low bits, and floats rounding to nearest, ties to even.
+    declare_widen!(u8 => u16, i8 => i16, u16 => u32, i16 => i32, u32 => u64, i32 => i64);
+    declare_widen!(f16 => f32, f32 => f64);
+
     declare_reduction!(reduce_add, i8, i16, i32, i64, u8, u16, u32, u64, f16, f32, f64);
     declare_reduction!(reduce_min, i8, i16, i32, i64, u8, u16, u32, u64, f16, f32, f64);
     declare_reduction!(reduce_max, i8, i16, i32, i64, u8, u16, u32, u64, f16, f32, f64);
@@ -613,6 +646,81 @@ pub(crate) fn saturate_f64_i64<S: Simd>(x: S::Register, converted: S::Register) 
     let r = S::select_64(too_high, S::splat_i64(i64::MAX), converted);
     let r = S::select_64(too_low, S::splat_i64(i64::MIN), r);
     S::select_64(S::equals_f64(x, x), r, S::splat_i64(0))
+}
+
+/// A lane type and the lane type twice its width, with the conversions of
+/// `as` (and of [`f16::from_f32`] and [`f16::to_f32`]) between them.
+pub(crate) trait WidenLane: Scalar {
+    type Wide: Scalar;
+    fn widen(self) -> Self::Wide;
+    fn narrow(wide: Self::Wide) -> Self;
+}
+
+macro_rules! impl_widen_lane {
+    ($($ty: ty => $wide: ty),*) => {
+        $(impl WidenLane for $ty {
+            type Wide = $wide;
+            #[inline(always)]
+            fn widen(self) -> $wide {
+                self as $wide
+            }
+            #[inline(always)]
+            fn narrow(wide: $wide) -> Self {
+                wide as $ty
+            }
+        })*
+    };
+}
+
+impl_widen_lane!(u8 => u16, i8 => i16, u16 => u32, i16 => i32, u32 => u64, i32 => i64, f32 => f64);
+
+impl WidenLane for f16 {
+    type Wide = f32;
+    #[inline(always)]
+    fn widen(self) -> f32 {
+        self.to_f32()
+    }
+    #[inline(always)]
+    fn narrow(wide: f32) -> Self {
+        f16::from_f32(wide)
+    }
+}
+
+/// Widening one lane at a time through buffers that hold a vector of any lane
+/// type on any backend.
+#[inline(always)]
+pub(crate) fn widen_lanes<S: Simd, T: WidenLane>(a: S::Register) -> [S::Register; 2] {
+    let lanes = T::lanes::<S>();
+    let mut narrow = [T::default(); crate::MAX_VECTOR_BYTES];
+    let mut wide = [T::Wide::default(); crate::MAX_VECTOR_BYTES];
+    unsafe { S::store_unaligned(narrow.as_mut_ptr(), S::typed::<T>(a)) };
+    for i in 0..lanes {
+        wide[i] = narrow[i].widen();
+    }
+    // SAFETY: `wide` holds `lanes` elements, two vectors of the wide type.
+    unsafe {
+        let lo = S::load_unaligned(wide.as_ptr());
+        let hi = S::load_unaligned(wide.as_ptr().add(lanes / 2));
+        [*lo, *hi]
+    }
+}
+
+/// Narrowing one lane at a time, as [`widen_lanes`].
+#[inline(always)]
+pub(crate) fn narrow_lanes<S: Simd, T: WidenLane>(lo: S::Register, hi: S::Register) -> S::Register {
+    let lanes = T::lanes::<S>();
+    let mut wide = [T::Wide::default(); crate::MAX_VECTOR_BYTES];
+    let mut narrow = [T::default(); crate::MAX_VECTOR_BYTES];
+    // SAFETY: `wide` has room for `lanes` elements, two vectors of the wide
+    // type.
+    unsafe {
+        S::store_unaligned(wide.as_mut_ptr(), S::typed::<T::Wide>(lo));
+        S::store_unaligned(wide.as_mut_ptr().add(lanes / 2), S::typed::<T::Wide>(hi));
+    }
+    for i in 0..lanes {
+        narrow[i] = T::narrow(wide[i]);
+    }
+    unsafe { *S::load_unaligned(narrow.as_ptr()) }
 }
 
 /// Float and integer conversion one lane at a time, for registers of `$bytes`

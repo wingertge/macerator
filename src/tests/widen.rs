@@ -144,6 +144,9 @@ testgen_widen_float!(
     // Generating the reference uses F16C or FP16 conversions Miri lacks.
     #[cfg_attr(all(miri, any(x86_v3, x86_v4, aarch64)), ignore)]
     f16 => f32: u16, u32, f16::to_f32, f16::from_f32,
+    // Miri does not implement the NEON and AVX-512 shifts or the LoongArch
+    // float compare bf16 goes through.
+    #[cfg_attr(all(miri, any(aarch64, x86_v4, loong64)), ignore)]
     bf16 => f32: u16, u32, bf16::to_f32, bf16::from_f32,
     f32 => f64: u32, u64, |x: f32| x as f64, |x: f64| x as f32
 );

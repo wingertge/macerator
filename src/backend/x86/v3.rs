@@ -28,6 +28,50 @@ pub struct V3;
 
 impl Sealed for V3 {}
 
+macro_rules! impl_widen {
+    ($($ty: ty: $cvt: ident),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<widen_ $ty>](a: Self::Register) -> [Self::Register; 2] {
+                unsafe {
+                    let a: __m256i = cast!(a);
+                    [
+                        cast!([<_mm256_cvt $cvt>](_mm256_castsi256_si128(a))),
+                        cast!([<_mm256_cvt $cvt>](_mm256_extracti128_si256::<1>(a))),
+                    ]
+                }
+            }
+            #[inline(always)]
+            fn [<widen_ $ty _supported>]() -> bool {
+                true
+            }
+        })*
+    };
+}
+
+/// Truncating narrowing: the unsigned saturating pack cannot saturate once the
+/// upper half of each lane is masked off. It packs each 128 bits on its own,
+/// so the 64-bit quarters come out as lo, hi, lo, hi and are put back in order.
+macro_rules! impl_narrow {
+    ($($ty: ty: $pack: ident, $mask: literal),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<narrow_ $ty>](lo: Self::Register, hi: Self::Register) -> Self::Register {
+                unsafe {
+                    let mask = _mm256_set1_epi32($mask);
+                    let lo = _mm256_and_si256(cast!(lo), mask);
+                    let hi = _mm256_and_si256(cast!(hi), mask);
+                    cast!(_mm256_permute4x64_epi64::<0b11_01_10_00>($pack(lo, hi)))
+                }
+            }
+            #[inline(always)]
+            fn [<narrow_ $ty _supported>]() -> bool {
+                true
+            }
+        })*
+    };
+}
+
 macro_rules! cmp_int {
     ($($ty: ty),*) => {
         $(paste! {
@@ -161,6 +205,80 @@ impl Simd for V3 {
     impl_shift!(shl, _mm256_sll, u16, i16, u32, i32, u64, i64);
     impl_shift!(shr, _mm256_srl, u16, u32, u64);
     impl_shift!(shr, _mm256_sra, i16, i32);
+
+    impl_widen!(u8: epu8_epi16, i8: epi8_epi16, u16: epu16_epi32);
+    impl_widen!(i16: epi16_epi32, u32: epu32_epi64, i32: epi32_epi64);
+    impl_narrow!(u8: _mm256_packus_epi16, 0x00ff_00ff, i8: _mm256_packus_epi16, 0x00ff_00ff);
+    impl_narrow!(u16: _mm256_packus_epi32, 0xffff, i16: _mm256_packus_epi32, 0xffff);
+    #[inline(always)]
+    fn narrow_u32(lo: Self::Register, hi: Self::Register) -> Self::Register {
+        // The low half of each 64-bit lane, elements 0 and 2 of each input
+        // per 128 bits, then the 64-bit quarters back in order.
+        unsafe {
+            let packed = _mm256_shuffle_ps::<0b10_00_10_00>(lo, hi);
+            cast!(_mm256_permute4x64_epi64::<0b11_01_10_00>(cast!(packed)))
+        }
+    }
+    #[inline(always)]
+    fn narrow_u32_supported() -> bool {
+        true
+    }
+    #[inline(always)]
+    fn narrow_i32(lo: Self::Register, hi: Self::Register) -> Self::Register {
+        Self::narrow_u32(lo, hi)
+    }
+    #[inline(always)]
+    fn narrow_i32_supported() -> bool {
+        true
+    }
+    #[inline(always)]
+    fn widen_f16(a: Self::Register) -> [Self::Register; 2] {
+        unsafe {
+            let a: __m256i = cast!(a);
+            [
+                _mm256_cvtph_ps(_mm256_castsi256_si128(a)),
+                _mm256_cvtph_ps(_mm256_extracti128_si256::<1>(a)),
+            ]
+        }
+    }
+    #[inline(always)]
+    fn widen_f16_supported() -> bool {
+        true
+    }
+    #[inline(always)]
+    fn narrow_f16(lo: Self::Register, hi: Self::Register) -> Self::Register {
+        unsafe {
+            let lo = _mm256_cvtps_ph::<_MM_FROUND_TO_NEAREST_INT>(lo);
+            let hi = _mm256_cvtps_ph::<_MM_FROUND_TO_NEAREST_INT>(hi);
+            cast!(_mm256_set_m128i(hi, lo))
+        }
+    }
+    #[inline(always)]
+    fn narrow_f16_supported() -> bool {
+        true
+    }
+    #[inline(always)]
+    fn widen_f32(a: Self::Register) -> [Self::Register; 2] {
+        unsafe {
+            [
+                cast!(_mm256_cvtps_pd(_mm256_castps256_ps128(a))),
+                cast!(_mm256_cvtps_pd(_mm256_extractf128_ps::<1>(a))),
+            ]
+        }
+    }
+    #[inline(always)]
+    fn widen_f32_supported() -> bool {
+        true
+    }
+    #[inline(always)]
+    fn narrow_f32(lo: Self::Register, hi: Self::Register) -> Self::Register {
+        // `cvtpd2ps` rounds as MXCSR says, which Rust assumes is the default.
+        unsafe { _mm256_set_m128(_mm256_cvtpd_ps(cast!(hi)), _mm256_cvtpd_ps(cast!(lo))) }
+    }
+    #[inline(always)]
+    fn narrow_f32_supported() -> bool {
+        true
+    }
     #[inline(always)]
     fn shr_i64(a: Self::Register, n: u32) -> Self::Register {
         // No 64-bit arithmetic shift before AVX-512: shift logically, then fill

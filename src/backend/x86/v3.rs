@@ -532,6 +532,22 @@ impl Simd for V3 {
         true
     }
     #[inline(always)]
+    fn fma_f32(a: Self::Register, b: Self::Register, c: Self::Register) -> Self::Register {
+        cast!(_mm256_fmadd_ps(cast!(a), cast!(b), cast!(c)))
+    }
+    #[inline(always)]
+    fn fma_f32_supported() -> bool {
+        true
+    }
+    #[inline(always)]
+    fn fma_f64(a: Self::Register, b: Self::Register, c: Self::Register) -> Self::Register {
+        cast!(_mm256_fmadd_pd(cast!(a), cast!(b), cast!(c)))
+    }
+    #[inline(always)]
+    fn fma_f64_supported() -> bool {
+        true
+    }
+    #[inline(always)]
     fn bitnot(a: Self::Register) -> Self::Register {
         cast!(_mm256_xor_si256(cast!(a), cast!(Self::splat_i64(-1))))
     }

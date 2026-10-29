@@ -66,6 +66,8 @@ impl<S: Simd, T: VMulAdd> Vector<S, T> {
     /// last bit. With wasm relaxed SIMD it depends on the engine. `f16` is
     /// fused only where the backend has native `f16` arithmetic; elsewhere it
     /// can round more than once. Integers wrap on overflow.
+    ///
+    /// For a single rounding on every backend, use [`fma`](Self::fma).
     #[inline(always)]
     pub fn mul_add(self, b: Self, c: Self) -> Self {
         T::vmul_add(self, b, c)

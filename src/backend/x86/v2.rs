@@ -12,7 +12,7 @@ use paste::paste;
 use crate::{backend::arch::NullaryFnOnce, impl_cmp_scalar, Scalar, WithSimd};
 
 use crate::backend::{
-    arch::impl_simd, cast, impl_convert_scalar, impl_fma_scalar, saturate_f32_i32, seal::Sealed,
+    arch::impl_simd, cast, impl_convert_scalar, impl_fma_scalar, seal::Sealed,
     wrapping_mul, RoundTiesEven, Simd, VRegister, Vector,
 };
 

@@ -588,7 +588,7 @@ pub(crate) use impl_cmp_scalar;
 /// Corrects a float-to-int conversion to the result of Rust's `as`: lanes at
 /// or above 2^31 become `i32::MAX`, lanes below -2^31 `i32::MIN`, and NaN lanes
 /// 0, whatever the instruction produced for them.
-#[cfg(any(x86, loong64))]
+#[cfg(loong64)]
 #[inline(always)]
 pub(crate) fn saturate_f32_i32<S: Simd>(x: S::Register, converted: S::Register) -> S::Register {
     let too_high = S::greater_than_or_equal_f32(x, S::splat_f32(2147483648.0));
@@ -599,7 +599,7 @@ pub(crate) fn saturate_f32_i32<S: Simd>(x: S::Register, converted: S::Register) 
 }
 
 /// As [`saturate_f32_i32`], for f64 and i64 lanes and the bounds ±2^63.
-#[cfg(any(x86, loong64))]
+#[cfg(loong64)]
 #[inline(always)]
 pub(crate) fn saturate_f64_i64<S: Simd>(x: S::Register, converted: S::Register) -> S::Register {
     let too_high = S::greater_than_or_equal_f64(x, S::splat_f64(9223372036854775808.0));

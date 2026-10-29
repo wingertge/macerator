@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - add fma, a multiply-add fused on every backend ([#74](https://github.com/wingertge/macerator/pull/74))
 - add shifts for 16-, 32-, and 64-bit lanes ([#71](https://github.com/wingertge/macerator/pull/71))
 - add conversion between float and integer lanes ([#75](https://github.com/wingertge/macerator/pull/75))
+- add floor, ceil, trunc, and round_ties_even ([#75](https://github.com/wingertge/macerator/pull/75))
 - add Mask::select and Vector::reinterpret ([#69](https://github.com/wingertge/macerator/pull/69))
 - add Mask::any and Mask::all ([#73](https://github.com/wingertge/macerator/pull/73))
 

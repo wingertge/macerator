@@ -104,6 +104,12 @@ impl<S: Simd, T: Scalar> Clone for Vector<S, T> {
     }
 }
 impl<S: Simd, T: Scalar> Copy for Vector<S, T> {}
+impl<S: Simd, T: Scalar> Clone for Mask<S, T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+impl<S: Simd, T: Scalar> Copy for Mask<S, T> {}
 impl<S: Simd, T: Scalar> Debug for Vector<S, T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_tuple("Vector").field(&self.inner).finish()
@@ -217,6 +223,22 @@ macro_rules! declare_shift {
         $(paste! {
             fn [<$name _ $ty>](a: Self::Register, n: u32) -> Self::Register;
             fn [<$name _ $ty _supported>]() -> bool;
+        })*
+    };
+}
+macro_rules! declare_shift_lanes {
+    ($name: ident, $op: ident, $($ty: ty),*) => {
+        $(paste! {
+            /// Shifts lane `i` of `a` by lane `i` of `n`, taken modulo the lane
+            /// width. The default shifts one lane at a time.
+            #[inline(always)]
+            fn [<$name _ $ty>](a: Self::Register, n: Self::Register) -> Self::Register {
+                shift_lanes::<Self, $ty>(a, n, |x, n| x.$op(n as u32))
+            }
+            #[inline(always)]
+            fn [<$name _ $ty _supported>]() -> bool {
+                false
+            }
         })*
     };
 }
@@ -551,6 +573,67 @@ pub trait Simd: Sized + seal::Sealed + 'static {
     // unsigned lanes and arithmetic for signed ones.
     declare_shift!(shl, u16, i16, u32, i32, u64, i64);
     declare_shift!(shr, u16, i16, u32, i32, u64, i64);
+    // x86 has no 8-bit shifts. The defaults shift 16-bit lanes and clear the
+    // bits that crossed from one byte into the other.
+    #[inline(always)]
+    fn shl_u8(a: Self::Register, n: u32) -> Self::Register {
+        Self::bitand(Self::shl_u16(a, n), Self::splat_u8(0xff << n))
+    }
+    #[inline(always)]
+    fn shl_u8_supported() -> bool {
+        Self::shl_u16_supported()
+    }
+    #[inline(always)]
+    fn shl_i8(a: Self::Register, n: u32) -> Self::Register {
+        Self::shl_u8(a, n)
+    }
+    #[inline(always)]
+    fn shl_i8_supported() -> bool {
+        Self::shl_u8_supported()
+    }
+    #[inline(always)]
+    fn shr_u8(a: Self::Register, n: u32) -> Self::Register {
+        Self::bitand(Self::shr_u16(a, n), Self::splat_u8(0xff >> n))
+    }
+    #[inline(always)]
+    fn shr_u8_supported() -> bool {
+        Self::shr_u16_supported()
+    }
+    /// With the sign bit flipped a lane is `x + 128` unsigned; shifting that
+    /// logically gives `(x >> n) + (128 >> n)`.
+    #[inline(always)]
+    fn shr_i8(a: Self::Register, n: u32) -> Self::Register {
+        let biased = Self::shr_u8(Self::bitxor(a, Self::splat_u8(0x80)), n);
+        Self::sub_u8(biased, Self::splat_u8(0x80 >> n))
+    }
+    #[inline(always)]
+    fn shr_i8_supported() -> bool {
+        Self::shr_u8_supported()
+    }
+    declare_shift_lanes!(
+        shl_lanes,
+        wrapping_shl,
+        u8,
+        i8,
+        u16,
+        i16,
+        u32,
+        i32,
+        u64,
+        i64
+    );
+    declare_shift_lanes!(
+        shr_lanes,
+        wrapping_shr,
+        u8,
+        i8,
+        u16,
+        i16,
+        u32,
+        i32,
+        u64,
+        i64
+    );
     declare_unop!(abs, i8, i16, i32, i64, f16, f32, f64);
 
     declare_reduction!(reduce_add, i8, i16, i32, i64, u8, u16, u32, u64, f16, f32, f64);
@@ -607,6 +690,26 @@ pub(crate) fn saturate_f64_i64<S: Simd>(x: S::Register, converted: S::Register) 
     let r = S::select_64(too_high, S::splat_i64(i64::MAX), converted);
     let r = S::select_64(too_low, S::splat_i64(i64::MIN), r);
     S::select_64(S::equals_f64(x, x), r, S::splat_i64(0))
+}
+
+/// Per-lane shifts one lane at a time, through buffers that hold a vector of
+/// any lane type on any backend.
+#[inline(always)]
+pub(crate) fn shift_lanes<S: Simd, T: Scalar>(
+    a: S::Register,
+    n: S::Register,
+    op: impl Fn(T, T) -> T,
+) -> S::Register {
+    let mut a_lanes = [T::default(); crate::MAX_VECTOR_BYTES];
+    let mut n_lanes = [T::default(); crate::MAX_VECTOR_BYTES];
+    unsafe {
+        S::store_unaligned(a_lanes.as_mut_ptr(), S::typed::<T>(a));
+        S::store_unaligned(n_lanes.as_mut_ptr(), S::typed::<T>(n));
+    }
+    for i in 0..T::lanes::<S>() {
+        a_lanes[i] = op(a_lanes[i], n_lanes[i]);
+    }
+    unsafe { *S::load_unaligned(a_lanes.as_ptr()) }
 }
 
 /// Float and integer conversion one lane at a time, for registers of `$bytes`

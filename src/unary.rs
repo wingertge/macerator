@@ -1,3 +1,5 @@
+use core::ops::Neg;
+
 use half::f16;
 use paste::paste;
 
@@ -109,6 +111,58 @@ impl<S: Simd, T: VRoundTiesEven> Vector<S, T> {
         T::vroundtieseven(self)
     }
 }
+
+pub trait VNeg: Scalar + Neg<Output = Self> {
+    fn vneg<S: Simd>(input: Vector<S, Self>) -> Vector<S, Self>;
+    fn is_accelerated<S: Simd>() -> bool;
+}
+
+/// Elementwise negation, like scalar `-x` for floats and `x.wrapping_neg()`
+/// for signed integers. Floats flip the sign bit, so `-0.0` and `0.0` swap and
+/// NaN stays NaN with its sign flipped. Integers wrap: `-MIN` is `MIN`, where
+/// scalar `-x` would panic in debug builds.
+impl<S: Simd, T: VNeg> Neg for Vector<S, T> {
+    type Output = Self;
+
+    #[inline(always)]
+    fn neg(self) -> Self::Output {
+        T::vneg(self)
+    }
+}
+
+macro_rules! impl_neg {
+    (float $($ty: ty: $bits: literal),*) => {
+        $(paste! {
+            impl VNeg for $ty {
+                #[inline(always)]
+                fn vneg<S: Simd>(input: Vector<S, Self>) -> Vector<S, Self> {
+                    S::typed(S::bitxor(*input, S::[<splat_i $bits>]([<i $bits>]::MIN)))
+                }
+                #[inline(always)]
+                fn is_accelerated<S: Simd>() -> bool {
+                    S::bitxor_supported()
+                }
+            }
+        })*
+    };
+    (int $($ty: ty),*) => {
+        $(paste! {
+            impl VNeg for $ty {
+                #[inline(always)]
+                fn vneg<S: Simd>(input: Vector<S, Self>) -> Vector<S, Self> {
+                    S::typed(S::[<sub_ $ty>](S::[<splat_ $ty>](0), *input))
+                }
+                #[inline(always)]
+                fn is_accelerated<S: Simd>() -> bool {
+                    S::[<sub_ $ty _supported>]()
+                }
+            }
+        })*
+    };
+}
+
+impl_neg!(float f16: 16, f32: 32, f64: 64);
+impl_neg!(int i8, i16, i32, i64);
 
 macro_rules! impl_unop {
     ($trait: ident, $name: ident, $($ty: ty),*) => {

@@ -26,6 +26,58 @@ impl VRegister for __m512 {}
 
 const WIDTH: usize = size_of::<<V4 as Simd>::Register>() * 8;
 
+/// The lower and upper 256 bits of a register.
+#[inline(always)]
+fn halves(a: __m512) -> [__m256i; 2] {
+    unsafe {
+        let a: __m512i = cast!(a);
+        [_mm512_castsi512_si256(a), _mm512_extracti64x4_epi64::<1>(a)]
+    }
+}
+
+/// A register of `lo` in the lower 256 bits and `hi` in the upper.
+#[inline(always)]
+fn join(lo: __m256i, hi: __m256i) -> __m512 {
+    unsafe { cast!(_mm512_inserti64x4::<1>(_mm512_castsi256_si512(lo), hi)) }
+}
+
+/// Widening each 256-bit half to a whole register.
+macro_rules! impl_widen {
+    ($($ty: ty: $cvt: ident),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<widen_ $ty>](a: Self::Register) -> [Self::Register; 2] {
+                halves(a).map(|half| unsafe { cast!($cvt(cast!(half))) })
+            }
+            #[inline(always)]
+            fn [<widen_ $ty _supported>]() -> bool {
+                true
+            }
+        })*
+    };
+}
+
+/// Narrowing each register to a 256-bit half.
+macro_rules! impl_narrow {
+    ($($ty: ty: $cvt: ident $(::<$imm: ident>)?),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<narrow_ $ty>](lo: Self::Register, hi: Self::Register) -> Self::Register {
+                unsafe {
+                    join(
+                        cast!($cvt $(::<$imm>)?(cast!(lo))),
+                        cast!($cvt $(::<$imm>)?(cast!(hi))),
+                    )
+                }
+            }
+            #[inline(always)]
+            fn [<narrow_ $ty _supported>]() -> bool {
+                true
+            }
+        })*
+    };
+}
+
 macro_rules! with_ty_cmp {
     ($func: ident, f16, $op: expr) => {
         paste!([<$func _ph_mask>]::<$op>)
@@ -539,6 +591,17 @@ where
     impl_shift!(shl, _mm512_sll, u16, i16, u32, i32, u64, i64);
     impl_shift!(shr, _mm512_srl, u16, u32, u64);
     impl_shift!(shr, _mm512_sra, i16, i32, i64);
+
+    impl_widen!(u8: _mm512_cvtepu8_epi16, i8: _mm512_cvtepi8_epi16);
+    impl_widen!(u16: _mm512_cvtepu16_epi32, i16: _mm512_cvtepi16_epi32);
+    impl_widen!(u32: _mm512_cvtepu32_epi64, i32: _mm512_cvtepi32_epi64);
+    impl_widen!(f16: _mm512_cvtph_ps, f32: _mm512_cvtps_pd);
+    impl_narrow!(u8: _mm512_cvtepi16_epi8, i8: _mm512_cvtepi16_epi8);
+    impl_narrow!(u16: _mm512_cvtepi32_epi16, i16: _mm512_cvtepi32_epi16);
+    impl_narrow!(u32: _mm512_cvtepi64_epi32, i32: _mm512_cvtepi64_epi32);
+    impl_narrow!(f16: _mm512_cvtps_ph::<_MM_FROUND_TO_NEAREST_INT>);
+    // `cvtpd2ps` rounds as MXCSR says, which Rust assumes is the default.
+    impl_narrow!(f32: _mm512_cvtpd_ps);
 
     impl_reduce_signless!(reduce_add, _mm512_reduce_add, u32, i32, u64, i64, f32, f64);
     impl_reduce!(reduce_min, _mm512_reduce_min, u32, i32, u64, i64, f32, f64);

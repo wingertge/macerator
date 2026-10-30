@@ -3,11 +3,12 @@ use crate::{
     seal::Sealed,
     Mask, MaskOps,
 };
-use bytemuck::{NoUninit, Pod};
+use bytemuck::{NoUninit, Pod, Zeroable};
+use core::ptr;
 use half::{bf16, f16};
 use paste::paste;
 
-pub trait Scalar: Sized + Copy + Pod + NoUninit + Default {
+pub trait Scalar: Sized + Copy + Pod + NoUninit + Default + Sealed {
     type Mask<S: Simd>: MaskOps;
 
     fn lanes<S: Simd>() -> usize;
@@ -277,4 +278,81 @@ pub unsafe fn vstore_low<S: Simd, T: Scalar>(ptr: *mut T, value: Vector<S, T>) {
 /// not accessed.
 pub unsafe fn vstore_high<S: Simd, T: Scalar>(ptr: *mut T, value: Vector<S, T>) {
     unsafe { T::vstore_high(ptr, value) };
+}
+
+/// The widest register any backend uses, in bytes (AVX-512). A buffer this
+/// long holds a vector of any lane type on every backend.
+pub const MAX_VECTOR_BYTES: usize = 64;
+
+/// The bytes a partial load or store of `n` elements touches: no more than
+/// `n` elements and no more than a vector.
+#[inline(always)]
+fn partial_bytes<S: Simd, T: Scalar>(n: usize) -> usize {
+    n.min(T::lanes::<S>()) * size_of::<T>()
+}
+
+/// Load `min(n, T::lanes::<S>())` elements from `ptr` into the low lanes of a
+/// vector. The other lanes are zero, and nothing past them is read.
+///
+/// # Safety
+///
+/// `ptr` must be valid for reads of `min(n, T::lanes::<S>())` elements. It
+/// need not be aligned.
+#[inline(always)]
+pub unsafe fn vload_partial<S: Simd, T: Scalar>(ptr: *const T, n: usize) -> Vector<S, T> {
+    let bytes = partial_bytes::<S, T>(n);
+    let mut buf = S::Register::zeroed();
+    let buf = bytemuck::bytes_of_mut(&mut buf);
+    // SAFETY: the caller makes `n` elements at `ptr` readable, `bytes` covers
+    // no more, and `buf` is a whole register.
+    unsafe {
+        ptr::copy_nonoverlapping(ptr.cast::<u8>(), buf.as_mut_ptr(), bytes);
+        T::vload_unaligned(buf.as_ptr().cast())
+    }
+}
+
+/// Store the first `min(n, T::lanes::<S>())` lanes of `value` to `ptr`, and
+/// nothing past them.
+///
+/// # Safety
+///
+/// `ptr` must be valid for writes of `min(n, T::lanes::<S>())` elements. It
+/// need not be aligned.
+#[inline(always)]
+pub unsafe fn vstore_partial<S: Simd, T: Scalar>(ptr: *mut T, value: Vector<S, T>, n: usize) {
+    let bytes = partial_bytes::<S, T>(n);
+    let mut buf = S::Register::zeroed();
+    let buf = bytemuck::bytes_of_mut(&mut buf);
+    // SAFETY: `buf` is a whole register, and the caller makes `n` elements at
+    // `ptr` writable, which `bytes` does not exceed.
+    unsafe {
+        T::vstore_unaligned(buf.as_mut_ptr().cast(), value);
+        ptr::copy_nonoverlapping(buf.as_ptr(), ptr.cast::<u8>(), bytes);
+    }
+}
+
+impl<S: Simd, T: Scalar> Vector<S, T> {
+    /// Load a vector from the first `T::lanes::<S>()` elements of `src`.
+    ///
+    /// # Panics
+    ///
+    /// If `src` is shorter than `T::lanes::<S>()`.
+    #[inline(always)]
+    pub fn load(src: &[T]) -> Self {
+        assert!(src.len() >= T::lanes::<S>(), "slice shorter than a vector");
+        // SAFETY: `src` holds at least a whole vector.
+        unsafe { T::vload_unaligned(src.as_ptr()) }
+    }
+
+    /// Store every lane into the first `T::lanes::<S>()` elements of `dst`.
+    ///
+    /// # Panics
+    ///
+    /// If `dst` is shorter than `T::lanes::<S>()`.
+    #[inline(always)]
+    pub fn store(self, dst: &mut [T]) {
+        assert!(dst.len() >= T::lanes::<S>(), "slice shorter than a vector");
+        // SAFETY: `dst` has room for a whole vector.
+        unsafe { T::vstore_unaligned(dst.as_mut_ptr(), self) }
+    }
 }

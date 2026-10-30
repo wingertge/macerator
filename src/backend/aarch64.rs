@@ -114,6 +114,42 @@ macro_rules! impl_binop {
     };
 }
 
+macro_rules! impl_widen {
+    ($($ty: ty: $suffix: ident),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<widen_ $ty>](a: Self::Register) -> [Self::Register; 2] {
+                unsafe {
+                    let a = cast!(a);
+                    [
+                        cast!([<vmovl_ $suffix>]([<vget_low_ $suffix>](a))),
+                        cast!([<vmovl_high_ $suffix>](a)),
+                    ]
+                }
+            }
+            #[inline(always)]
+            fn [<widen_ $ty _supported>]() -> bool {
+                true
+            }
+        })*
+    };
+}
+
+macro_rules! impl_narrow {
+    ($($ty: ty: $suffix: ident),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<narrow_ $ty>](lo: Self::Register, hi: Self::Register) -> Self::Register {
+                unsafe { cast!([<vuzp1q_ $suffix>](cast!(lo), cast!(hi))) }
+            }
+            #[inline(always)]
+            fn [<narrow_ $ty _supported>]() -> bool {
+                true
+            }
+        })*
+    };
+}
+
 macro_rules! impl_cmp {
     ($func: ident, $intrinsic: ident, $($ty: ty),*) => {
         $(paste! {
@@ -679,6 +715,54 @@ where
     }
 
     impl_shift!(u16: s16, i16: s16, u32: s32, i32: s32, u64: s64, i64: s64);
+
+    impl_widen!(u8: u8, i8: s8, u16: u16, i16: s16, u32: u32, i32: s32);
+    // `uzp1` keeps the even lanes, the low half of each wide lane.
+    impl_narrow!(u8: u8, i8: u8, u16: u16, i16: u16, u32: u32, i32: u32);
+    #[inline(always)]
+    fn widen_f16(a: Self::Register) -> [Self::Register; 2] {
+        unsafe {
+            let a: float16x8_t = cast!(a);
+            [
+                cast!(vcvt_f32_f16(vget_low_f16(a))),
+                cast!(vcvt_high_f32_f16(a)),
+            ]
+        }
+    }
+    #[inline(always)]
+    fn widen_f16_supported() -> bool {
+        true
+    }
+    #[inline(always)]
+    fn narrow_f16(lo: Self::Register, hi: Self::Register) -> Self::Register {
+        unsafe { cast!(vcvt_high_f16_f32(vcvt_f16_f32(cast!(lo)), cast!(hi))) }
+    }
+    #[inline(always)]
+    fn narrow_f16_supported() -> bool {
+        true
+    }
+    #[inline(always)]
+    fn widen_f32(a: Self::Register) -> [Self::Register; 2] {
+        unsafe {
+            let a: float32x4_t = cast!(a);
+            [
+                cast!(vcvt_f64_f32(vget_low_f32(a))),
+                cast!(vcvt_high_f64_f32(a)),
+            ]
+        }
+    }
+    #[inline(always)]
+    fn widen_f32_supported() -> bool {
+        true
+    }
+    #[inline(always)]
+    fn narrow_f32(lo: Self::Register, hi: Self::Register) -> Self::Register {
+        unsafe { cast!(vcvt_high_f32_f64(vcvt_f32_f64(cast!(lo)), cast!(hi))) }
+    }
+    #[inline(always)]
+    fn narrow_f32_supported() -> bool {
+        true
+    }
 
     impl_cmp!(equals, vceqq, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64);
     impl_cmp!(less_than, vcltq, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64);

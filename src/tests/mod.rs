@@ -20,6 +20,7 @@ mod convert;
 
 mod fma;
 mod half;
+mod load_store;
 mod macro_tests;
 mod mask_reduce;
 mod ord;
@@ -29,6 +30,7 @@ mod select;
 
 mod shift;
 mod unary;
+mod widen;
 
 wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 

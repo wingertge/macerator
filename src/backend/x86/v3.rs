@@ -13,7 +13,7 @@ use paste::paste;
 use crate::{backend::arch::NullaryFnOnce, impl_cmp_scalar, Scalar, WithSimd};
 
 use crate::backend::{
-    arch::impl_simd, cast, impl_convert_scalar, saturate_f32_i32, seal::Sealed, wrapping_mul,
+    arch::impl_simd, cast, impl_convert_f64_emulated, seal::Sealed, wrapping_mul,
     RoundTiesEven, Simd, VRegister, Vector,
 };
 
@@ -156,7 +156,7 @@ impl Simd for V3 {
         true
     }
     // No 64-bit float and integer conversion before AVX-512.
-    impl_convert_scalar!(32, f64: i64);
+    impl_convert_f64_emulated!();
 
     impl_shift!(shl, _mm256_sll, u16, i16, u32, i32, u64, i64);
     impl_shift!(shr, _mm256_srl, u16, u32, u64);

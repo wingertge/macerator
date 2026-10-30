@@ -9,7 +9,7 @@ use num_traits::real::Real;
 use paste::paste;
 
 use crate::{
-    backend::{arch::*, saturate_f32_i32, saturate_f64_i64, wrapping_mul, RoundTiesEven},
+    backend::{arch::*, wrapping_mul, RoundTiesEven},
     cast,
     seal::Sealed,
     MaskOps, Scalar, Simd, VRegister, Vector,
@@ -486,7 +486,7 @@ where
     impl_round!(_mm512_roundscale, f32: ps, f64: pd);
     #[inline(always)]
     fn trunc_to_int_f32(a: Self::Register) -> Self::Register {
-        saturate_f32_i32::<Self>(a, cast!(_mm512_cvttps_epi32(cast!(a))))
+        saturate_masked_f32_i32::<Self>(a, cast!(_mm512_cvttps_epi32(cast!(a))))
     }
     #[inline(always)]
     fn trunc_to_int_f32_supported() -> bool {
@@ -495,7 +495,7 @@ where
     #[inline(always)]
     fn round_to_int_f32(a: Self::Register) -> Self::Register {
         let rounded = cast!(_mm512_cvt_roundps_epi32::<{ _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC }>(cast!(a)));
-        saturate_f32_i32::<Self>(a, rounded)
+        saturate_masked_f32_i32::<Self>(a, rounded)
     }
     #[inline(always)]
     fn round_to_int_f32_supported() -> bool {
@@ -511,7 +511,7 @@ where
     }
     #[inline(always)]
     fn trunc_to_int_f64(a: Self::Register) -> Self::Register {
-        saturate_f64_i64::<Self>(a, cast!(_mm512_cvttpd_epi64(cast!(a))))
+        saturate_masked_f64_i64::<Self>(a, cast!(_mm512_cvttpd_epi64(cast!(a))))
     }
     #[inline(always)]
     fn trunc_to_int_f64_supported() -> bool {
@@ -520,7 +520,7 @@ where
     #[inline(always)]
     fn round_to_int_f64(a: Self::Register) -> Self::Register {
         let rounded = cast!(_mm512_cvt_roundpd_epi64::<{ _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC }>(cast!(a)));
-        saturate_f64_i64::<Self>(a, rounded)
+        saturate_masked_f64_i64::<Self>(a, rounded)
     }
     #[inline(always)]
     fn round_to_int_f64_supported() -> bool {

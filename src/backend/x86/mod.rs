@@ -17,6 +17,8 @@ pub use v4::V4;
 #[cfg(avx512_fp16)]
 pub use v4::V4FP16;
 
+use crate::{Simd, Vector};
+
 macro_rules! lanes {
     ($($bits: literal),*) => {
         $(paste! {
@@ -28,6 +30,49 @@ macro_rules! lanes {
     };
 }
 pub(crate) use lanes;
+
+// x86 float-to-int conversions return `MIN` for every lane out of range and
+// for NaN. Rust's `as` gives `MIN` below the range too, so only lanes at or
+// above it (`MAX`) and NaN lanes (0) need fixing.
+
+/// Corrects `cvtps2dq` or `cvttps2dq` to the result of Rust's `as`, with
+/// vector masks: an XOR turns `MIN` into `MAX` in lanes at or above 2^31, and
+/// an AND zeroes NaN lanes.
+#[inline(always)]
+pub(crate) fn saturate_f32_i32<S: Simd<Mask32 = Vector<S, i32>>>(
+    x: S::Register,
+    converted: S::Register,
+) -> S::Register {
+    let too_high = S::greater_than_or_equal_f32(x, S::splat_f32(2147483648.0));
+    let not_nan = S::equals_f32(x, x);
+    S::bitand(S::bitxor(converted, *too_high), *not_nan)
+}
+
+/// As [`saturate_f32_i32`], with AVX-512 bit masks, which take a masked move
+/// each instead.
+#[cfg(avx512)]
+#[inline(always)]
+pub(crate) fn saturate_masked_f32_i32<S: Simd>(
+    x: S::Register,
+    converted: S::Register,
+) -> S::Register {
+    let too_high = S::greater_than_or_equal_f32(x, S::splat_f32(2147483648.0));
+    let r = S::select_32(too_high, S::splat_i32(i32::MAX), converted);
+    S::select_32(S::equals_f32(x, x), r, S::splat_i32(0))
+}
+
+/// As [`saturate_masked_f32_i32`], for `cvtpd2qq` and `cvttpd2qq` and the
+/// bound 2^63.
+#[cfg(avx512)]
+#[inline(always)]
+pub(crate) fn saturate_masked_f64_i64<S: Simd>(
+    x: S::Register,
+    converted: S::Register,
+) -> S::Register {
+    let too_high = S::greater_than_or_equal_f64(x, S::splat_f64(9223372036854775808.0));
+    let r = S::select_64(too_high, S::splat_i64(i64::MAX), converted);
+    S::select_64(S::equals_f64(x, x), r, S::splat_i64(0))
+}
 
 macro_rules! impl_binop_scalar {
     ($func: ident, $intrinsic: path, $($ty: ty),*) => {

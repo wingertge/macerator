@@ -17,6 +17,7 @@ mod approx;
 mod arithmetic;
 mod bitwise;
 mod convert;
+mod dot;
 
 mod fma;
 mod half;

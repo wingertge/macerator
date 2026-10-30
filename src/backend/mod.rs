@@ -557,6 +557,11 @@ pub trait Simd: Sized + seal::Sealed + 'static {
     fn fma_f64(a: Self::Register, b: Self::Register, c: Self::Register) -> Self::Register;
     fn fma_f64_supported() -> bool;
 
+    /// For each i32 lane `k`, `acc[k]` plus the products of i8 lanes `4k` to
+    /// `4k + 3` of `a` and `b`, wrapping.
+    fn dot_i8(a: Self::Register, b: Self::Register, acc: Self::Register) -> Self::Register;
+    fn dot_i8_supported() -> bool;
+
     declare_unop!(recip, f16, f32, f64);
     declare_unop!(sqrt, f16, f32, f64);
     declare_unop!(floor, f16, f32, f64);
@@ -865,6 +870,32 @@ macro_rules! impl_fma_scalar {
 pub(crate) use impl_convert_scalar;
 
 pub(crate) use impl_fma_scalar;
+
+/// The i8 dot product one lane at a time, for registers of `$bytes` bytes.
+macro_rules! impl_dot_scalar {
+    ($bytes: literal) => {
+        #[inline(always)]
+        fn dot_i8(a: Self::Register, b: Self::Register, acc: Self::Register) -> Self::Register {
+            const LANES: usize = $bytes / 4;
+            let a: [[i8; 4]; LANES] = cast!(a);
+            let b: [[i8; 4]; LANES] = cast!(b);
+            let mut out: [i32; LANES] = cast!(acc);
+            for k in 0..LANES {
+                let mut sum = 0i32;
+                for j in 0..4 {
+                    sum += a[k][j] as i32 * b[k][j] as i32;
+                }
+                out[k] = out[k].wrapping_add(sum);
+            }
+            cast!(out)
+        }
+        #[inline(always)]
+        fn dot_i8_supported() -> bool {
+            false
+        }
+    };
+}
+pub(crate) use impl_dot_scalar;
 /// Tests that type inference works properly
 #[cfg(test)]
 mod test_inference {

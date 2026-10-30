@@ -578,6 +578,28 @@ impl Simd for V3 {
         true
     }
     #[inline(always)]
+    fn dot_i8(a: Self::Register, b: Self::Register, acc: Self::Register) -> Self::Register {
+        // As on SSE4.2, but `hadd` works within 128-bit halves, which leaves
+        // the groups as 0, 1, 4, 5, 2, 3, 6, 7 until the permute.
+        unsafe {
+            let (a, b): (__m256i, __m256i) = (cast!(a), cast!(b));
+            let lo = _mm256_madd_epi16(
+                _mm256_cvtepi8_epi16(_mm256_castsi256_si128(a)),
+                _mm256_cvtepi8_epi16(_mm256_castsi256_si128(b)),
+            );
+            let hi = _mm256_madd_epi16(
+                _mm256_cvtepi8_epi16(_mm256_extracti128_si256::<1>(a)),
+                _mm256_cvtepi8_epi16(_mm256_extracti128_si256::<1>(b)),
+            );
+            let sums = _mm256_permute4x64_epi64::<0b11_01_10_00>(_mm256_hadd_epi32(lo, hi));
+            cast!(_mm256_add_epi32(cast!(acc), sums))
+        }
+    }
+    #[inline(always)]
+    fn dot_i8_supported() -> bool {
+        true
+    }
+    #[inline(always)]
     fn bitnot(a: Self::Register) -> Self::Register {
         cast!(_mm256_xor_si256(cast!(a), cast!(Self::splat_i64(-1))))
     }

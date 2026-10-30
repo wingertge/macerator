@@ -652,6 +652,22 @@ where
     }
     // wasm SIMD has no fused multiply-add; relaxed `madd` may round twice.
     impl_fma_scalar!(16, f32, f64);
+    #[inline(always)]
+    fn dot_i8(a: Self::Register, b: Self::Register, acc: Self::Register) -> Self::Register {
+        // `dot` sums the i32 products of each pair of i16 lanes; the shuffles
+        // then pick the even and odd pairs across both halves.
+        unsafe {
+            let lo = i32x4_dot_i16x8(i16x8_extend_low_i8x16(a), i16x8_extend_low_i8x16(b));
+            let hi = i32x4_dot_i16x8(i16x8_extend_high_i8x16(a), i16x8_extend_high_i8x16(b));
+            let even = i32x4_shuffle::<0, 2, 4, 6>(lo, hi);
+            let odd = i32x4_shuffle::<1, 3, 5, 7>(lo, hi);
+            i32x4_add(acc, i32x4_add(even, odd))
+        }
+    }
+    #[inline(always)]
+    fn dot_i8_supported() -> bool {
+        true
+    }
 }
 
 impl Simd128Fallback {

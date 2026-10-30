@@ -995,6 +995,22 @@ where
         true
     }
     #[inline(always)]
+    fn dot_i8(a: Self::Register, b: Self::Register, acc: Self::Register) -> Self::Register {
+        // i8 products fit i16; `paddl` adds pairs of them into i32 lanes and
+        // `padd` the pairs of those, in order across its two inputs.
+        // `sdot` would be one instruction but needs FEAT_DotProd.
+        unsafe {
+            let (a, b): (int8x16_t, int8x16_t) = (cast!(a), cast!(b));
+            let lo = vpaddlq_s16(vmull_s8(vget_low_s8(a), vget_low_s8(b)));
+            let hi = vpaddlq_s16(vmull_high_s8(a, b));
+            cast!(vaddq_s32(cast!(acc), vpaddq_s32(lo, hi)))
+        }
+    }
+    #[inline(always)]
+    fn dot_i8_supported() -> bool {
+        true
+    }
+    #[inline(always)]
     fn recip_f16(a: Self::Register) -> Self::Register {
         FP16::recip_f16(a)
     }

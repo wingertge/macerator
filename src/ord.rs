@@ -78,23 +78,23 @@ impl<S: Simd, T: VOrd> Vector<S, T> {
     pub fn ge(self, b: Self) -> Mask<S, T> {
         T::vge(self, b)
     }
-    /// Apply elementwise [`Ord::min`] to two vectors
+    /// Elementwise minimum, like [`Ord::min`] for integers.
     ///
-    /// For floats, which operand comes back when they compare equal but
-    /// differ (`-0.0` and `0.0`), or when either is NaN, depends on the backend:
-    /// for f32 and f64, x86 returns `b`, NEON and wasm return
-    /// `-0.0` for `min` and `0.0` for `max` and propagate NaN, and the scalar
-    /// fallback follows [`f32::min`], which returns the operand that is not
-    /// NaN. Do not rely on either case where results must agree across
-    /// backends.
+    /// For floats the result is unspecified when either operand is NaN, and
+    /// when the operands are `-0.0` and `0.0`. Backends differ: for f32 and
+    /// f64, x86 returns `b`, NEON and wasm return `-0.0` for `min` and `0.0`
+    /// for `max` and propagate NaN, and the scalar fallback follows
+    /// [`f32::min`], which returns the operand that is not NaN. Where results
+    /// must agree across backends, handle NaN lanes separately, for example
+    /// with an `x.eq(x)` mask and [`Mask::select`].
     #[inline(always)]
     pub fn min(self, b: Self) -> Self {
         T::vmin(self, b)
     }
-    /// Apply elementwise [`Ord::max`] on two vectors
+    /// Elementwise maximum, like [`Ord::max`] for integers.
     ///
-    /// For floats, signed zeros and NaN behave as described for
-    /// [`min`](Self::min).
+    /// For floats the result is unspecified for NaN and signed zeros, as
+    /// described for [`min`](Self::min).
     #[inline(always)]
     pub fn max(self, b: Self) -> Self {
         T::vmax(self, b)

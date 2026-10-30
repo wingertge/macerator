@@ -7,6 +7,7 @@ pub trait VTruncToInt: Scalar {
     type Int: Scalar;
     fn vtrunc_to_int<S: Simd>(input: Vector<S, Self>) -> Vector<S, Self::Int>;
     fn is_accelerated<S: Simd>() -> bool;
+    fn vtrunc_to_int_unchecked<S: Simd>(input: Vector<S, Self>) -> Vector<S, Self::Int>;
 }
 
 impl<S: Simd, T: VTruncToInt> Vector<S, T> {
@@ -17,11 +18,23 @@ impl<S: Simd, T: VTruncToInt> Vector<S, T> {
     pub fn trunc_to_int(self) -> Vector<S, T::Int> {
         T::vtrunc_to_int(self)
     }
+
+    /// As [`trunc_to_int`](Self::trunc_to_int) for lanes in range, without
+    /// the fixups that saturate the others and zero NaN. A lane is in range if
+    /// its result fits the integer and, for `f64`, the lane is below 2^51 in
+    /// magnitude. Any other lane, NaN included, gives an unspecified value but
+    /// no undefined behavior. For input the caller has already clamped; for
+    /// `f32`, note that `i32::MAX as f32` is 2^31, which is out of range.
+    #[inline(always)]
+    pub fn trunc_to_int_unchecked(self) -> Vector<S, T::Int> {
+        T::vtrunc_to_int_unchecked(self)
+    }
 }
 
 pub trait VRoundToInt: VTruncToInt {
     fn vround_to_int<S: Simd>(input: Vector<S, Self>) -> Vector<S, Self::Int>;
     fn is_accelerated<S: Simd>() -> bool;
+    fn vround_to_int_unchecked<S: Simd>(input: Vector<S, Self>) -> Vector<S, Self::Int>;
 }
 
 impl<S: Simd, T: VRoundToInt> Vector<S, T> {
@@ -34,6 +47,14 @@ impl<S: Simd, T: VRoundToInt> Vector<S, T> {
     #[inline(always)]
     pub fn round_to_int(self) -> Vector<S, T::Int> {
         T::vround_to_int(self)
+    }
+
+    /// As [`round_to_int`](Self::round_to_int) for lanes in range, with the
+    /// same unspecified result outside it as
+    /// [`trunc_to_int_unchecked`](Self::trunc_to_int_unchecked).
+    #[inline(always)]
+    pub fn round_to_int_unchecked(self) -> Vector<S, T::Int> {
+        T::vround_to_int_unchecked(self)
     }
 }
 
@@ -66,6 +87,10 @@ macro_rules! impl_convert {
                 fn is_accelerated<S: Simd>() -> bool {
                     S::[<trunc_to_int_ $ty _supported>]()
                 }
+                #[inline(always)]
+                fn vtrunc_to_int_unchecked<S: Simd>(input: Vector<S, Self>) -> Vector<S, $int> {
+                    S::typed(S::[<trunc_to_int_unchecked_ $ty>](*input))
+                }
             }
             impl VRoundToInt for $ty {
                 #[inline(always)]
@@ -75,6 +100,10 @@ macro_rules! impl_convert {
                 #[inline(always)]
                 fn is_accelerated<S: Simd>() -> bool {
                     S::[<round_to_int_ $ty _supported>]()
+                }
+                #[inline(always)]
+                fn vround_to_int_unchecked<S: Simd>(input: Vector<S, Self>) -> Vector<S, $int> {
+                    S::typed(S::[<round_to_int_unchecked_ $ty>](*input))
                 }
             }
             impl VToFloat for $int {

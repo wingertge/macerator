@@ -28,6 +28,14 @@ fn test_to_int_impl<S: Simd, T: VRoundToInt>(a: &[T]) -> Vec<T::Int> {
     out
 }
 
+/// Truncated results, then rounded ones, without the fixups.
+#[inline(always)]
+fn test_to_int_unchecked_impl<S: Simd, T: VRoundToInt>(a: &[T]) -> Vec<T::Int> {
+    let mut out = apply::<S, T, T::Int>(a, |v| v.trunc_to_int_unchecked());
+    out.extend(apply::<S, T, T::Int>(a, |v| v.round_to_int_unchecked()));
+    out
+}
+
 #[inline(always)]
 fn test_from_int_impl<S: Simd, T: VToFloat>(a: &[T]) -> Vec<T::Float> {
     apply::<S, T, T::Float>(a, |v| v.to_float())
@@ -121,4 +129,49 @@ testgen_convert!(
         18446744073709551616.0,
         4503599627370495.5
     ]
+);
+
+macro_rules! testgen_convert_unchecked {
+    ($($ty: ty: $int: ty: $limit: expr, [$($edge: expr),*]),*) => {
+        $(::paste::paste! {
+            // Miri implements none of the AVX-512, NEON and LoongArch float to
+            // int conversions.
+            #[cfg_attr(all(miri, any(x86_v4, aarch64, loong64)), ignore)]
+            #[::wasm_bindgen_test::wasm_bindgen_test(unsupported = test)]
+            fn [<test_to_int_unchecked_ $ty>]() {
+                let mut rng = rand::rng();
+                // In range, results must match `as`.
+                let limit: $ty = $limit;
+                let mut a: Vec<$ty> = vec![
+                    0.0, -0.0, 0.5, 1.5, 2.5, -0.5, -1.5, -2.5, limit, -limit, $($edge),*
+                ];
+                while a.len() < crate::tests::SIZE {
+                    a.push(rng.random_range(-limit..limit));
+                    a.push(rng.random_range(-4.0..4.0));
+                }
+                a.truncate(crate::tests::SIZE);
+                let mut want: Vec<$int> = a.iter().map(|&x| x as $int).collect();
+                want.extend(a.iter().map(|&x| x.round_ties_even() as $int));
+                for_each_backend!(test_to_int_unchecked_impl, $ty, &a[..], |out: &[$int]| {
+                    for (i, (w, g)) in want.iter().zip(out).enumerate() {
+                        let x = a[i % a.len()];
+                        let op = if i < a.len() { "trunc" } else { "round" };
+                        assert_eq!(w, g, "{op}_to_int_unchecked({x:?})");
+                    }
+                });
+                // Out of range any value will do, but under Miri this catches a
+                // backend that reaches undefined behavior, as `to_int_unchecked` would.
+                let mut a: Vec<$ty> = vec![<$ty>::NAN, <$ty>::INFINITY, <$ty>::NEG_INFINITY, <$ty>::MAX, <$ty>::MIN];
+                a.resize(crate::tests::SIZE, <$ty>::NAN);
+                for_each_backend!(test_to_int_unchecked_impl, $ty, &a[..], |_: &[$int]| {});
+            }
+        })*
+    };
+}
+
+testgen_convert_unchecked!(
+    // The largest f32 below 2^31; -2^31, the least i32; the f32 below 0.5.
+    f32: i32: 2147483520.0, [-2147483648.0, 0.49999997],
+    // 2^51 - 0.5, a tie that rounds to 2^51; the f64 below 0.5.
+    f64: i64: 2251799813685247.5, [0.49999999999999994]
 );

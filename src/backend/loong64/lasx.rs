@@ -139,6 +139,22 @@ impl Simd for Lasx {
         true
     }
     #[inline(always)]
+    fn trunc_to_int_unchecked_f32(a: Self::Register) -> Self::Register {
+        cast!(lasx_xvftintrz_w_s(cast!(a)))
+    }
+    #[inline(always)]
+    fn round_to_int_unchecked_f32(a: Self::Register) -> Self::Register {
+        cast!(lasx_xvftintrne_w_s(cast!(a)))
+    }
+    #[inline(always)]
+    fn trunc_to_int_unchecked_f64(a: Self::Register) -> Self::Register {
+        cast!(lasx_xvftintrz_l_d(cast!(a)))
+    }
+    #[inline(always)]
+    fn round_to_int_unchecked_f64(a: Self::Register) -> Self::Register {
+        cast!(lasx_xvftintrne_l_d(cast!(a)))
+    }
+    #[inline(always)]
     fn from_int_f64(a: Self::Register) -> Self::Register {
         cast!(lasx_xvffint_d_l(cast!(a)))
     }

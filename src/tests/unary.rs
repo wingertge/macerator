@@ -1,4 +1,4 @@
-use core::{fmt::Debug, num::FpCategory};
+use core::{fmt::Debug, num::FpCategory, ops::Neg};
 use half::f16;
 use std::{vec, vec::Vec};
 
@@ -7,10 +7,10 @@ use num_traits::{Float, NumCast, PrimInt};
 use crate::{
     assert_relative_eq,
     tests::{approx::RelativeEq, assert_eq, test_unop, unop},
-    Simd, VAbs, VRecip, VSqrt, Vector,
+    Simd, VAbs, VNeg, VRecip, VSqrt, Vector,
 };
 
-use super::{testgen_unop, testgen_unop_values, Unop};
+use super::{for_each_backend, testgen_unop, testgen_unop_values, Unop};
 
 #[inline(always)]
 fn test_recip_impl<S: Simd, T: VRecip>(a: &[T]) -> Vec<T> {
@@ -288,3 +288,38 @@ testgen_unop_values!(
     f32,
     f64
 );
+
+#[inline(always)]
+fn test_neg_impl<S: Simd, T: VNeg>(a: &[T]) -> Vec<T> {
+    unop!(VNeg, |a: Vector<S, T>| -a);
+    test_unop::<S, T, VNegOp<T>>(a)
+}
+
+macro_rules! testgen_neg {
+    ($reference: ident, $($ty: ty: $int: ty),*) => {
+        $(::paste::paste! {
+            #[::wasm_bindgen_test::wasm_bindgen_test(unsupported = test)]
+            fn [<test_neg_ $ty>]() {
+                use bytemuck::Zeroable;
+                use rand::Rng;
+
+                // Random bits give NaN payloads and infinities for floats. Zero
+                // and the sign bit alone are `0.0` and `-0.0` for floats, and
+                // `0` and `MIN` for integers.
+                let mut a = vec![<$ty>::zeroed(); crate::tests::SIZE];
+                rand::rng().fill(bytemuck::cast_slice_mut::<$ty, u8>(&mut a));
+                a[0] = <$ty>::zeroed();
+                a[1] = bytemuck::cast(<$int>::MIN);
+                let want: Vec<$ty> = a.iter().map(|x| x.$reference()).collect();
+                for_each_backend!(test_neg_impl, $ty, &a, |out: &[$ty]| assert_eq(
+                    bytemuck::cast_slice::<$ty, u8>(&want),
+                    bytemuck::cast_slice::<$ty, u8>(out)
+                ));
+            }
+        })*
+    };
+}
+
+testgen_neg!(neg, f16: i16, f32: i32, f64: i64);
+// Scalar `-MIN` panics in debug builds; vector negation wraps.
+testgen_neg!(wrapping_neg, i8: i8, i16: i16, i32: i32, i64: i64);

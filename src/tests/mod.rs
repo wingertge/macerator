@@ -20,6 +20,7 @@ mod convert;
 
 mod fma;
 mod half;
+mod load_store;
 mod macro_tests;
 mod mask_reduce;
 mod ord;

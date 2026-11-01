@@ -186,3 +186,35 @@ fn test_reinterpret_u64_u8() {
         assert_eq!(&want[..], out)
     });
 }
+
+/// One comparison drives two selects, which needs `Mask: Copy`.
+#[allow(clippy::extra_unused_type_parameters)]
+#[inline(always)]
+fn test_select_reused_mask_impl<S: Simd, T: Scalar>(a: &[f32]) -> Vec<f32> {
+    let lanes = f32::lanes::<S>();
+    let mut out = vec![0.0; a.len()];
+    for (a, out) in a.chunks_exact(lanes).zip(out.chunks_exact_mut(lanes)) {
+        let x = unsafe { vload_unaligned::<S, f32>(a.as_ptr()) };
+        let small = x.lt(0.5.splat());
+        let arg = small.select(x * x, x);
+        unsafe { vstore_unaligned(out.as_mut_ptr(), small.select(arg, arg + 1.0.splat())) };
+    }
+    out
+}
+
+// Miri implements neither the AVX-512 nor the LoongArch float compares.
+#[cfg_attr(all(miri, any(x86_v4, loong64)), ignore)]
+#[::wasm_bindgen_test::wasm_bindgen_test(unsupported = test)]
+fn test_select_reused_mask() {
+    let a = crate::tests::random::<f32>(0.0, 1.0);
+    let want: Vec<f32> = a
+        .iter()
+        .map(|&x| if x < 0.5 { x * x } else { x + 1.0 })
+        .collect();
+    for_each_backend!(
+        test_select_reused_mask_impl,
+        f32,
+        &a[..],
+        |out: &[f32]| { assert_eq!(&want[..], out) }
+    );
+}

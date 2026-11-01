@@ -104,6 +104,12 @@ impl<S: Simd, T: Scalar> Clone for Vector<S, T> {
     }
 }
 impl<S: Simd, T: Scalar> Copy for Vector<S, T> {}
+impl<S: Simd, T: Scalar> Clone for Mask<S, T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+impl<S: Simd, T: Scalar> Copy for Mask<S, T> {}
 impl<S: Simd, T: Scalar> Debug for Vector<S, T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_tuple("Vector").field(&self.inner).finish()

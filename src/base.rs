@@ -7,7 +7,7 @@ use bytemuck::{NoUninit, Pod};
 use half::{bf16, f16};
 use paste::paste;
 
-pub trait Scalar: Sized + Copy + Pod + NoUninit + Default {
+pub trait Scalar: Sized + Copy + Pod + NoUninit + Default + Sealed {
     type Mask<S: Simd>: MaskOps;
 
     fn lanes<S: Simd>() -> usize;
@@ -277,4 +277,30 @@ pub unsafe fn vstore_low<S: Simd, T: Scalar>(ptr: *mut T, value: Vector<S, T>) {
 /// not accessed.
 pub unsafe fn vstore_high<S: Simd, T: Scalar>(ptr: *mut T, value: Vector<S, T>) {
     unsafe { T::vstore_high(ptr, value) };
+}
+
+impl<S: Simd, T: Scalar> Vector<S, T> {
+    /// Load a vector from the first `T::lanes::<S>()` elements of `src`.
+    ///
+    /// # Panics
+    ///
+    /// If `src` is shorter than `T::lanes::<S>()`.
+    #[inline(always)]
+    pub fn load(src: &[T]) -> Self {
+        assert!(src.len() >= T::lanes::<S>(), "slice shorter than a vector");
+        // SAFETY: `src` holds at least a whole vector.
+        unsafe { T::vload_unaligned(src.as_ptr()) }
+    }
+
+    /// Store every lane into the first `T::lanes::<S>()` elements of `dst`.
+    ///
+    /// # Panics
+    ///
+    /// If `dst` is shorter than `T::lanes::<S>()`.
+    #[inline(always)]
+    pub fn store(self, dst: &mut [T]) {
+        assert!(dst.len() >= T::lanes::<S>(), "slice shorter than a vector");
+        // SAFETY: `dst` has room for a whole vector.
+        unsafe { T::vstore_unaligned(dst.as_mut_ptr(), self) }
+    }
 }

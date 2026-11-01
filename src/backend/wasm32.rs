@@ -13,7 +13,7 @@ use crate::{seal::Sealed, Scalar, WithSimd};
 
 use super::{
     arch::{impl_simd, NullaryFnOnce},
-    cast, impl_cmp_scalar, impl_convert_scalar, wrapping_mul, RoundTiesEven, Simd, VRegister, Vector, impl_fma_scalar,
+    cast, impl_cmp_scalar, impl_convert_f64_emulated, wrapping_mul, RoundTiesEven, Simd, VRegister, Vector, impl_fma_scalar,
 };
 
 impl Sealed for v128 {}
@@ -559,7 +559,7 @@ where
         true
     }
     // wasm SIMD has no 64-bit float and integer conversion.
-    impl_convert_scalar!(16, f64: i64);
+    impl_convert_f64_emulated!();
     impl_mask_reduce!(8, 16, 32, 64);
     #[inline(always)]
     fn bitnot(a: Self::Register) -> Self::Register {

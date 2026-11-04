@@ -359,6 +359,40 @@ macro_rules! impl_mask_reduce {
     };
 }
 
+/// `vshlq` shifts each lane by the signed low byte of the matching count lane,
+/// right for a negative count, so counts are reduced modulo the lane width and
+/// negated for right shifts.
+macro_rules! impl_shift_lanes {
+    ($($ty: ty: $count: ident),*) => {
+        $(paste! {
+            #[inline(always)]
+            fn [<shl_lanes_ $ty>](a: Self::Register, n: Self::Register) -> Self::Register {
+                unsafe {
+                    let mask = [<vdupq_n_ $count>]((<$ty>::BITS - 1) as _);
+                    let n = [<vandq_ $count>](cast!(n), mask);
+                    cast!(with_ty!(vshlq, $ty)(cast!(a), n))
+                }
+            }
+            #[inline(always)]
+            fn [<shl_lanes_ $ty _supported>]() -> bool {
+                true
+            }
+            #[inline(always)]
+            fn [<shr_lanes_ $ty>](a: Self::Register, n: Self::Register) -> Self::Register {
+                unsafe {
+                    let mask = [<vdupq_n_ $count>]((<$ty>::BITS - 1) as _);
+                    let n = [<vnegq_ $count>]([<vandq_ $count>](cast!(n), mask));
+                    cast!(with_ty!(vshlq, $ty)(cast!(a), n))
+                }
+            }
+            #[inline(always)]
+            fn [<shr_lanes_ $ty _supported>]() -> bool {
+                true
+            }
+        })*
+    };
+}
+
 /// `vshl` shifts by a signed count per lane: negative counts shift right,
 /// logically for unsigned lanes and arithmetically for signed ones. Unlike
 /// `vshr_n`, it accepts a count of zero.
@@ -678,7 +712,8 @@ where
         true
     }
 
-    impl_shift!(u16: s16, i16: s16, u32: s32, i32: s32, u64: s64, i64: s64);
+    impl_shift!(u8: s8, i8: s8, u16: s16, i16: s16, u32: s32, i32: s32, u64: s64, i64: s64);
+    impl_shift_lanes!(u8: s8, i8: s8, u16: s16, i16: s16, u32: s32, i32: s32, u64: s64, i64: s64);
 
     impl_cmp!(equals, vceqq, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64);
     impl_cmp!(less_than, vcltq, u8, i8, u16, i16, u32, i32, f32, u64, i64, f64);

@@ -330,6 +330,8 @@ where
     impl_unop_scalar!(trunc, trunc, f16);
     impl_unop_scalar!(round_ties_even, round_ties_even_soft, f16);
 
+    impl_shift!(shl, u8: i8x16_shl, i8: i8x16_shl);
+    impl_shift!(shr, u8: u8x16_shr, i8: i8x16_shr);
     impl_shift!(shl, u16: i16x8_shl, i16: i16x8_shl, u32: i32x4_shl, i32: i32x4_shl);
     impl_shift!(shl, u64: i64x2_shl, i64: i64x2_shl);
     impl_shift!(shr, u16: u16x8_shr, i16: i16x8_shr, u32: u32x4_shr, i32: i32x4_shr);

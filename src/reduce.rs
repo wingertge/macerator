@@ -9,6 +9,10 @@ pub trait ReduceAdd: Scalar {
 }
 
 impl<S: Simd, T: ReduceAdd> Vector<S, T> {
+    /// Sum of all lanes. Integers wrap on overflow.
+    ///
+    /// For floats the order of the additions depends on the backend, so sums
+    /// can differ in the last bits between backends.
     #[inline(always)]
     pub fn reduce_add(self) -> T {
         T::reduce_add(self)
@@ -21,6 +25,17 @@ pub trait ReduceMin: Scalar {
 }
 
 impl<S: Simd, T: ReduceMin> Vector<S, T> {
+    /// Smallest lane.
+    ///
+    /// For floats, NaN lanes depend on the backend. NEON returns NaN when any
+    /// lane is NaN. AVX-512 compares lanes in a tree, so whether NaN comes
+    /// back depends on which lane holds it. The other backends skip NaN lanes
+    /// and return NaN only when every lane is NaN, and so does f16 on NEON
+    /// and AVX-512 without their fp16 extensions. The result can therefore
+    /// differ from folding with [`min`](Self::min) on the same backend. Which
+    /// zero comes back when lanes hold both `-0.0` and `0.0` is also
+    /// unspecified. Do not rely on either case where results must agree
+    /// across backends.
     #[inline(always)]
     pub fn reduce_min(self) -> T {
         T::reduce_min(self)
@@ -33,6 +48,10 @@ pub trait ReduceMax: Scalar {
 }
 
 impl<S: Simd, T: ReduceMax> Vector<S, T> {
+    /// Largest lane.
+    ///
+    /// For floats, NaN lanes and signed zeros behave as described for
+    /// [`reduce_min`](Self::reduce_min).
     #[inline(always)]
     pub fn reduce_max(self) -> T {
         T::reduce_max(self)

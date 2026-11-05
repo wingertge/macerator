@@ -20,4 +20,8 @@ jobs:
           run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
         - name: Run Chrome tests
           run: wasm-pack test --headless --chrome
+        - name: Run Chrome tests with relaxed SIMD
+          run: wasm-pack test --headless --chrome
+          env:
+            RUSTFLAGS: -Ctarget-feature=+simd128,+relaxed-simd --cfg getrandom_backend="wasm_js"
         

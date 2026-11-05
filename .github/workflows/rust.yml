@@ -30,5 +30,17 @@ jobs:
       run: |
         rustup target add thumbv7em-none-eabihf
         cargo check --no-default-features --target thumbv7em-none-eabihf
+    - name: Check formatting
+      if: matrix.os == 'ubuntu-latest'
+      # `cargo fmt` does not reach the backend modules behind `moddef!`.
+      run: git ls-files '*.rs' | xargs rustfmt --check --edition 2021
+    - name: Check MSRV
+      run: |
+        rustup toolchain install 1.94 --profile minimal
+        cargo +1.94 check
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test --workspace --verbose
+    - name: Run tests in release
+      run: cargo test --workspace --release --verbose
+    - name: Run tests without default features
+      run: cargo test --no-default-features --verbose

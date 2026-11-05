@@ -14,6 +14,7 @@ pub(crate) mod backend;
 mod base;
 mod bitwise;
 mod convert;
+mod dot;
 mod mask_reduce;
 
 mod fma;
@@ -32,6 +33,7 @@ pub use backend::*;
 pub use base::*;
 pub use bitwise::*;
 pub use convert::*;
+pub use dot::*;
 pub use mask_reduce::*;
 
 pub use fma::*;

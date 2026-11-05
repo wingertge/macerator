@@ -12,7 +12,7 @@ use paste::paste;
 use crate::{backend::arch::NullaryFnOnce, impl_cmp_scalar, Scalar, WithSimd};
 
 use crate::backend::{
-    arch::impl_simd, cast, saturate_f32_i32, saturate_f64_i64, seal::Sealed, RoundTiesEven, Simd,
+    arch::impl_simd, cast, impl_dot_scalar, saturate_f32_i32, saturate_f64_i64, seal::Sealed, RoundTiesEven, Simd,
     VRegister, Vector,
 };
 
@@ -412,6 +412,7 @@ impl Simd for Lsx {
     fn fma_f64_supported() -> bool {
         true
     }
+    impl_dot_scalar!(16);
     #[inline(always)]
     fn bitnot(a: Self::Register) -> Self::Register {
         Self::bitxor(a, Self::splat_i64(-1))

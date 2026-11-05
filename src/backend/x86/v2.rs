@@ -485,6 +485,23 @@ impl Simd for V2 {
     // x86-64 v2 has no fused multiply-add.
     impl_fma_scalar!(16, f32, f64);
     #[inline(always)]
+    fn dot_i8(a: Self::Register, b: Self::Register, acc: Self::Register) -> Self::Register {
+        // `madd` sums the i32 products of each pair of i16 lanes, and `hadd`
+        // adds pairs of pairs, in order across its two inputs.
+        unsafe {
+            let (a, b) = (cast!(a), cast!(b));
+            let lo = _mm_madd_epi16(_mm_cvtepi8_epi16(a), _mm_cvtepi8_epi16(b));
+            let a = _mm_unpackhi_epi64(a, a);
+            let b = _mm_unpackhi_epi64(b, b);
+            let hi = _mm_madd_epi16(_mm_cvtepi8_epi16(a), _mm_cvtepi8_epi16(b));
+            cast!(_mm_add_epi32(cast!(acc), _mm_hadd_epi32(lo, hi)))
+        }
+    }
+    #[inline(always)]
+    fn dot_i8_supported() -> bool {
+        true
+    }
+    #[inline(always)]
     fn bitnot(a: Self::Register) -> Self::Register {
         cast!(_mm_xor_si128(cast!(a), cast!(Self::splat_i64(-1))))
     }

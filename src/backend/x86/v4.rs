@@ -760,6 +760,28 @@ where
         true
     }
     #[inline(always)]
+    fn dot_i8(a: Self::Register, b: Self::Register, acc: Self::Register) -> Self::Register {
+        // Within each 128-bit block: unpacking a byte with itself and shifting
+        // right by 8 sign-extends it, the low eight bytes into `lo` and the
+        // high eight into `hi`. `madd` sums the i32 products of each pair of
+        // i16 lanes, and adding the even pairs to the odd ones leaves the
+        // block's four groups in order.
+        unsafe {
+            let (a, b): (__m512i, __m512i) = (cast!(a), cast!(b));
+            let widen_lo = |v| _mm512_srai_epi16::<8>(_mm512_unpacklo_epi8(v, v));
+            let widen_hi = |v| _mm512_srai_epi16::<8>(_mm512_unpackhi_epi8(v, v));
+            let lo = _mm512_castsi512_ps(_mm512_madd_epi16(widen_lo(a), widen_lo(b)));
+            let hi = _mm512_castsi512_ps(_mm512_madd_epi16(widen_hi(a), widen_hi(b)));
+            let even = _mm512_castps_si512(_mm512_shuffle_ps::<0b10_00_10_00>(lo, hi));
+            let odd = _mm512_castps_si512(_mm512_shuffle_ps::<0b11_01_11_01>(lo, hi));
+            cast!(_mm512_add_epi32(cast!(acc), _mm512_add_epi32(even, odd)))
+        }
+    }
+    #[inline(always)]
+    fn dot_i8_supported() -> bool {
+        true
+    }
+    #[inline(always)]
     fn recip_f16(a: Self::Register) -> Self::Register {
         FP16::recip_f16(a)
     }

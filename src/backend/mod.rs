@@ -167,8 +167,11 @@ impl<S: Simd, T: Scalar> Mask<S, T> {
         self.bitor(rhs)
     }
 
-    /// Converts a slice of booleans to a mask. Slice length must be equal to
-    /// `lanes`.
+    /// Converts a slice of booleans to a mask.
+    ///
+    /// # Panics
+    ///
+    /// If the slice length is not equal to `lanes`.
     pub fn from_bools(bools: &[bool]) -> Self {
         T::mask_from_bools(bools)
     }

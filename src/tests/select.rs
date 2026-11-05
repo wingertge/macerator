@@ -218,3 +218,31 @@ fn test_select_reused_mask() {
         |out: &[f32]| { assert_eq!(&want[..], out) }
     );
 }
+
+/// Whether `from_bools` panics on a slice one too short and on one too long.
+#[cfg(not(target_arch = "wasm32"))]
+#[inline(always)]
+fn test_from_bools_wrong_length_impl<S: Simd, T: Scalar>(_: ()) -> [bool; 2] {
+    let lanes = T::lanes::<S>();
+    let bools = vec![true; lanes + 1];
+    [&bools[..lanes - 1], &bools[..]]
+        .map(|bools| std::panic::catch_unwind(|| Mask::<S, T>::from_bools(bools)).is_err())
+}
+
+// wasm aborts on panic, so there is nothing to catch there.
+#[cfg(not(target_arch = "wasm32"))]
+macro_rules! testgen_from_bools_wrong_length {
+    ($($ty: ty),*) => {
+        $(::paste::paste! {
+            #[test]
+            fn [<test_from_bools_wrong_length_ $ty>]() {
+                for_each_backend!(test_from_bools_wrong_length_impl, $ty, (), |out: &[bool; 2]| {
+                    assert_eq!(out, &[true, true]);
+                });
+            }
+        })*
+    };
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+testgen_from_bools_wrong_length!(u8, u16, u32, u64);

@@ -303,7 +303,7 @@ impl Simd for V3 {
     }
     #[inline(always)]
     fn mask_from_bools_8(bools: &[bool]) -> Self::Mask8 {
-        debug_assert_eq!(bools.len(), Self::lanes8());
+        assert_eq!(bools.len(), Self::lanes8());
         const LANES: usize = 256 / 8;
         let mut out = [0i8; LANES];
         for i in 0..LANES {
@@ -313,7 +313,7 @@ impl Simd for V3 {
     }
     #[inline(always)]
     fn mask_from_bools_16(bools: &[bool]) -> Self::Mask16 {
-        debug_assert_eq!(bools.len(), Self::lanes16());
+        assert_eq!(bools.len(), Self::lanes16());
         const LANES: usize = 256 / 16;
         let mut out = [0i16; LANES];
         for i in 0..LANES {
@@ -323,7 +323,7 @@ impl Simd for V3 {
     }
     #[inline(always)]
     fn mask_from_bools_32(bools: &[bool]) -> Self::Mask32 {
-        debug_assert_eq!(bools.len(), Self::lanes32());
+        assert_eq!(bools.len(), Self::lanes32());
         const LANES: usize = 256 / 32;
         let mut out = [0i32; LANES];
         for i in 0..LANES {
@@ -333,7 +333,7 @@ impl Simd for V3 {
     }
     #[inline(always)]
     fn mask_from_bools_64(bools: &[bool]) -> Self::Mask64 {
-        debug_assert_eq!(bools.len(), Self::lanes64());
+        assert_eq!(bools.len(), Self::lanes64());
         const LANES: usize = 256 / 64;
         let mut out = [0i64; LANES];
         for i in 0..LANES {

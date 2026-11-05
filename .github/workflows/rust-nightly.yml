@@ -20,8 +20,8 @@ jobs:
     - name: Install Nightly
       run: rustup install nightly
     - name: Build no-fp16
-      run: cargo +nightly build --verbose --features nightly
+      run: cargo +nightly build --verbose --no-default-features --features std,avx512,nightly
     - name: Build fp16
-      run: cargo +nightly build --verbose --features fp16
+      run: cargo +nightly build --verbose --features fp16,nightly
     - name: Run tests
-      run: cargo +nightly test --verbose --features fp16
+      run: cargo +nightly test --verbose --features fp16,nightly

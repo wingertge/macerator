@@ -333,7 +333,6 @@ macro_rules! impl_select_bitwise {
     };
 }
 
-
 /// Any and all for masks held as vectors of all-ones or all-zero lanes: every
 /// byte of a set lane is set, so byte reductions answer for every lane width.
 macro_rules! impl_mask_reduce {
@@ -688,7 +687,6 @@ where
     impl_unop!(trunc, vrndq, f32, f64);
     impl_unop!(round_ties_even, vrndnq, f32, f64);
     delegate_fp16!(unop floor, ceil, trunc, round_ties_even);
-
 
     // `fcvtzs` and `fcvtns` saturate and map NaN to 0, as Rust's `as` does.
     impl_unop!(trunc_to_int, vcvtq_s32, f32);

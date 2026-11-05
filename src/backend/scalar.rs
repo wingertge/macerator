@@ -13,7 +13,8 @@ use paste::paste;
 use crate::{MaskOps, Scalar};
 
 use super::{
-    cast, impl_convert_scalar, wrapping_add, wrapping_mul, wrapping_sub, RoundTiesEven, Simd, VRegister, WithSimd, impl_fma_scalar, impl_dot_scalar,
+    cast, impl_convert_scalar, impl_dot_scalar, impl_fma_scalar, wrapping_add, wrapping_mul,
+    wrapping_sub, RoundTiesEven, Simd, VRegister, WithSimd,
 };
 
 impl VRegister for u64 {}
@@ -110,7 +111,6 @@ macro_rules! impl_select_scalar {
         })*
     };
 }
-
 
 macro_rules! impl_mask_reduce_scalar {
     ($($bits: literal),*) => {

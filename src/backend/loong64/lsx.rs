@@ -12,8 +12,8 @@ use paste::paste;
 use crate::{backend::arch::NullaryFnOnce, impl_cmp_scalar, Scalar, WithSimd};
 
 use crate::backend::{
-    arch::impl_simd, cast, impl_dot_scalar, saturate_f32_i32, saturate_f64_i64, seal::Sealed, RoundTiesEven, Simd,
-    VRegister, Vector,
+    arch::impl_simd, cast, impl_dot_scalar, saturate_f32_i32, saturate_f64_i64, seal::Sealed,
+    RoundTiesEven, Simd, VRegister, Vector,
 };
 
 use super::*;

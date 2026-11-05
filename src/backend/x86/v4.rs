@@ -514,7 +514,9 @@ where
     }
     #[inline(always)]
     fn round_to_int_f32(a: Self::Register) -> Self::Register {
-        let rounded = cast!(_mm512_cvt_roundps_epi32::<{ _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC }>(cast!(a)));
+        let rounded = cast!(_mm512_cvt_roundps_epi32::<
+            { _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC },
+        >(cast!(a)));
         saturate_masked_f32_i32::<Self>(a, rounded)
     }
     #[inline(always)]
@@ -539,7 +541,9 @@ where
     }
     #[inline(always)]
     fn round_to_int_f64(a: Self::Register) -> Self::Register {
-        let rounded = cast!(_mm512_cvt_roundpd_epi64::<{ _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC }>(cast!(a)));
+        let rounded = cast!(_mm512_cvt_roundpd_epi64::<
+            { _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC },
+        >(cast!(a)));
         saturate_masked_f64_i64::<Self>(a, rounded)
     }
     #[inline(always)]

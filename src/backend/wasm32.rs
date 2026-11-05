@@ -13,7 +13,8 @@ use crate::{seal::Sealed, Scalar, WithSimd};
 
 use super::{
     arch::{impl_simd, NullaryFnOnce},
-    cast, impl_cmp_scalar, impl_convert_f64_emulated, wrapping_mul, RoundTiesEven, Simd, VRegister, Vector, impl_fma_scalar,
+    cast, impl_cmp_scalar, impl_convert_f64_emulated, impl_fma_scalar, wrapping_mul, RoundTiesEven,
+    Simd, VRegister, Vector,
 };
 
 impl Sealed for v128 {}

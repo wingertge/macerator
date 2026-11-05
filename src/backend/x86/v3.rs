@@ -13,8 +13,8 @@ use paste::paste;
 use crate::{backend::arch::NullaryFnOnce, impl_cmp_scalar, Scalar, WithSimd};
 
 use crate::backend::{
-    arch::impl_simd, cast, impl_convert_f64_emulated, seal::Sealed, wrapping_mul,
-    RoundTiesEven, Simd, VRegister, Vector,
+    arch::impl_simd, cast, impl_convert_f64_emulated, seal::Sealed, wrapping_mul, RoundTiesEven,
+    Simd, VRegister, Vector,
 };
 
 use super::*;
@@ -235,7 +235,8 @@ impl Simd for V3 {
     // Pairwise tree instead of a serial chain of scalar adds.
     #[inline(always)]
     fn reduce_add_f32(a: Self::Register) -> f32 {
-        let halves = unsafe { _mm_add_ps(_mm256_castps256_ps128(a), _mm256_extractf128_ps::<1>(a)) };
+        let halves =
+            unsafe { _mm_add_ps(_mm256_castps256_ps128(a), _mm256_extractf128_ps::<1>(a)) };
         V2::reduce_add_f32(halves)
     }
     #[inline(always)]

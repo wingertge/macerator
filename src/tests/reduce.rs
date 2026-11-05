@@ -374,10 +374,11 @@ fn assert_approx_eq_sum<T: RelativeEq<Epsilon = T> + Debug + NumCast + Copy>(lhs
     // No idea what the actual deviation is, f64 failed with an absolute difference
     // of 1e-10
     let epsilon = T::from(2.0.powf(-8.0)).unwrap();
-    // Higher max relative because instructions may use butterfly reduction, which
-    // can accumulate error to log2(lanes) times the normal error. 4x seems to work
-    // for the largest lane count.
-    let max_relative = T::from(T::default_max_relative().to_f64().unwrap() * 4.0).unwrap();
+    // A sum of 128 positive values makes 127 additions, in an order that depends
+    // on the backend, and each one rounds by up to half an epsilon of the total.
+    // So two sums can differ by up to 127 epsilons. For f32 that's 1.5e-5, still
+    // well under the 7.8e-5 of the smallest element against the largest sum.
+    let max_relative = T::from(T::default_max_relative().to_f64().unwrap() * 127.0).unwrap();
     // f16 rounds every partial sum to 11 bits, and the backend and the
     // reference add in different orders. Over 128 values the two sums drift
     // apart by up to ~0.6%, more than 4x f16 epsilon (0.39%) allows. 2^-7 still

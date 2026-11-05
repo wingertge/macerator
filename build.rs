@@ -12,7 +12,8 @@ fn main() {
         // Workaround for Safari
         relaxed_simd: { all(target_arch = "wasm32", target_feature = "simd128", target_feature = "relaxed-simd") },
 
-        x86_v3: { feature = "miri-x86_v3" },
-        x86_v4: { feature = "miri-x86_v4" },
+        // The Miri rows these target features select, for tests it lacks intrinsics for.
+        x86_v3: { all(x86, target_feature = "avx2") },
+        x86_v4: { all(x86, target_feature = "avx512f") },
     }
 }

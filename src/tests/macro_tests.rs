@@ -76,3 +76,20 @@ where
 fn test_with_simd_where_clause() {
     assert_eq!(test_where_simd(1), 2);
 }
+
+#[with_simd]
+fn test_const_first<const N: usize, S: Simd, T: Copy>(a: [T; N]) -> T {
+    a[0]
+}
+
+#[with_simd]
+fn test_const_last<S: Simd, T: Copy, const N: usize>(a: [T; N]) -> T {
+    a[0]
+}
+
+/// Generic arguments follow the declared order, without the SIMD parameter.
+#[::wasm_bindgen_test::wasm_bindgen_test(unsupported = test)]
+fn test_with_simd_generic_order() {
+    assert_eq!(test_const_first::<2, u32>([1, 2]), 1);
+    assert_eq!(test_const_last::<u32, 2>([1, 2]), 1);
+}

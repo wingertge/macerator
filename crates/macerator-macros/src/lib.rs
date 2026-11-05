@@ -72,17 +72,6 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
 
     let name = &sig.ident;
 
-    let lifetimes = sig.generics.lifetimes();
-    let type_params = sig.generics.type_params();
-    let const_params = sig.generics.const_params();
-
-    let mut outer_fn_sig = sig.clone();
-    outer_fn_sig.generics.params = lifetimes
-        .map(|l| GenericParam::Lifetime(l.clone()))
-        .chain(type_params.skip(1).map(|t| GenericParam::Type(t.clone())))
-        .chain(const_params.map(|c| GenericParam::Const(c.clone())))
-        .collect();
-
     let Some(simd_param) = sig.generics.type_params().next() else {
         return Err(syn::Error::new(
             sig.ident.span(),
@@ -90,6 +79,18 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
         ));
     };
     let simd_generic_name = simd_param.ident.clone();
+
+    // Only the SIMD parameter goes, so callers' generic arguments keep the
+    // declared order.
+    let mut outer_fn_sig = sig.clone();
+    outer_fn_sig.generics.params = sig
+        .generics
+        .params
+        .iter()
+        .filter(|param| !matches!(param, GenericParam::Type(ty) if ty.ident == simd_generic_name))
+        .cloned()
+        .collect();
+
     // The dispatcher doesn't have the SIMD parameter, so `where` bounds on it
     // only apply to the inner fn.
     if let Some(where_clause) = &mut outer_fn_sig.generics.where_clause {

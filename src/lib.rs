@@ -1,3 +1,4 @@
+#![doc = include_str!("../README.md")]
 #![no_std]
 #![cfg_attr(avx512_fp16, feature(stdarch_x86_avx512_f16))]
 #![cfg_attr(loong64, feature(stdarch_loongarch))]

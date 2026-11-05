@@ -209,6 +209,11 @@ pub unsafe fn vload_unaligned<S: Simd, T: Scalar>(ptr: *const T) -> Vector<S, T>
 /// Load the lower half of a vector from an unaligned element pointer. The
 /// upper half of the result is zeroed.
 ///
+/// A half is half the vector's bytes, so with a single 64-bit lane, as on the
+/// scalar fallback, it splits the element. `lanes / 2` is 0 there but this
+/// still touches the half, so generic code that steps by `lanes / 2` needs to
+/// check `lanes > 1` first.
+///
 /// # Safety
 ///
 /// Same safety requirements as
@@ -221,6 +226,8 @@ pub unsafe fn vload_low<S: Simd, T: Scalar>(ptr: *const T) -> Vector<S, T> {
 /// Load the upper half of a vector. `ptr` points to the start of the whole
 /// vector, so the half is read from `ptr` plus half the vector width. The
 /// lower half of the result is zeroed.
+///
+/// See [`vload_low`] for vectors with a single lane.
 ///
 /// # Safety
 ///
@@ -257,6 +264,8 @@ pub unsafe fn vstore_unaligned<S: Simd, T: Scalar>(ptr: *mut T, value: Vector<S,
 }
 /// Store the lower half of a vector to an unaligned element pointer.
 ///
+/// See [`vload_low`] for vectors with a single lane.
+///
 /// # Safety
 ///
 /// Same safety requirements as
@@ -268,6 +277,8 @@ pub unsafe fn vstore_low<S: Simd, T: Scalar>(ptr: *mut T, value: Vector<S, T>) {
 }
 /// Store the upper half of a vector. `ptr` points to the start of the whole
 /// vector, so the half is written to `ptr` plus half the vector width.
+///
+/// See [`vload_low`] for vectors with a single lane.
 ///
 /// # Safety
 ///

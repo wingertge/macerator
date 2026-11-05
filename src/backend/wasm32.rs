@@ -233,8 +233,8 @@ mod relaxed {
 
     impl Simd128Run for Simd128Relaxed {
         #[inline(always)]
-        fn run_vectorized<F: NullaryFnOnce>(f: F) -> F::Output {
-            Simd128Relaxed::run_vectorized(f)
+        unsafe fn run_vectorized<F: NullaryFnOnce>(f: F) -> F::Output {
+            unsafe { Simd128Relaxed::run_vectorized(f) }
         }
     }
 

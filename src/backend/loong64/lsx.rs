@@ -142,6 +142,22 @@ impl Simd for Lsx {
         true
     }
     #[inline(always)]
+    fn trunc_to_int_unchecked_f32(a: Self::Register) -> Self::Register {
+        cast!(lsx_vftintrz_w_s(cast!(a)))
+    }
+    #[inline(always)]
+    fn round_to_int_unchecked_f32(a: Self::Register) -> Self::Register {
+        cast!(lsx_vftintrne_w_s(cast!(a)))
+    }
+    #[inline(always)]
+    fn trunc_to_int_unchecked_f64(a: Self::Register) -> Self::Register {
+        cast!(lsx_vftintrz_l_d(cast!(a)))
+    }
+    #[inline(always)]
+    fn round_to_int_unchecked_f64(a: Self::Register) -> Self::Register {
+        cast!(lsx_vftintrne_l_d(cast!(a)))
+    }
+    #[inline(always)]
     fn from_int_f64(a: Self::Register) -> Self::Register {
         cast!(lsx_vffint_d_l(cast!(a)))
     }

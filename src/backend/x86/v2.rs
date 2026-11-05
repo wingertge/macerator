@@ -144,6 +144,14 @@ impl Simd for V2 {
     fn from_int_f32_supported() -> bool {
         true
     }
+    #[inline(always)]
+    fn trunc_to_int_unchecked_f32(a: Self::Register) -> Self::Register {
+        cast!(_mm_cvttps_epi32(cast!(a)))
+    }
+    #[inline(always)]
+    fn round_to_int_unchecked_f32(a: Self::Register) -> Self::Register {
+        cast!(_mm_cvtps_epi32(cast!(a)))
+    }
     // No 64-bit float and integer conversion before AVX-512.
     impl_convert_f64_emulated!();
 

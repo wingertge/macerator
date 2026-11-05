@@ -578,6 +578,27 @@ pub trait Simd: Sized + seal::Sealed + 'static {
     declare_unop!(round_to_int, f32, f64);
     declare_unop!(from_int, f32, f64);
 
+    // As `trunc_to_int` and `round_to_int` for lanes in range: f32 lanes whose
+    // result fits i32, f64 lanes below 2^51 in magnitude. Other lanes give an
+    // unspecified value. Backends with nothing cheaper that is safe keep these
+    // defaults.
+    #[inline(always)]
+    fn trunc_to_int_unchecked_f32(a: Self::Register) -> Self::Register {
+        Self::trunc_to_int_f32(a)
+    }
+    #[inline(always)]
+    fn round_to_int_unchecked_f32(a: Self::Register) -> Self::Register {
+        Self::round_to_int_f32(a)
+    }
+    #[inline(always)]
+    fn trunc_to_int_unchecked_f64(a: Self::Register) -> Self::Register {
+        Self::trunc_to_int_f64(a)
+    }
+    #[inline(always)]
+    fn round_to_int_unchecked_f64(a: Self::Register) -> Self::Register {
+        Self::round_to_int_f64(a)
+    }
+
     // Shifts every lane by `n` bits. `n` must be less than the lane width:
     // backends disagree about larger counts. Right shifts are logical for
     // unsigned lanes and arithmetic for signed ones.
@@ -807,6 +828,14 @@ pub(crate) fn f64_to_i64<S: Simd>(x: S::Register) -> S::Register {
         }
         return unsafe { *S::load_unaligned(out.as_ptr()) };
     }
+    f64_to_i64_unchecked::<S>(x)
+}
+
+/// The fast path of [`f64_to_i64`] alone: the same result for lanes below 2^51
+/// in magnitude, an unspecified value for others.
+#[cfg(any(x86, wasm32))]
+#[inline(always)]
+pub(crate) fn f64_to_i64_unchecked<S: Simd>(x: S::Register) -> S::Register {
     // 1.5 * 2^52
     let magic = S::splat_f64(6755399441055744.0);
     S::sub_i64(S::add_f64(x, magic), magic)
@@ -832,6 +861,14 @@ macro_rules! impl_convert_f64_emulated {
         #[inline(always)]
         fn round_to_int_f64_supported() -> bool {
             true
+        }
+        #[inline(always)]
+        fn trunc_to_int_unchecked_f64(a: Self::Register) -> Self::Register {
+            $crate::backend::f64_to_i64_unchecked::<Self>(Self::trunc_f64(a))
+        }
+        #[inline(always)]
+        fn round_to_int_unchecked_f64(a: Self::Register) -> Self::Register {
+            $crate::backend::f64_to_i64_unchecked::<Self>(a)
         }
         #[inline(always)]
         fn from_int_f64(a: Self::Register) -> Self::Register {

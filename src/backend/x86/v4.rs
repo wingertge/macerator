@@ -551,6 +551,26 @@ where
         true
     }
     #[inline(always)]
+    fn trunc_to_int_unchecked_f32(a: Self::Register) -> Self::Register {
+        cast!(_mm512_cvttps_epi32(cast!(a)))
+    }
+    #[inline(always)]
+    fn round_to_int_unchecked_f32(a: Self::Register) -> Self::Register {
+        cast!(_mm512_cvt_roundps_epi32::<
+            { _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC },
+        >(cast!(a)))
+    }
+    #[inline(always)]
+    fn trunc_to_int_unchecked_f64(a: Self::Register) -> Self::Register {
+        cast!(_mm512_cvttpd_epi64(cast!(a)))
+    }
+    #[inline(always)]
+    fn round_to_int_unchecked_f64(a: Self::Register) -> Self::Register {
+        cast!(_mm512_cvt_roundpd_epi64::<
+            { _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC },
+        >(cast!(a)))
+    }
+    #[inline(always)]
     fn from_int_f64(a: Self::Register) -> Self::Register {
         cast!(_mm512_cvtepi64_pd(cast!(a)))
     }

@@ -13,6 +13,27 @@ struct WithSimdOpts {
     arch: Option<Expr>,
 }
 
+/// Turns a function generic over a SIMD backend into one that picks the best
+/// backend for the CPU at runtime and runs its body compiled for that backend.
+///
+/// ```ignore
+/// #[with_simd]
+/// fn sum<S: Simd, T: ReduceAdd>(values: &[T]) -> T {
+///     // ...
+/// }
+///
+/// let total = sum::<f32>(&values);
+/// ```
+///
+/// The first type parameter is the backend. The generated function drops it,
+/// along with any `where` bounds on it, and the original body moves to a
+/// separate `sum_impl` next to it. Arguments must be plain identifiers or `_`,
+/// and methods are not supported.
+///
+/// The body always inlines into the code compiled for the backend, so
+/// attributes like `#[inline]` go on the generated function, while docs, lints
+/// and `cfg` go on both. Functions the body calls need to inline too in order
+/// to get the backend's CPU features, so mark them `#[inline(always)]`.
 #[proc_macro_attribute]
 pub fn with_simd(
     attr: proc_macro::TokenStream,

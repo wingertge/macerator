@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0](https://github.com/wingertge/macerator/compare/macerator-v0.5.2...macerator-v0.6.0) - 2026-11-06
+
+### Added
+
+- add trunc_to_int_unchecked and round_to_int_unchecked ([#96](https://github.com/wingertge/macerator/pull/96))
+- add dot_add, an i8 dot product into i32 lanes ([#97](https://github.com/wingertge/macerator/pull/97))
+- add shifts by per-lane counts, and shifts for 8-bit lanes ([#94](https://github.com/wingertge/macerator/pull/94))
+- add vload_partial and vstore_partial for slice tails ([#92](https://github.com/wingertge/macerator/pull/92))
+- add Neg, safe slice load and store, and Mask: Copy ([#90](https://github.com/wingertge/macerator/pull/90))
+
+### Fixed
+
+- *(macros)* [**breaking**] keep the declared order of generics in with_simd ([#110](https://github.com/wingertge/macerator/pull/110))
+- [**breaking**] make Mask::from_bools panic on a wrong length on every backend ([#111](https://github.com/wingertge/macerator/pull/111))
+- make Simd128Relaxed compile, and test it in CI ([#98](https://github.com/wingertge/macerator/pull/98))
+
+### Other
+
+- [**breaking**] small public API cleanups before 0.6.0 ([#109](https://github.com/wingertge/macerator/pull/109))
+- derive the reduce_add tolerance from the number of additions ([#113](https://github.com/wingertge/macerator/pull/113))
+- test release builds, no default features and the macro crate ([#99](https://github.com/wingertge/macerator/pull/99))
+- show with_simd in the README, and document features and half loads ([#112](https://github.com/wingertge/macerator/pull/112))
+- say how reduce_add, reduce_min and reduce_max treat floats ([#87](https://github.com/wingertge/macerator/pull/87))
+- cheaper x86 float to int fixup, and f64 and i64 conversion in registers ([#91](https://github.com/wingertge/macerator/pull/91))
+- list the rounding ops in the 0.5.2 changelog ([#86](https://github.com/wingertge/macerator/pull/86))
+
 ## [0.5.2](https://github.com/wingertge/macerator/compare/macerator-v0.5.1...macerator-v0.5.2) - 2026-10-29
 
 ### Added

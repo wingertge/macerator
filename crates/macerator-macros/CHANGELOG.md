@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0](https://github.com/wingertge/macerator/compare/macerator-macros-v0.3.2...macerator-macros-v0.4.0) - 2026-11-06
+
+### Fixed
+
+- *(macros)* [**breaking**] keep the declared order of generics in with_simd ([#110](https://github.com/wingertge/macerator/pull/110))
+
+### Other
+
+- show with_simd in the README, and document features and half loads ([#112](https://github.com/wingertge/macerator/pull/112))
+
 ## [0.3.2](https://github.com/wingertge/macerator/compare/macerator-macros-v0.3.1...macerator-macros-v0.3.2) - 2026-09-27
 
 ### Fixed

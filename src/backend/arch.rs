@@ -35,7 +35,6 @@ impl Default for AutoArch {
 }
 
 #[cfg(all(feature = "std", x86))]
-#[macro_export]
 macro_rules! feature_detected {
     ($feature: tt) => {
         ::std::is_x86_feature_detected!($feature)
@@ -43,7 +42,6 @@ macro_rules! feature_detected {
 }
 
 #[cfg(all(feature = "std", aarch64))]
-#[macro_export]
 macro_rules! feature_detected {
     ($feature: tt) => {
         ::std::arch::is_aarch64_feature_detected!($feature)
@@ -51,7 +49,6 @@ macro_rules! feature_detected {
 }
 
 #[cfg(all(feature = "std", loong64))]
-#[macro_export]
 macro_rules! feature_detected {
     ($feature: tt) => {
         ::std::arch::is_loongarch_feature_detected!($feature)
@@ -59,7 +56,6 @@ macro_rules! feature_detected {
 }
 
 #[cfg(any(not(feature = "std"), not(any(x86, aarch64, loong64))))]
-#[macro_export]
 macro_rules! feature_detected {
     ($feature: tt) => {
         cfg!(target_feature = $feature)

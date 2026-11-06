@@ -29,7 +29,7 @@ moddef::moddef!(
     }
 );
 
-use crate::{seal::Sealed, Scalar, VAdd, VBitAnd, VBitNot, VBitOr, VBitXor};
+use crate::{seal::Sealed, Scalar, VBitAnd, VBitNot, VBitOr, VBitXor};
 
 pub trait VRegister: Copy + Pod + Debug + Send + Sync + Sealed {}
 
@@ -451,10 +451,6 @@ pub trait Simd: Sized + seal::Sealed + 'static {
     splat!(transmute 8 -> u8);
     splat!(transmute 16 -> bf16);
     splat!(float 16, 32, 64);
-
-    fn add<T: VAdd>(a: Vector<Self, T>, b: Vector<Self, T>) -> Vector<Self, T> {
-        T::vadd::<Self>(a, b)
-    }
 
     declare_binop!(add, i8, u8, i16, u16, f16, i32, u32, f32, i64, u64, f64);
     declare_binop!(sub, i8, u8, i16, u16, f16, i32, u32, f32, i64, u64, f64);

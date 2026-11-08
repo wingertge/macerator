@@ -18,7 +18,8 @@ impl<S: Simd, T: VRecip> Vector<S, T> {
     ///
     /// Backends that flush subnormals (e.g. SSE/AVX2 `rcp_ps`) saturate subnormal inputs
     /// or subnormal results to signed `±inf`/`±0`, preserving sign without returning NaN.
-    /// `f16` uses unrefined hardware estimates (~8-bit precision) for now.
+    /// `f16` is within 1 ULP on backends with native `f16`, and correctly rounded
+    /// on the rest.
     #[inline(always)]
     pub fn recip(self) -> Self {
         T::vrecip(self)

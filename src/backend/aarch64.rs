@@ -536,7 +536,22 @@ impl FP16Ext for FP16Intrinsic {
     impl_binop!(min, vminq, f16);
     impl_binop!(max, vmaxq, f16);
 
-    impl_unop!(recip, vrecpeq, f16);
+    #[inline(always)]
+    fn recip_f16(a: Self::Register) -> Self::Register {
+        unsafe {
+            let x: float16x8_t = cast!(a);
+            let y0 = vrecpeq_f16(x);
+            // One Newton-Raphson step, enough for f16
+            let y = vmulq_f16(vrecpsq_f16(x, y0), y0);
+            // Keep initial y0 if it saturated (|y0| == inf) to prevent sign corruption
+            let max = vreinterpretq_f16_u16(vdupq_n_u16(f16::MAX.to_bits()));
+            cast!(vbslq_f16(vcagtq_f16(y0, max), y0, y))
+        }
+    }
+    #[inline(always)]
+    fn recip_f16_supported() -> bool {
+        true
+    }
     impl_unop!(sqrt, vsqrtq, f16);
     impl_unop!(floor, vrndmq, f16);
     impl_unop!(ceil, vrndpq, f16);

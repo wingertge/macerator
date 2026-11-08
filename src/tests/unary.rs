@@ -29,7 +29,7 @@ fn assert_approx_eq_recip<T: RelativeEq<Epsilon = T> + Debug + NumCast + Copy>(
     rhs: &[T],
 ) {
     let epsilon = match core::mem::size_of::<T>() {
-        ..=2 => T::from(2.0.powf(-8.0)).unwrap(), // f16: ~8-bit estimate precision
+        ..=2 => T::from(2.0.powf(-10.0)).unwrap(), // f16: within 1 ULP
         4 => T::from(4.0 * f32::EPSILON as f64).unwrap(), // f32: ~4 ULP
         _ => T::from(4.0 * f64::EPSILON).unwrap(), // f64: ~4 ULP
     };
@@ -78,6 +78,43 @@ testgen_unop!(
     #[cfg_attr(all(miri, any(x86_v3, x86_v4, aarch64)), ignore)]
     f16
 );
+/// Checks f16 `recip` within 1 ULP of the correctly rounded `1 / x`, with zeros,
+/// infinities and NaN exact. A subnormal input or result may saturate, as for
+/// f32 and f64.
+fn assert_recip_f16(input: &[f16], expected: &[f16], actual: &[f16]) {
+    for ((x, want), got) in input.iter().zip(expected).zip(actual) {
+        let saturation = if x.classify() == FpCategory::Subnormal {
+            Some(f16::INFINITY)
+        } else if want.classify() == FpCategory::Subnormal {
+            Some(f16::ZERO)
+        } else {
+            None
+        };
+        let saturation = saturation.map(|s| if x.is_sign_negative() { -s } else { s });
+        let within_ulp = want.is_finite()
+            && got.is_finite()
+            && want.is_sign_negative() == got.is_sign_negative()
+            && want.to_bits().abs_diff(got.to_bits()) <= 1;
+        assert!(
+            recip_bits_eq(*got, *want)
+                || within_ulp
+                || saturation.is_some_and(|s| recip_bits_eq(*got, s)),
+            "recip({x:?}): expected {want:?} (saturation permitted: {saturation:?}), got {got:?}"
+        );
+    }
+}
+
+#[cfg_attr(miri, ignore)]
+#[::wasm_bindgen_test::wasm_bindgen_test(unsupported = test)]
+fn test_recip_every_f16() {
+    let a: Vec<f16> = (0..=u16::MAX).map(f16::from_bits).collect();
+    // `1 / x` is exact in f64 or not a tie, so rounding it once more is correct.
+    let want: Vec<f16> = a.iter().map(|x| f16::from_f64(1.0 / x.to_f64())).collect();
+    for_each_backend!(test_recip_impl, f16, &a, |got: &[f16]| {
+        assert_recip_f16(&a, &want, got)
+    });
+}
+
 testgen_unop!(
     test_recip,
     recip,

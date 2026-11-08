@@ -17,4 +17,4 @@ proc-macro = true
 darling = "0.24"
 proc-macro2 = "1"
 quote = "1"
-syn = { version = "3", features = ["full"] }
+syn = { version = "3", features = ["full", "visit-mut"] }

@@ -1,8 +1,9 @@
-use darling::FromMeta;
+use darling::{ast::NestedMeta, FromMeta};
 use proc_macro2::{Span, TokenStream};
 use quote::{format_ident, quote};
-use syn::{parse_quote, LifetimeParam, Token, Type};
+use syn::{parse_quote, LifetimeParam, Safety, Token, Type};
 use syn::{spanned::Spanned, FnArg, GenericParam, ItemFn, Pat};
+use syn::{visit_mut, visit_mut::VisitMut};
 use syn::{Expr, Lifetime};
 use syn::{Ident, TypeGroup, TypeParen, WherePredicate};
 
@@ -28,12 +29,17 @@ struct WithSimdOpts {
 /// The first type parameter is the backend. The generated function drops it,
 /// along with any `where` bounds on it, and the original body moves to a
 /// separate `sum_impl` next to it. Arguments must be plain identifiers or `_`,
-/// and methods are not supported.
+/// and methods are not supported. A type with a hidden lifetime needs it written
+/// out, as in `Foo<'_>`, since the macro can't see that `Foo` has one.
 ///
 /// The body always inlines into the code compiled for the backend, so
 /// attributes like `#[inline]` go on the generated function, while docs, lints
 /// and `cfg` go on both. Functions the body calls need to inline too in order
 /// to get the backend's CPU features, so mark them `#[inline(always)]`.
+///
+/// `#[with_simd(arch = expr)]` dispatches on `expr`, usually an `Arch`, in place of
+/// detecting the CPU. The generated function is `unsafe`, since `expr` may name a
+/// backend the CPU doesn't have.
 #[proc_macro_attribute]
 pub fn with_simd(
     attr: proc_macro::TokenStream,
@@ -50,13 +56,10 @@ const ANON_LIFETIME: &str = "'__simd";
 fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, syn::Error> {
     let opts = match attr.is_empty() {
         true => WithSimdOpts::default(),
-        false => {
-            let meta = syn::parse2::<syn::Meta>(attr)?;
-            WithSimdOpts::from_meta(&meta)?
-        }
+        false => WithSimdOpts::from_list(&NestedMeta::parse_meta_list(attr)?)?,
     };
 
-    let unsafety = opts.arch.as_ref().map(|arch| Token![unsafe](arch.span()));
+    let arch_unsafe = opts.arch.as_ref().map(|arch| Token![unsafe](arch.span()));
     let arch = opts
         .arch
         .unwrap_or(parse_quote!(macerator::AutoArch::new()));
@@ -83,6 +86,9 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
     // Only the SIMD parameter goes, so callers' generic arguments keep the
     // declared order.
     let mut outer_fn_sig = sig.clone();
+    if let Some(arch_unsafe) = arch_unsafe {
+        outer_fn_sig.safety = Safety::Unsafe(arch_unsafe);
+    }
     outer_fn_sig.generics.params = sig
         .generics
         .params
@@ -104,6 +110,7 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
     inner_fn_sig.ident = format_ident!("{}_impl", name);
     let struct_name = format_ident!("{}_struct", name);
 
+    let mut input_lifetimes = NameElidedLifetimes::default();
     let fields = sig
         .inputs
         .iter()
@@ -122,8 +129,8 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
                     }
                 };
                 let mut ty = *pat_type.ty.clone();
-                let has_implicit_ref = add_named_lifetimes(&mut ty);
-                Ok((ident, ty, has_implicit_ref))
+                input_lifetimes.visit_type_mut(&mut ty);
+                Ok((ident, ty))
             }
         })
         .collect::<Result<Vec<_>, _>>()?;
@@ -140,10 +147,21 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
 
     let anon_lifetime = Lifetime::new(ANON_LIFETIME, Span::call_site());
 
+    // The usual elision rule: an elided output lifetime is the one input lifetime.
+    // With any other number the inner fn gets a compile error for it, so what it's
+    // named here doesn't matter.
+    let output_lifetime = match input_lifetimes.used.as_slice() {
+        [lifetime] => lifetime.clone(),
+        _ => anon_lifetime.clone(),
+    };
     let output_ty = match sig.output.clone() {
         syn::ReturnType::Default => quote! { () },
         syn::ReturnType::Type(_, mut ty) => {
-            add_named_lifetimes(&mut ty);
+            NameElidedLifetimes {
+                output: Some(output_lifetime),
+                ..Default::default()
+            }
+            .visit_type_mut(&mut ty);
             quote! { #ty }
         }
     };
@@ -162,14 +180,35 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
     });
 
     let mut struct_generics = outer_fn_sig.generics.clone();
-    struct_generics.params.insert(
-        0,
-        GenericParam::Lifetime(LifetimeParam::new(anon_lifetime.clone())),
-    );
+    for lifetime in input_lifetimes
+        .generated
+        .into_iter()
+        .chain([anon_lifetime.clone()])
+    {
+        struct_generics
+            .params
+            .insert(0, GenericParam::Lifetime(LifetimeParam::new(lifetime)));
+    }
+
+    // Marks every parameter as used, since some may only be in the output type.
+    let phantom_params = struct_generics
+        .params
+        .iter()
+        .filter_map(|param| match param {
+            GenericParam::Lifetime(param) => {
+                let lifetime = &param.lifetime;
+                Some(quote![&#lifetime ()])
+            }
+            GenericParam::Type(param) => {
+                let ident = &param.ident;
+                Some(quote![::core::marker::PhantomData<#ident>])
+            }
+            GenericParam::Const(_) => None,
+        });
 
     let (impl_generics, type_generics, where_clause) = struct_generics.split_for_impl();
 
-    let field_decl = fields.iter().map(|(ident, ty, _)| quote![#ident: #ty]);
+    let field_decl = fields.iter().map(|(ident, ty)| quote![#ident: #ty]);
     let field_names = fields.iter().map(|it| &it.0).collect::<Vec<_>>();
 
     let mut inner_generics_no_lifetime = inner_fn_sig.generics.clone();
@@ -194,11 +233,11 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
     Ok(quote! {
         #(#attrs)*
         #[allow(unused_mut, clippy::all)]
-        #unsafety #vis #outer_fn_sig {
+        #vis #outer_fn_sig {
             #[allow(non_camel_case_types)]
             struct #struct_name #impl_generics #where_clause {
                 #(#field_decl,)*
-                __lifetime: ::core::marker::PhantomData<&#anon_lifetime ()>,
+                __generics: ::core::marker::PhantomData<(#(#phantom_params,)*)>,
             };
 
             impl #impl_generics macerator::WithSimd for #struct_name #type_generics #where_clause {
@@ -217,7 +256,11 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
                 }
             }
 
-            (#arch).dispatch( #struct_name #struct_turbofish { __lifetime: core::marker::PhantomData, #(#field_names,)* } )
+            // `Arch::dispatch` is unsafe, `AutoArch::dispatch` isn't.
+            #[allow(unused_unsafe)]
+            unsafe {
+                (#arch).dispatch( #struct_name #struct_turbofish { __generics: core::marker::PhantomData, #(#field_names,)* } )
+            }
         }
 
         #(#inner_attrs)*
@@ -239,23 +282,64 @@ fn bounds_param(predicate: &WherePredicate, param: &Ident) -> bool {
     matches!(ty, Type::Path(p) if p.qself.is_none() && p.path.is_ident(param))
 }
 
-fn add_named_lifetimes(ty: &mut Type) -> bool {
-    match ty {
-        Type::Array(type_array) => add_named_lifetimes(&mut type_array.elem),
-        Type::Group(type_group) => add_named_lifetimes(&mut type_group.elem),
-        Type::Paren(type_paren) => add_named_lifetimes(&mut type_paren.elem),
-        Type::Ptr(type_ptr) => add_named_lifetimes(&mut type_ptr.elem),
-        Type::Reference(type_reference) if type_reference.lifetime.is_none() => {
-            type_reference.lifetime = Some(Lifetime::new(
-                ANON_LIFETIME,
-                type_reference.and_token.span(),
-            ));
-            true
+/// Names the lifetimes a function signature can elide but a struct field can't.
+///
+/// Each one in an input gets its own name, because a `&mut` makes what's behind
+/// it invariant, so `&mut &u32` wouldn't fit a single lifetime.
+#[derive(Default)]
+struct NameElidedLifetimes {
+    /// When set, the name for all of them, in place of generating one each.
+    output: Option<Lifetime>,
+    generated: Vec<Lifetime>,
+    /// Every lifetime position seen, named or generated.
+    used: Vec<Lifetime>,
+}
+
+impl NameElidedLifetimes {
+    fn name(&mut self, span: Span) -> Lifetime {
+        if let Some(output) = &self.output {
+            return output.clone();
         }
-        Type::Slice(type_slice) => add_named_lifetimes(&mut type_slice.elem),
-        Type::Tuple(type_tuple) => type_tuple.elems.iter_mut().any(add_named_lifetimes),
-        _ => false,
+        let name = format!("{ANON_LIFETIME}{}", self.generated.len());
+        let lifetime = Lifetime::new(&name, span);
+        self.generated.push(lifetime.clone());
+        lifetime
     }
+}
+
+impl VisitMut for NameElidedLifetimes {
+    fn visit_type_reference_mut(&mut self, ty: &mut syn::TypeReference) {
+        if ty.lifetime.is_none() {
+            ty.lifetime = Some(self.name(ty.and_token.span()));
+        }
+        visit_mut::visit_type_reference_mut(self, ty);
+    }
+
+    fn visit_lifetime_mut(&mut self, lifetime: &mut Lifetime) {
+        if lifetime.ident == "_" {
+            *lifetime = self.name(lifetime.span());
+        }
+        self.used.push(lifetime.clone());
+    }
+
+    // Elided lifetimes in `fn(&T)`, `Fn(&T)` and `for<'a>` bounds are higher-ranked,
+    // so those are valid in a struct field as they are.
+    fn visit_type_fn_ptr_mut(&mut self, _: &mut syn::TypeFnPtr) {}
+
+    fn visit_parenthesized_generic_arguments_mut(
+        &mut self,
+        _: &mut syn::ParenthesizedGenericArguments,
+    ) {
+    }
+
+    fn visit_trait_bound_mut(&mut self, bound: &mut syn::TraitBound) {
+        if bound.lifetimes.is_none() {
+            visit_mut::visit_trait_bound_mut(self, bound);
+        }
+    }
+
+    // Array lengths and const generic arguments have their own scope.
+    fn visit_expr_mut(&mut self, _: &mut Expr) {}
 }
 
 #[cfg(test)]

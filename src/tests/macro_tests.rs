@@ -114,14 +114,15 @@ fn test_placeholder_lifetime<S: Simd>(a: Cow<'_, str>, b: &'_ u32) -> usize {
     a.len() + *b as usize
 }
 
-/// The two references have different lifetimes, and `&mut` can't shrink the
+/// The two references can have different lifetimes, and `&mut` can't shrink the
 /// inner one to match the outer.
 #[with_simd]
 fn test_mut_ref_to_ref<S: Simd>(a: &mut &u32) -> u32 {
     **a
 }
 
-/// These are higher-ranked, so naming their lifetime would reject the body.
+/// These are higher-ranked. Naming their lifetime in the struct would make them
+/// plain `fn(&'s u32)`, which can't be passed on to the inner fn.
 #[with_simd]
 fn test_fn_args<S: Simd>(a: fn(&u32) -> u32, b: Box<dyn Fn(&u32) -> u32>) -> u32 {
     let x = 1;
@@ -137,11 +138,45 @@ fn test_with_simd_elided_inputs() {
     assert_eq!(test_placeholder_lifetime(Cow::Borrowed("ab"), &x), 3);
     assert_eq!(test_mut_ref_to_ref(&mut y), 2);
     assert_eq!(test_fn_args(|x| *x, Box::new(|x| *x)), 2);
+    assert_eq!(test_hrtb_with_elided(&()), 1);
+}
+
+trait Pair<'x, T> {}
+
+impl<'x, T> Pair<'x, T> for () {}
+
+/// Only `'x` is higher-ranked here. The `&u32` is an ordinary elided lifetime.
+#[with_simd]
+fn test_hrtb_with_elided<S: Simd>(a: &dyn for<'x> Pair<'x, &u32>) -> u32 {
+    1
 }
 
 #[with_simd]
 #[allow(mismatched_lifetime_syntaxes)]
 fn test_output_from_named<'a, S: Simd>(a: &'a u32) -> &u32 {
+    a
+}
+
+/// One argument with one distinct lifetime, as Rust counts it.
+#[with_simd]
+#[allow(mismatched_lifetime_syntaxes)]
+fn test_output_from_ref_to_ref<'a, S: Simd>(a: &'a &'a u32) -> &u32 {
+    a
+}
+
+#[with_simd]
+#[allow(mismatched_lifetime_syntaxes)]
+fn test_output_from_tuple<'a, S: Simd>(a: (&'a u32, &'a u32)) -> &u32 {
+    a.1
+}
+
+/// Lifetimes bound by `fn` and `for<'x>` don't count.
+#[with_simd]
+fn test_output_past_higher_ranked<S: Simd>(
+    a: &u32,
+    b: fn(&u32) -> u32,
+    c: Box<dyn for<'x> Pair<'x, u32>>,
+) -> &u32 {
     a
 }
 
@@ -155,6 +190,9 @@ fn test_with_simd_elided_output() {
     let x = 1;
     assert_eq!(*test_output_from_named(&x), 1);
     assert_eq!(test_output_in_generic_arg(Some(&x)), Some(&1));
+    assert_eq!(*test_output_from_ref_to_ref(&&x), 1);
+    assert_eq!(*test_output_from_tuple((&0, &x)), 1);
+    assert_eq!(*test_output_past_higher_ranked(&x, |x| *x, Box::new(())), 1);
 }
 
 #[with_simd]
@@ -180,7 +218,6 @@ fn test_with_simd_params_only_in_output() {
 }
 
 #[with_simd(arch = crate::Arch::detect())]
-#[deny(unsafe_op_in_unsafe_fn)]
 fn test_arch_private<S: Simd>(a: u32) -> u32 {
     a + 1
 }
@@ -196,7 +233,6 @@ unsafe fn test_arch_unsafe<S: Simd>(a: u32) -> u32 {
 }
 
 #[with_simd(arch = crate::AutoArch::new())]
-#[deny(unused_unsafe)]
 pub unsafe fn test_arch_pub_unsafe<S: Simd>(a: u32) -> u32 {
     a + 1
 }

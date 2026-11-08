@@ -1,6 +1,6 @@
 use darling::{ast::NestedMeta, FromMeta};
 use proc_macro2::{Span, TokenStream};
-use quote::{format_ident, quote};
+use quote::{format_ident, quote, quote_spanned};
 use syn::{parse_quote, LifetimeParam, Safety, Token, Type};
 use syn::{spanned::Spanned, FnArg, GenericParam, ItemFn, Pat};
 use syn::{visit_mut, visit_mut::VisitMut};
@@ -29,17 +29,18 @@ struct WithSimdOpts {
 /// The first type parameter is the backend. The generated function drops it,
 /// along with any `where` bounds on it, and the original body moves to a
 /// separate `sum_impl` next to it. Arguments must be plain identifiers or `_`,
-/// and methods are not supported. A type with a hidden lifetime needs it written
-/// out, as in `Foo<'_>`, since the macro can't see that `Foo` has one.
+/// and methods are not supported. A type with a hidden lifetime needs it
+/// written out, as in `Foo<'_>`, since the macro can't see that `Foo` has one.
 ///
 /// The body always inlines into the code compiled for the backend, so
 /// attributes like `#[inline]` go on the generated function, while docs, lints
 /// and `cfg` go on both. Functions the body calls need to inline too in order
 /// to get the backend's CPU features, so mark them `#[inline(always)]`.
 ///
-/// `#[with_simd(arch = expr)]` dispatches on `expr`, usually an `Arch`, in place of
-/// detecting the CPU. The generated function is `unsafe`, since `expr` may name a
-/// backend the CPU doesn't have.
+/// `#[with_simd(arch = expr)]` dispatches on `expr`, usually an `Arch`, in
+/// place of detecting the CPU. The generated function is `unsafe`, even when
+/// `expr` is an `AutoArch`: callers must make sure the CPU supports the backend
+/// `expr` picks.
 #[proc_macro_attribute]
 pub fn with_simd(
     attr: proc_macro::TokenStream,
@@ -111,6 +112,8 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
     let struct_name = format_ident!("{}_struct", name);
 
     let mut input_lifetimes = NameElidedLifetimes::default();
+    // The distinct lifetimes of each argument that has any.
+    let mut arg_lifetimes = Vec::new();
     let fields = sig
         .inputs
         .iter()
@@ -130,6 +133,15 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
                 };
                 let mut ty = *pat_type.ty.clone();
                 input_lifetimes.visit_type_mut(&mut ty);
+                let mut distinct = Vec::new();
+                for lifetime in core::mem::take(&mut input_lifetimes.used) {
+                    if !distinct.contains(&lifetime) {
+                        distinct.push(lifetime);
+                    }
+                }
+                if !distinct.is_empty() {
+                    arg_lifetimes.push(distinct);
+                }
                 Ok((ident, ty))
             }
         })
@@ -147,11 +159,12 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
 
     let anon_lifetime = Lifetime::new(ANON_LIFETIME, Span::call_site());
 
-    // The usual elision rule: an elided output lifetime is the one input lifetime.
-    // With any other number the inner fn gets a compile error for it, so what it's
+    // Rust's elision rule: an elided output lifetime is the input's when
+    // exactly one argument has lifetimes and they're all the same one.
+    // Otherwise the inner fn gets a compile error for it, so what it's
     // named here doesn't matter.
-    let output_lifetime = match input_lifetimes.used.as_slice() {
-        [lifetime] => lifetime.clone(),
+    let output_lifetime = match arg_lifetimes.as_slice() {
+        [lifetimes] if lifetimes.len() == 1 => lifetimes[0].clone(),
         _ => anon_lifetime.clone(),
     };
     let output_ty = match sig.output.clone() {
@@ -190,7 +203,8 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
             .insert(0, GenericParam::Lifetime(LifetimeParam::new(lifetime)));
     }
 
-    // Marks every parameter as used, since some may only be in the output type.
+    // Marks every parameter as used, since some may only be in the output type
+    // or in bounds.
     let phantom_params = struct_generics
         .params
         .iter()
@@ -230,6 +244,11 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
     let (_, struct_turbofish_generics, _) = struct_generics_no_lifetime.split_for_impl();
     let struct_turbofish = struct_turbofish_generics.as_turbofish();
 
+    // `arch` is evaluated outside the `unsafe` block below, so an unsafe call
+    // in it needs a block of its own, as anywhere in an `unsafe fn`.
+    let arch_var = Ident::new("__arch", Span::mixed_site());
+    let dispatch = quote_spanned!(arch.span()=> #arch_var.dispatch);
+
     Ok(quote! {
         #(#attrs)*
         #[allow(unused_mut, clippy::all)]
@@ -256,10 +275,11 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
                 }
             }
 
+            let #arch_var = #arch;
             // `Arch::dispatch` is unsafe, `AutoArch::dispatch` isn't.
             #[allow(unused_unsafe)]
             unsafe {
-                (#arch).dispatch( #struct_name #struct_turbofish { __generics: core::marker::PhantomData, #(#field_names,)* } )
+                #dispatch( #struct_name #struct_turbofish { __generics: core::marker::PhantomData, #(#field_names,)* } )
             }
         }
 
@@ -291,8 +311,10 @@ struct NameElidedLifetimes {
     /// When set, the name for all of them, in place of generating one each.
     output: Option<Lifetime>,
     generated: Vec<Lifetime>,
-    /// Every lifetime position seen, named or generated.
+    /// Every lifetime seen, named or generated, except higher-ranked ones.
     used: Vec<Lifetime>,
+    /// The lifetimes the enclosing `for<..>` bounds introduce.
+    higher_ranked: Vec<Lifetime>,
 }
 
 impl NameElidedLifetimes {
@@ -316,14 +338,17 @@ impl VisitMut for NameElidedLifetimes {
     }
 
     fn visit_lifetime_mut(&mut self, lifetime: &mut Lifetime) {
+        if self.higher_ranked.contains(lifetime) {
+            return;
+        }
         if lifetime.ident == "_" {
             *lifetime = self.name(lifetime.span());
         }
         self.used.push(lifetime.clone());
     }
 
-    // Elided lifetimes in `fn(&T)`, `Fn(&T)` and `for<'a>` bounds are higher-ranked,
-    // so those are valid in a struct field as they are.
+    // Elided lifetimes in `fn(&T)` and `Fn(&T)` are higher-ranked, so those are
+    // valid in a struct field as they are.
     fn visit_type_fn_ptr_mut(&mut self, _: &mut syn::TypeFnPtr) {}
 
     fn visit_parenthesized_generic_arguments_mut(
@@ -332,13 +357,26 @@ impl VisitMut for NameElidedLifetimes {
     ) {
     }
 
+    // Only the lifetimes `for<'a>` introduces are higher-ranked. Others in the
+    // bound, elided or not, are the fn's own.
     fn visit_trait_bound_mut(&mut self, bound: &mut syn::TraitBound) {
-        if bound.lifetimes.is_none() {
-            visit_mut::visit_trait_bound_mut(self, bound);
+        let outer = self.higher_ranked.len();
+        if let Some(bound_lifetimes) = &bound.lifetimes {
+            let introduced = bound_lifetimes
+                .lifetimes
+                .iter()
+                .filter_map(|param| match param {
+                    GenericParam::Lifetime(param) => Some(param.lifetime.clone()),
+                    _ => None,
+                });
+            self.higher_ranked.extend(introduced);
         }
+        visit_mut::visit_trait_bound_mut(self, bound);
+        self.higher_ranked.truncate(outer);
     }
 
-    // Array lengths and const generic arguments have their own scope.
+    // Array lengths and const arguments are const bodies, where an elided
+    // lifetime is inferred and the struct's lifetimes aren't allowed.
     fn visit_expr_mut(&mut self, _: &mut Expr) {}
 }
 
@@ -443,6 +481,18 @@ mod tests {
             .as_ref()
             .map_or(0, |w| w.predicates.len());
         assert_eq!(predicates, 0);
+    }
+
+    #[test]
+    fn arch_makes_the_dispatcher_unsafe() {
+        let item = quote! { pub fn f<S: Simd>(x: u32) -> u32 { x } };
+        for (attr, is_unsafe) in [(quote!(), false), (quote!(arch = a()), true)] {
+            let expanded = with_simd_impl(attr, item.clone()).unwrap();
+            let expanded: syn::File = syn::parse2(expanded).unwrap();
+            let f = generated_fn(&expanded, "f");
+            assert_eq!(matches!(f.sig.safety, syn::Safety::Unsafe(_)), is_unsafe);
+            assert!(matches!(f.vis, syn::Visibility::Public(_)));
+        }
     }
 
     #[test]

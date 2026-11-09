@@ -40,7 +40,9 @@ struct WithSimdOpts {
 /// `#[with_simd(arch = expr)]` dispatches on `expr`, usually an `Arch`, in
 /// place of detecting the CPU. The generated function is `unsafe`, even when
 /// `expr` is an `AutoArch`: callers must make sure the CPU supports the backend
-/// `expr` picks.
+/// `expr` picks. `expr` is evaluated before dispatch, so its temporaries are
+/// dropped by then, and an unsafe call in it needs an `unsafe` block unless the
+/// function was already `unsafe`.
 #[proc_macro_attribute]
 pub fn with_simd(
     attr: proc_macro::TokenStream,
@@ -159,10 +161,10 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
 
     let anon_lifetime = Lifetime::new(ANON_LIFETIME, Span::call_site());
 
-    // Rust's elision rule: an elided output lifetime is the input's when
-    // exactly one argument has lifetimes and they're all the same one.
-    // Otherwise the inner fn gets a compile error for it, so what it's
-    // named here doesn't matter.
+    // rustc's elision rule: an elided output lifetime is the input's when
+    // exactly one argument has lifetimes and they're all the same one. Two
+    // arguments with the same `'a` don't qualify. Otherwise rustc rejects the
+    // signature anyway, so what it's named here doesn't matter.
     let output_lifetime = match arg_lifetimes.as_slice() {
         [lifetimes] if lifetimes.len() == 1 => lifetimes[0].clone(),
         _ => anon_lifetime.clone(),
@@ -244,9 +246,14 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
     let (_, struct_turbofish_generics, _) = struct_generics_no_lifetime.split_for_impl();
     let struct_turbofish = struct_turbofish_generics.as_turbofish();
 
-    // `arch` is evaluated outside the `unsafe` block below, so an unsafe call
-    // in it needs a block of its own, as anywhere in an `unsafe fn`.
+    // `arch` is evaluated outside the `unsafe` block below. The dispatcher is
+    // only `unsafe` because of `arch`, so unless the user wrote `unsafe fn`, an
+    // unsafe call in `arch` needs a block of its own, as in a safe fn.
     let arch_var = Ident::new("__arch", Span::mixed_site());
+    let arch_lint = match sig.safety {
+        Safety::Unsafe(_) => quote!(),
+        _ => quote!(#[deny(unsafe_op_in_unsafe_fn)]),
+    };
     let dispatch = quote_spanned!(arch.span()=> #arch_var.dispatch);
 
     Ok(quote! {
@@ -275,6 +282,7 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
                 }
             }
 
+            #arch_lint
             let #arch_var = #arch;
             // `Arch::dispatch` is unsafe, `AutoArch::dispatch` isn't.
             #[allow(unused_unsafe)]
@@ -311,7 +319,8 @@ struct NameElidedLifetimes {
     /// When set, the name for all of them, in place of generating one each.
     output: Option<Lifetime>,
     generated: Vec<Lifetime>,
-    /// Every lifetime seen, named or generated, except higher-ranked ones.
+    /// The lifetimes seen in the current argument, named or generated, except
+    /// higher-ranked ones. The caller takes them after each argument.
     used: Vec<Lifetime>,
     /// The lifetimes the enclosing `for<..>` bounds introduce.
     higher_ranked: Vec<Lifetime>,
@@ -348,7 +357,8 @@ impl VisitMut for NameElidedLifetimes {
     }
 
     // Elided lifetimes in `fn(&T)` and `Fn(&T)` are higher-ranked, so those are
-    // valid in a struct field as they are.
+    // valid in a struct field as they are. Rust's elision doesn't count any
+    // lifetime inside them either.
     fn visit_type_fn_ptr_mut(&mut self, _: &mut syn::TypeFnPtr) {}
 
     fn visit_parenthesized_generic_arguments_mut(

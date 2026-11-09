@@ -139,6 +139,7 @@ fn test_with_simd_elided_inputs() {
     assert_eq!(test_mut_ref_to_ref(&mut y), 2);
     assert_eq!(test_fn_args(|x| *x, Box::new(|x| *x)), 2);
     assert_eq!(test_hrtb_with_elided(&()), 1);
+    assert_eq!(*test_nested_hrtb(&()), 1);
 }
 
 trait Pair<'x, T> {}
@@ -170,6 +171,14 @@ fn test_output_from_tuple<'a, S: Simd>(a: (&'a u32, &'a u32)) -> &u32 {
     a.1
 }
 
+/// `'x` is still higher-ranked inside the inner binder. An alias would hide the
+/// type from the macro.
+#[with_simd]
+#[allow(clippy::type_complexity)]
+fn test_nested_hrtb<S: Simd>(a: &dyn for<'x> Pair<'x, Box<dyn for<'y> Pair<'y, &'x u32>>>) -> &u32 {
+    &1
+}
+
 /// Lifetimes bound by `fn` and `for<'x>` don't count.
 #[with_simd]
 fn test_output_past_higher_ranked<S: Simd>(
@@ -177,6 +186,11 @@ fn test_output_past_higher_ranked<S: Simd>(
     b: fn(&u32) -> u32,
     c: Box<dyn for<'x> Pair<'x, u32>>,
 ) -> &u32 {
+    a
+}
+
+#[with_simd]
+fn test_output_hrtb_with_elided<S: Simd>(a: &()) -> &dyn for<'x> Pair<'x, &u32> {
     a
 }
 
@@ -193,6 +207,7 @@ fn test_with_simd_elided_output() {
     assert_eq!(*test_output_from_ref_to_ref(&&x), 1);
     assert_eq!(*test_output_from_tuple((&0, &x)), 1);
     assert_eq!(*test_output_past_higher_ranked(&x, |x| *x, Box::new(())), 1);
+    test_output_hrtb_with_elided(&());
 }
 
 #[with_simd]
@@ -237,6 +252,12 @@ pub unsafe fn test_arch_pub_unsafe<S: Simd>(a: u32) -> u32 {
     a + 1
 }
 
+/// The macro's own local for `arch` can't shadow an argument of the same name.
+#[with_simd(arch = crate::Arch::detect())]
+fn test_arch_named_arg<S: Simd>(__arch: u32) -> u32 {
+    __arch
+}
+
 #[::wasm_bindgen_test::wasm_bindgen_test(unsupported = test)]
 fn test_with_simd_arch() {
     unsafe {
@@ -244,5 +265,6 @@ fn test_with_simd_arch() {
         assert_eq!(test_arch_pub(1), 2);
         assert_eq!(test_arch_unsafe(1), 2);
         assert_eq!(test_arch_pub_unsafe(1), 2);
+        assert_eq!(test_arch_named_arg(3), 3);
     }
 }

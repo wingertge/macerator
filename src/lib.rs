@@ -29,8 +29,9 @@ mod unary;
 #[cfg(test)]
 mod tests;
 
-/// An unsafe call in `with_simd`'s `arch` needs an `unsafe` block of its own,
-/// as in the body of any `unsafe fn`.
+/// The function `with_simd` generates for `arch` is `unsafe`, but an unsafe
+/// call in `arch` on a safe function still needs an `unsafe` block, as it would
+/// in the body.
 ///
 /// ```compile_fail,E0133
 /// unsafe fn pick() -> macerator::Arch {
@@ -38,7 +39,6 @@ mod tests;
 /// }
 ///
 /// #[macerator::with_simd(arch = pick())]
-/// #[deny(unsafe_op_in_unsafe_fn)]
 /// fn f<S: macerator::Simd>(x: u32) -> u32 {
 ///     x
 /// }

@@ -58,7 +58,8 @@ macro_rules! testgen_fma {
                 let want: Vec<$ty> = cases.iter().map(|&(a, b, c)| a.mul_add(b, c)).collect();
                 // `mul_add` is fused on every backend there too.
                 let fused_mul_add = cfg!(any(target_arch = "aarch64", target_arch = "loongarch64"));
-                for mul_add in [false, fused_mul_add] {
+                let ops: &[bool] = if fused_mul_add { &[false, true] } else { &[false] };
+                for &mul_add in ops {
                     let name = if mul_add { "mul_add" } else { "fma" };
                     let input = (&a[..], &b[..], &c[..], mul_add);
                     for_each_backend!(test_fma_impl, $ty, input, |out: &[$ty]| {

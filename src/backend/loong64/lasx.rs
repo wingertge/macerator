@@ -395,8 +395,7 @@ impl Simd for Lasx {
     }
     #[inline(always)]
     fn mul_add_f32(a: Self::Register, b: Self::Register, c: Self::Register) -> Self::Register {
-        let temp = Self::mul_f32(a, b);
-        cast!(Self::add_f32(temp, c))
+        Self::fma_f32(a, b, c)
     }
     #[inline(always)]
     fn mul_add_f32_supported() -> bool {
@@ -404,8 +403,7 @@ impl Simd for Lasx {
     }
     #[inline(always)]
     fn mul_add_f64(a: Self::Register, b: Self::Register, c: Self::Register) -> Self::Register {
-        let temp = Self::mul_f64(a, b);
-        cast!(Self::add_f64(temp, c))
+        Self::fma_f64(a, b, c)
     }
     #[inline(always)]
     fn mul_add_f64_supported() -> bool {

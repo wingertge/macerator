@@ -2,10 +2,12 @@ use std::{vec, vec::Vec};
 
 use rand::Rng;
 
-use crate::{tests::for_each_backend, vload_unaligned, vstore_unaligned, Simd, VFma};
+use crate::{tests::for_each_backend, vload_unaligned, vstore_unaligned, Simd, VFma, VMulAdd};
 
 #[inline(always)]
-fn test_fma_impl<S: Simd, T: VFma>((a, b, c): (&[T], &[T], &[T])) -> Vec<T> {
+fn test_fma_impl<S: Simd, T: VFma + VMulAdd>(
+    (a, b, c, mul_add): (&[T], &[T], &[T], bool),
+) -> Vec<T> {
     let lanes = T::lanes::<S>();
     let mut out = vec![T::default(); a.len()];
     for (i, out) in out.chunks_exact_mut(lanes).enumerate() {
@@ -13,7 +15,12 @@ fn test_fma_impl<S: Simd, T: VFma>((a, b, c): (&[T], &[T], &[T])) -> Vec<T> {
         let a = unsafe { vload_unaligned::<S, T>(a[at..].as_ptr()) };
         let b = unsafe { vload_unaligned::<S, T>(b[at..].as_ptr()) };
         let c = unsafe { vload_unaligned::<S, T>(c[at..].as_ptr()) };
-        unsafe { vstore_unaligned(out.as_mut_ptr(), a.fma(b, c)) };
+        let fused = if mul_add {
+            a.mul_add(b, c)
+        } else {
+            a.fma(b, c)
+        };
+        unsafe { vstore_unaligned(out.as_mut_ptr(), fused) };
     }
     out
 }
@@ -49,12 +56,18 @@ macro_rules! testgen_fma {
                 let b: Vec<$ty> = cases.iter().map(|c| c.1).collect();
                 let c: Vec<$ty> = cases.iter().map(|c| c.2).collect();
                 let want: Vec<$ty> = cases.iter().map(|&(a, b, c)| a.mul_add(b, c)).collect();
-                for_each_backend!(test_fma_impl, $ty, (&a[..], &b[..], &c[..]), |out: &[$ty]| {
-                    for (i, (w, g)) in want.iter().zip(out).enumerate() {
-                        let same = (w.is_nan() && g.is_nan()) || w.to_bits() == g.to_bits();
-                        assert!(same, "fma{:?}: expected {w:?}, got {g:?}", cases[i]);
-                    }
-                });
+                // `mul_add` is fused on every backend there too.
+                let fused_mul_add = cfg!(any(target_arch = "aarch64", target_arch = "loongarch64"));
+                for mul_add in [false, fused_mul_add] {
+                    let name = if mul_add { "mul_add" } else { "fma" };
+                    let input = (&a[..], &b[..], &c[..], mul_add);
+                    for_each_backend!(test_fma_impl, $ty, input, |out: &[$ty]| {
+                        for (i, (w, g)) in want.iter().zip(out).enumerate() {
+                            let same = (w.is_nan() && g.is_nan()) || w.to_bits() == g.to_bits();
+                            assert!(same, "{name}{:?}: expected {w:?}, got {g:?}", cases[i]);
+                        }
+                    });
+                }
             }
         })*
     };

@@ -8,9 +8,11 @@ macro_rules! impl_bitwise {
     ($trait: ident, $std_trait: path, $name: ident) => {
         paste!{
             pub trait $trait: Scalar + $std_trait<Output = Self> {
+                #[inline(always)]
                 fn [<$trait:lower>]<S: Simd>(lhs: Vector<S, Self>, rhs: Vector<S, Self>) -> Vector<S, Self> {
                     S::typed(S::$name(*lhs, *rhs))
                 }
+                #[inline(always)]
                 fn is_accelerated<S: Simd>() -> bool {
                     S::[<$name _supported>]()
                 }

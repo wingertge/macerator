@@ -235,6 +235,7 @@ pub struct ScalarMask<const LANES: usize>([u8; LANES]);
 impl<const LANES: usize> core::ops::Not for ScalarMask<LANES> {
     type Output = Self;
 
+    #[inline(always)]
     fn not(self) -> Self::Output {
         let mut out = [0; LANES];
         for (i, o) in self.0.into_iter().zip(&mut out) {
@@ -247,6 +248,7 @@ impl<const LANES: usize> core::ops::Not for ScalarMask<LANES> {
 impl<const LANES: usize> core::ops::BitAnd for ScalarMask<LANES> {
     type Output = Self;
 
+    #[inline(always)]
     fn bitand(self, rhs: Self) -> Self::Output {
         let mut out = [0; LANES];
         for ((lhs, rhs), o) in self.0.into_iter().zip(rhs.0).zip(&mut out) {
@@ -259,6 +261,7 @@ impl<const LANES: usize> core::ops::BitAnd for ScalarMask<LANES> {
 impl<const LANES: usize> core::ops::BitOr for ScalarMask<LANES> {
     type Output = Self;
 
+    #[inline(always)]
     fn bitor(self, rhs: Self) -> Self::Output {
         let mut out = [0; LANES];
         for ((lhs, rhs), o) in self.0.into_iter().zip(rhs.0).zip(&mut out) {
@@ -271,6 +274,7 @@ impl<const LANES: usize> core::ops::BitOr for ScalarMask<LANES> {
 impl<const LANES: usize> core::ops::BitXor for ScalarMask<LANES> {
     type Output = Self;
 
+    #[inline(always)]
     fn bitxor(self, rhs: Self) -> Self::Output {
         let mut out = [0; LANES];
         for ((lhs, rhs), o) in self.0.into_iter().zip(rhs.0).zip(&mut out) {
@@ -543,10 +547,12 @@ impl Simd for Fallback {
     impl_fma_scalar!(8, f32, f64);
     impl_dot_scalar!(8);
 
+    #[inline(always)]
     fn bitnot(a: Self::Register) -> Self::Register {
         !a
     }
 
+    #[inline(always)]
     fn bitnot_supported() -> bool {
         false
     }

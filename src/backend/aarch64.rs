@@ -541,9 +541,10 @@ impl FP16Ext for FP16Intrinsic {
         unsafe {
             let x: float16x8_t = cast!(a);
             let y0 = vrecpeq_f16(x);
-            // One Newton-Raphson step, enough for f16
+            // One Newton-Raphson step gets f16 within 1 ULP.
             let y = vmulq_f16(vrecpsq_f16(x, y0), y0);
-            // Keep initial y0 if it saturated (|y0| == inf) to prevent sign corruption
+            // Keep an estimate that saturated to inf. For tiny x, refining it
+            // gives (2 - x * inf) * inf = -inf, the wrong sign.
             let max = vreinterpretq_f16_u16(vdupq_n_u16(f16::MAX.to_bits()));
             cast!(vbslq_f16(vcagtq_f16(y0, max), y0, y))
         }

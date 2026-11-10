@@ -25,6 +25,7 @@ mod select;
 
 mod shift;
 mod unary;
+mod widen;
 
 #[cfg(test)]
 mod tests;
@@ -61,5 +62,6 @@ pub use select::*;
 
 pub use shift::*;
 pub use unary::*;
+pub use widen::*;
 
 pub use macerator_macros::*;

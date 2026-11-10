@@ -29,7 +29,7 @@ moddef::moddef!(
     }
 );
 
-use crate::{seal::Sealed, Scalar, VBitAnd, VBitNot, VBitOr, VBitXor};
+use crate::{seal::Sealed, Scalar, VBitAnd, VBitNot, VBitOr, VBitXor, WideLane};
 
 pub trait VRegister: Copy + Pod + Debug + Send + Sync + Sealed {}
 
@@ -264,6 +264,33 @@ macro_rules! declare_reduction {
         $(paste! {
             fn [<$name _ $ty>](a: Self::Register) -> $ty;
             fn [<$name _ $ty _supported>]() -> bool;
+        })*
+    };
+}
+
+macro_rules! declare_widen {
+    ($($ty: ty => $wide: ty),*) => {
+        $(paste! {
+            /// Lanes `0..n/2` and `n/2..n` of `a`, widened to the next lane
+            /// width. The default converts one lane at a time.
+            #[inline(always)]
+            fn [<widen_ $ty>](a: Self::Register) -> [Self::Register; 2] {
+                widen_lanes::<Self, $ty>(a)
+            }
+            #[inline(always)]
+            fn [<widen_ $ty _supported>]() -> bool {
+                false
+            }
+            /// The lanes of `lo`, then those of `hi`, narrowed from the next
+            /// lane width. The default converts one lane at a time.
+            #[inline(always)]
+            fn [<narrow_ $ty>](lo: Self::Register, hi: Self::Register) -> Self::Register {
+                narrow_lanes::<Self, $ty>(lo, hi)
+            }
+            #[inline(always)]
+            fn [<narrow_ $ty _supported>]() -> bool {
+                false
+            }
         })*
     };
 }
@@ -677,6 +704,12 @@ pub trait Simd: Sized + seal::Sealed + 'static {
     );
     declare_unop!(abs, i8, i16, i32, i64, f16, f32, f64);
 
+    // Lane widening and narrowing, named after the narrow lane type. Unsigned
+    // integers zero-extend and signed ones sign-extend; integers narrow by
+    // keeping the low bits, and floats rounding to nearest, ties to even.
+    declare_widen!(u8 => u16, i8 => i16, u16 => u32, i16 => i32, u32 => u64, i32 => i64);
+    declare_widen!(f16 => f32, f32 => f64);
+
     declare_reduction!(reduce_add, i8, i16, i32, i64, u8, u16, u32, u64, f16, f32, f64);
     declare_reduction!(reduce_min, i8, i16, i32, i64, u8, u16, u32, u64, f16, f32, f64);
     declare_reduction!(reduce_max, i8, i16, i32, i64, u8, u16, u32, u64, f16, f32, f64);
@@ -745,6 +778,67 @@ pub(crate) fn shift_lanes<S: Simd, T: Scalar>(
     let n_lanes: &[T] = bytemuck::cast_slice(core::slice::from_ref(&n));
     for (x, &n) in a_lanes.iter_mut().zip(n_lanes) {
         *x = op(*x, n);
+    }
+    out
+}
+
+/// The conversions of `as` (and of [`f16::from_f32`] and [`f16::to_f32`])
+/// between a lane type and the lane type twice its width.
+pub(crate) trait WidenLane: WideLane {
+    fn widen(self) -> Self::Wide;
+    fn narrow(wide: Self::Wide) -> Self;
+}
+
+macro_rules! impl_widen_lane {
+    ($($ty: ty => $wide: ty),*) => {
+        $(impl WidenLane for $ty {
+            #[inline(always)]
+            fn widen(self) -> $wide {
+                self as $wide
+            }
+            #[inline(always)]
+            fn narrow(wide: $wide) -> Self {
+                wide as $ty
+            }
+        })*
+    };
+}
+
+impl_widen_lane!(u8 => u16, i8 => i16, u16 => u32, i16 => i32, u32 => u64, i32 => i64, f32 => f64);
+
+impl WidenLane for f16 {
+    #[inline(always)]
+    fn widen(self) -> f32 {
+        self.to_f32()
+    }
+    #[inline(always)]
+    fn narrow(wide: f32) -> Self {
+        f16::from_f32(wide)
+    }
+}
+
+/// Widening one lane at a time, reading the lanes of `a` in place and
+/// writing those of the two wide registers.
+#[inline(always)]
+pub(crate) fn widen_lanes<S: Simd, T: WidenLane>(a: S::Register) -> [S::Register; 2] {
+    let mut out = [a; 2];
+    let narrow: &[T] = bytemuck::cast_slice(core::slice::from_ref(&a));
+    let wide: &mut [T::Wide] = bytemuck::cast_slice_mut(&mut out);
+    for (w, &n) in wide.iter_mut().zip(narrow) {
+        *w = n.widen();
+    }
+    out
+}
+
+/// Narrowing one lane at a time, as [`widen_lanes`].
+#[inline(always)]
+pub(crate) fn narrow_lanes<S: Simd, T: WidenLane>(lo: S::Register, hi: S::Register) -> S::Register {
+    let wide = [lo, hi];
+    let mut out = lo;
+    let wide: &[T::Wide] = bytemuck::cast_slice(&wide);
+    let narrow: &mut [T] = bytemuck::cast_slice_mut(core::slice::from_mut(&mut out));
+    for (n, &w) in narrow.iter_mut().zip(wide) {
+        *n = T::narrow(w);
     }
     out
 }

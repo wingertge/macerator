@@ -33,9 +33,11 @@ impl<F: Fma> super::seal::Sealed for Simd128<F> {}
 macro_rules! impl_binop {
     ($name: ident, $intrinsic: ident, $($ty: ident x $lanes: literal),*) => {
         $(paste! {
+            #[inline(always)]
             fn [<$name _ $ty>](a: Self::Register, b: Self::Register) -> Self::Register {
                 unsafe { [<$ty x $lanes _ $intrinsic>](a, b) }
             }
+            #[inline(always)]
             fn [<$name _ $ty _supported>]() -> bool {
                 true
             }
@@ -46,9 +48,11 @@ macro_rules! impl_binop {
 macro_rules! impl_unop {
     ($name: ident, $intrinsic: ident, $($ty: ident x $lanes: literal),*) => {
         $(paste! {
+            #[inline(always)]
             fn [<$name _ $ty>](a: Self::Register) -> Self::Register {
                 unsafe { [<$ty x $lanes _ $intrinsic>](a) }
             }
+            #[inline(always)]
             fn [<$name _ $ty _supported>]() -> bool {
                 true
             }
@@ -59,9 +63,11 @@ macro_rules! impl_unop {
 macro_rules! impl_cmp {
     ($name: ident, $intrinsic: ident, $($ty: ident x $lanes: literal),*) => {
         $(paste! {
+            #[inline(always)]
             fn [<$name _ $ty>](a: Self::Register, b: Self::Register) -> <$ty as Scalar>::Mask<Self> {
                 cast!([<$ty x $lanes _ $intrinsic>](a, b))
             }
+            #[inline(always)]
             fn [<$name _ $ty _supported>]() -> bool {
                 true
             }
@@ -627,7 +633,7 @@ where
         let mut out = [f16::default(); 8];
 
         for i in 0..8 {
-            out[i] = a[i].mul_add(b[i], c[i]);
+            out[i] = a[i] * b[i] + c[i];
         }
         cast!(out)
     }

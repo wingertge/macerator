@@ -29,6 +29,23 @@ mod unary;
 #[cfg(test)]
 mod tests;
 
+/// The function `with_simd` generates for `arch` is `unsafe`, but an unsafe
+/// call in `arch` on a safe function still needs an `unsafe` block, as it would
+/// in the body.
+///
+/// ```compile_fail,E0133
+/// unsafe fn pick() -> macerator::Arch {
+///     macerator::Arch::detect()
+/// }
+///
+/// #[macerator::with_simd(arch = pick())]
+/// fn f<S: macerator::Simd>(x: u32) -> u32 {
+///     x
+/// }
+/// ```
+#[cfg(doctest)]
+pub struct WithSimdArchUnsafeCall;
+
 pub use arithmetic::*;
 pub use backend::*;
 pub use base::*;

@@ -101,12 +101,14 @@ unsafe impl<S: Simd, T: Scalar> Sync for Vector<S, T> where S::Register: Sync {}
 pub struct Mask<S: Simd, T: Scalar>(pub(crate) T::Mask<S>);
 
 impl<S: Simd, T: Scalar> Clone for Vector<S, T> {
+    #[inline(always)]
     fn clone(&self) -> Self {
         *self
     }
 }
 impl<S: Simd, T: Scalar> Copy for Vector<S, T> {}
 impl<S: Simd, T: Scalar> Clone for Mask<S, T> {
+    #[inline(always)]
     fn clone(&self) -> Self {
         *self
     }
@@ -124,6 +126,7 @@ unsafe impl<S: Simd, T: Scalar> Zeroable for Vector<S, T> {}
 impl<S: Simd, T: Scalar> Deref for Vector<S, T> {
     type Target = S::Register;
 
+    #[inline(always)]
     fn deref(&self) -> &Self::Target {
         &self.inner
     }
@@ -132,6 +135,7 @@ impl<S: Simd, T: Scalar> Deref for Vector<S, T> {
 impl<S: Simd, T: Scalar> Not for Mask<S, T> {
     type Output = Self;
 
+    #[inline(always)]
     fn not(self) -> Self::Output {
         Self(self.0.not())
     }
@@ -139,6 +143,7 @@ impl<S: Simd, T: Scalar> Not for Mask<S, T> {
 impl<S: Simd, T: Scalar> BitAnd for Mask<S, T> {
     type Output = Self;
 
+    #[inline(always)]
     fn bitand(self, rhs: Self) -> Self::Output {
         Self(self.0.bitand(rhs.0))
     }
@@ -146,6 +151,7 @@ impl<S: Simd, T: Scalar> BitAnd for Mask<S, T> {
 impl<S: Simd, T: Scalar> BitOr for Mask<S, T> {
     type Output = Self;
 
+    #[inline(always)]
     fn bitor(self, rhs: Self) -> Self::Output {
         Self(self.0.bitor(rhs.0))
     }
@@ -153,16 +159,19 @@ impl<S: Simd, T: Scalar> BitOr for Mask<S, T> {
 impl<S: Simd, T: Scalar> BitXor for Mask<S, T> {
     type Output = Self;
 
+    #[inline(always)]
     fn bitxor(self, rhs: Self) -> Self::Output {
         Self(self.0.bitxor(rhs.0))
     }
 }
 
 impl<S: Simd, T: Scalar> Mask<S, T> {
+    #[inline(always)]
     pub fn and(self, rhs: Self) -> Self {
         self.bitand(rhs)
     }
 
+    #[inline(always)]
     pub fn or(self, rhs: Self) -> Self {
         self.bitor(rhs)
     }
@@ -172,6 +181,7 @@ impl<S: Simd, T: Scalar> Mask<S, T> {
     /// # Panics
     ///
     /// If the slice length is not equal to `lanes`.
+    #[inline(always)]
     pub fn from_bools(bools: &[bool]) -> Self {
         T::mask_from_bools(bools)
     }
@@ -181,6 +191,7 @@ impl<S: Simd, T: Scalar> Mask<S, T> {
     ///
     /// # SAFETY
     /// `out` must be valid for `lanes` contiguous values.
+    #[inline(always)]
     pub unsafe fn store_as_bool(self, out: *mut bool) {
         T::mask_store_as_bool(out, self);
     }
@@ -189,6 +200,7 @@ impl<S: Simd, T: Scalar> Mask<S, T> {
 impl<S: Simd, T: Scalar> Deref for Mask<S, T> {
     type Target = T::Mask<S>;
 
+    #[inline(always)]
     fn deref(&self) -> &Self::Target {
         &self.0
     }
@@ -275,6 +287,7 @@ macro_rules! splat {
     };
     (transmute $bits: literal -> $ty: ident) => {
         paste! {
+            #[inline(always)]
             fn [<splat_ $ty>](value: $ty) -> Self::Register {
                 Self::[<splat_i $bits>](unsafe { core::mem::transmute::<$ty, [<i $bits>]>(value) })
             }
@@ -316,6 +329,7 @@ pub trait Simd: Sized + seal::Sealed + 'static {
     fn lanes32() -> usize;
     fn lanes64() -> usize;
 
+    #[inline(always)]
     fn typed<T: Scalar>(reg: Self::Register) -> Vector<Self, T> {
         Vector {
             inner: reg,

@@ -15,6 +15,7 @@ pub trait Scalar: Sized + Copy + Pod + NoUninit + Default + Sealed {
 
     /// Convert slice into a head slice containing as many vectorized values as
     /// possible, and a tail slice, containing the leftover elements.
+    #[inline(always)]
     fn align_to<S: Simd>(data: &[Self]) -> (&[Self], &[Vector<S, Self>], &[Self]) {
         unsafe { data.align_to() }
     }
@@ -118,6 +119,7 @@ macro_rules! impl_vectorizable {
             impl Scalar for $ty {
                 type Mask<S: Simd> = S::[<Mask $bits>];
 
+                #[inline(always)]
                 fn lanes<S: Simd>() -> usize {
                     S::[<lanes $bits>]()
                 }
@@ -192,6 +194,7 @@ impl_vectorizable!(f64, 64);
 /// Same safety requirements as [`read`](std::ptr::read), with the
 /// additional requirement that the entire vector must be aligned and
 /// valid, not just the element at `ptr`.
+#[inline(always)]
 pub unsafe fn vload<S: Simd, T: Scalar>(ptr: *const T) -> Vector<S, T> {
     unsafe { T::vload(ptr) }
 }
@@ -203,6 +206,7 @@ pub unsafe fn vload<S: Simd, T: Scalar>(ptr: *const T) -> Vector<S, T> {
 /// [`read_unaligned`](std::ptr::read_unaligned), with the additional
 /// requirement that the entire vector must be valid, not just the
 /// element at `ptr`.
+#[inline(always)]
 pub unsafe fn vload_unaligned<S: Simd, T: Scalar>(ptr: *const T) -> Vector<S, T> {
     unsafe { T::vload_unaligned(ptr) }
 }
@@ -220,6 +224,7 @@ pub unsafe fn vload_unaligned<S: Simd, T: Scalar>(ptr: *const T) -> Vector<S, T>
 /// [`read_unaligned`](std::ptr::read_unaligned), with the additional
 /// requirement that the lower half of the vector must be valid, not just
 /// the element at `ptr`.
+#[inline(always)]
 pub unsafe fn vload_low<S: Simd, T: Scalar>(ptr: *const T) -> Vector<S, T> {
     unsafe { T::vload_low(ptr) }
 }
@@ -236,6 +241,7 @@ pub unsafe fn vload_low<S: Simd, T: Scalar>(ptr: *const T) -> Vector<S, T> {
 /// requirement that `ptr` points to the start of a whole vector in one
 /// allocation and the upper half of that vector is valid. The lower half is
 /// not accessed.
+#[inline(always)]
 pub unsafe fn vload_high<S: Simd, T: Scalar>(ptr: *const T) -> Vector<S, T> {
     unsafe { T::vload_high(ptr) }
 }
@@ -248,6 +254,7 @@ pub unsafe fn vload_high<S: Simd, T: Scalar>(ptr: *const T) -> Vector<S, T> {
 /// [`write`](std::ptr::write), with the additional
 /// requirement that the entire vector must be valid and aligned to the size
 /// of the full vector, not just the element at `ptr`.
+#[inline(always)]
 pub unsafe fn vstore<S: Simd, T: Scalar>(ptr: *mut T, value: Vector<S, T>) {
     unsafe { T::vstore(ptr, value) };
 }
@@ -259,6 +266,7 @@ pub unsafe fn vstore<S: Simd, T: Scalar>(ptr: *mut T, value: Vector<S, T>) {
 /// [`write_unaligned`](std::ptr::write_unaligned), with the additional
 /// requirement that the entire vector must be valid, not just
 /// the element at `ptr`.
+#[inline(always)]
 pub unsafe fn vstore_unaligned<S: Simd, T: Scalar>(ptr: *mut T, value: Vector<S, T>) {
     unsafe { T::vstore_unaligned(ptr, value) };
 }
@@ -272,6 +280,7 @@ pub unsafe fn vstore_unaligned<S: Simd, T: Scalar>(ptr: *mut T, value: Vector<S,
 /// [`write_unaligned`](std::ptr::write_unaligned), with the additional
 /// requirement that the lower half of the vector must be valid, not just
 /// the element at `ptr`.
+#[inline(always)]
 pub unsafe fn vstore_low<S: Simd, T: Scalar>(ptr: *mut T, value: Vector<S, T>) {
     unsafe { T::vstore_low(ptr, value) };
 }
@@ -287,6 +296,7 @@ pub unsafe fn vstore_low<S: Simd, T: Scalar>(ptr: *mut T, value: Vector<S, T>) {
 /// requirement that `ptr` points to the start of a whole vector in one
 /// allocation and the upper half of that vector is valid. The lower half is
 /// not accessed.
+#[inline(always)]
 pub unsafe fn vstore_high<S: Simd, T: Scalar>(ptr: *mut T, value: Vector<S, T>) {
     unsafe { T::vstore_high(ptr, value) };
 }

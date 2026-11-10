@@ -55,6 +55,8 @@ macro_rules! feature_detected {
     };
 }
 
+// Unused on targets without a SIMD backend.
+#[allow(unused_macros)]
 #[cfg(any(not(feature = "std"), not(any(x86, aarch64, loong64))))]
 macro_rules! feature_detected {
     ($feature: tt) => {

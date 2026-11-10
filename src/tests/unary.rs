@@ -29,7 +29,7 @@ fn assert_approx_eq_recip<T: RelativeEq<Epsilon = T> + Debug + NumCast + Copy>(
     rhs: &[T],
 ) {
     let epsilon = match core::mem::size_of::<T>() {
-        ..=2 => T::from(2.0.powf(-8.0)).unwrap(), // f16: ~8-bit estimate precision
+        ..=2 => T::from(2.0.powf(-8.0)).unwrap(), // f16: test_recip_every_f16 is exact
         4 => T::from(4.0 * f32::EPSILON as f64).unwrap(), // f32: ~4 ULP
         _ => T::from(4.0 * f64::EPSILON).unwrap(), // f64: ~4 ULP
     };
@@ -78,6 +78,60 @@ testgen_unop!(
     #[cfg_attr(all(miri, any(x86_v3, x86_v4, aarch64)), ignore)]
     f16
 );
+
+#[inline(always)]
+fn test_recip_f16_native<S: Simd, T: VRecip>(a: &[T]) -> (Vec<T>, bool) {
+    (test_recip_impl::<S, T>(a), T::is_accelerated::<S>())
+}
+
+/// Checks f16 `recip` against the correctly rounded `1 / x`. Backends with
+/// native f16 may be 1 ULP off for a finite input, and a subnormal input or
+/// result may saturate, as for f32 and f64. The rest must match exactly.
+fn assert_recip_f16(input: &[f16], expected: &[f16], (actual, native): &(Vec<f16>, bool)) {
+    for ((x, want), got) in input.iter().zip(expected).zip(actual) {
+        if !native {
+            assert!(
+                recip_bits_eq(*got, *want),
+                "recip({x:?}): expected {want:?}, got {got:?}"
+            );
+            continue;
+        }
+        let saturation = if x.classify() == FpCategory::Subnormal {
+            Some(f16::INFINITY)
+        } else if want.classify() == FpCategory::Subnormal {
+            Some(f16::ZERO)
+        } else {
+            None
+        };
+        let saturation = saturation.map(|s| if x.is_sign_negative() { -s } else { s });
+        let within_ulp = x.is_finite()
+            && want.is_finite()
+            && got.is_finite()
+            && want.is_sign_negative() == got.is_sign_negative()
+            && want.to_bits().abs_diff(got.to_bits()) <= 1;
+        assert!(
+            recip_bits_eq(*got, *want)
+                || within_ulp
+                || saturation.is_some_and(|s| recip_bits_eq(*got, s)),
+            "recip({x:?}): expected {want:?} (saturation permitted: {saturation:?}), got {got:?}"
+        );
+    }
+}
+
+#[cfg_attr(miri, ignore)]
+#[::wasm_bindgen_test::wasm_bindgen_test(unsupported = test)]
+fn test_recip_every_f16() {
+    let a: Vec<f16> = (0..=u16::MAX).map(f16::from_bits).collect();
+    // f32 has at least 2 * 11 + 2 bits, so rounding the quotient to f32 first
+    // can't change how it rounds to f16. Going through f64 would be as good,
+    // but without F16C `half` converts f64 to f16 in software, which rounds
+    // wrongly.
+    let want: Vec<f16> = a.iter().map(|x| f16::from_f32(1.0 / x.to_f32())).collect();
+    for_each_backend!(test_recip_f16_native, f16, &a, |got: &(Vec<f16>, bool)| {
+        assert_recip_f16(&a, &want, got)
+    });
+}
+
 testgen_unop!(
     test_recip,
     recip,

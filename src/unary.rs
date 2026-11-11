@@ -98,7 +98,7 @@ impl<S: Simd, T: VTrunc> Vector<S, T> {
 }
 
 pub trait VRoundTiesEven: Scalar {
-    fn vroundtieseven<S: Simd>(input: Vector<S, Self>) -> Vector<S, Self>;
+    fn vround_ties_even<S: Simd>(input: Vector<S, Self>) -> Vector<S, Self>;
     fn is_accelerated<S: Simd>() -> bool;
 }
 
@@ -109,7 +109,7 @@ impl<S: Simd, T: VRoundTiesEven> Vector<S, T> {
     /// from zero.
     #[inline(always)]
     pub fn round_ties_even(self) -> Self {
-        T::vroundtieseven(self)
+        T::vround_ties_even(self)
     }
 }
 
@@ -170,7 +170,7 @@ macro_rules! impl_unop {
         $(paste! {
             impl $trait for $ty {
                 #[inline(always)]
-                fn [<$trait:lower>]<S: Simd>(input: Vector<S, Self>) -> Vector<S, Self> {
+                fn [<v $name>]<S: Simd>(input: Vector<S, Self>) -> Vector<S, Self> {
                     S::typed(S::[<$name _ $ty>](*input))
                 }
                 #[inline(always)]

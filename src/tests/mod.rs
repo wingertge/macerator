@@ -205,7 +205,8 @@ macro_rules! unop {
 }
 pub(crate) use unop;
 
-/// Runs `$impl_fn` across all available runtime backends (and scalar fallback), passing outputs to `$check`.
+/// Runs `$impl_fn` across all available runtime backends (and scalar fallback),
+/// passing outputs to `$check`.
 macro_rules! for_each_backend {
     ($impl_fn: ident, $ty: ty, $a: expr, $check: expr) => {{
         let a = $a;
@@ -288,7 +289,8 @@ macro_rules! testgen_unop {
 }
 pub(crate) use testgen_unop;
 
-/// Unary operator test generator using explicit input values instead of random ranges.
+/// Unary operator test generator using explicit input values instead of random
+/// ranges.
 macro_rules! testgen_unop_values {
     ($test_fn: ident, $impl_fn: ident, $reference: expr, $values: expr, $assert: ident, $($(#[$meta:meta])* $ty: ty),*) => {
         $(::paste::paste! {

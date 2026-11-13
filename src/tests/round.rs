@@ -35,7 +35,8 @@ fn inputs<T: Float + Scalar + Bits>() -> Vec<T> {
         .into_iter()
         .map(|v| <T as num_traits::NumCast>::from(v).expect("float"))
         .collect();
-    // The largest value below one half, the smallest subnormal, and the extremes.
+    // The largest value below one half, the smallest subnormal, and the
+    // extremes.
     let half = <T as num_traits::NumCast>::from(0.5).expect("float");
     let below_half = T::from_bits_below(half);
     out.extend([
@@ -167,6 +168,6 @@ macro_rules! testgen_round_all {
 testgen_round_all!(floor, #[cfg_attr(all(miri, x86_v4), ignore)]);
 testgen_round_all!(ceil, #[cfg_attr(all(miri, x86_v4), ignore)]);
 testgen_round_all!(trunc, #[cfg_attr(all(miri, x86_v4), ignore)]);
-// Miri implements none of AVX-512 `roundscale`, NEON `frintn` (`llvm.roundeven`),
-// and LoongArch `vfrintrne`.
+// Miri implements none of AVX-512 `roundscale`, NEON `frintn`
+// (`llvm.roundeven`), and LoongArch `vfrintrne`.
 testgen_round_all!(round_ties_even, #[cfg_attr(all(miri, any(x86_v4, aarch64, loong64)), ignore)]);

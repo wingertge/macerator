@@ -182,10 +182,10 @@ fn with_simd_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, s
     };
 
     let inner_name = &inner_fn_sig.ident;
-    // The inner fn must inline into the target-feature trampoline to be compiled
-    // with its features. Only attributes that describe the body carry over; the
-    // rest (`inline`, `target_feature`, attribute macros, ...) stay on the
-    // dispatcher.
+    // The inner fn must inline into the target-feature trampoline to be
+    // compiled with its features. Only attributes that describe the body carry
+    // over; the rest (`inline`, `target_feature`, attribute macros, ...) stay
+    // on the dispatcher.
     let inner_attrs = attrs.iter().filter(|attr| {
         [
             "doc", "allow", "warn", "deny", "forbid", "expect", "cfg", "cfg_attr",

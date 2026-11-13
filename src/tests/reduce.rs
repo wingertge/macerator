@@ -371,13 +371,14 @@ mod full_range {
 }
 
 fn assert_approx_eq_sum<T: RelativeEq<Epsilon = T> + Debug + NumCast + Copy>(lhs: &[T], rhs: &[T]) {
-    // No idea what the actual deviation is, f64 failed with an absolute difference
-    // of 1e-10
+    // No idea what the actual deviation is, f64 failed with an absolute
+    // difference of 1e-10
     let epsilon = T::from(2.0.powf(-8.0)).unwrap();
-    // A sum of 128 positive values makes 127 additions, in an order that depends
-    // on the backend, and each one rounds by up to half an epsilon of the total.
-    // So two sums can differ by up to 127 epsilons. For f32 that's 1.5e-5, still
-    // well under the 7.8e-5 of the smallest element against the largest sum.
+    // A sum of 128 positive values makes 127 additions, in an order that
+    // depends on the backend, and each one rounds by up to half an epsilon of
+    // the total. So two sums can differ by up to 127 epsilons. For f32 that's
+    // 1.5e-5, still well under the 7.8e-5 of the smallest element against the
+    // largest sum.
     let max_relative = T::from(T::default_max_relative().to_f64().unwrap() * 127.0).unwrap();
     // f16 rounds every partial sum to 11 bits, and the backend and the
     // reference add in different orders. Over 128 values the two sums drift
@@ -440,7 +441,8 @@ fn test_reduce_add_specials_impl<S: Simd, T: ReduceAdd + Float>(_: &()) -> Vec<T
             _ => T::one(),
         },
     ];
-    // A single lane can't hold both infinities, so that case has nothing to sum.
+    // A single lane can't hold both infinities, so that case has nothing to
+    // sum.
     let cases = if lanes < 2 { &cases[..3] } else { &cases[..] };
     cases
         .iter()

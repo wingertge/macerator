@@ -50,7 +50,8 @@ pub(crate) fn wrapping_mul<T: WrappingMul>(a: T, b: T) -> T {
 }
 
 /// Rounding half to even for lanes without a rounding instruction. `std` has
-/// `round_ties_even`, but `core` and `num-traits` only round ties away from zero.
+/// `round_ties_even`, but `core` and `num-traits` only round ties away from
+/// zero.
 pub(crate) trait RoundTiesEven {
     fn round_ties_even_soft(self) -> Self;
 }

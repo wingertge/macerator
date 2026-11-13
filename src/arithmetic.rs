@@ -61,9 +61,9 @@ impl<S: Simd, T: VMulAdd> Vector<S, T> {
     /// Elementwise `self * b + c`.
     ///
     /// For `f32`/`f64` this is fused (a single rounding, like [`f32::mul_add`])
-    /// on NEON, AVX2, AVX-512, LoongArch and the scalar fallback, and a multiply
-    /// followed by an add on SSE4.2 and wasm, so results can differ in the last
-    /// bit. With wasm relaxed SIMD it depends on the engine. `f16` is
+    /// on NEON, AVX2, AVX-512, LoongArch and the scalar fallback, and a
+    /// multiply followed by an add on SSE4.2 and wasm, so results can differ in
+    /// the last bit. With wasm relaxed SIMD it depends on the engine. `f16` is
     /// fused only where the backend has native `f16` arithmetic; elsewhere it
     /// can round more than once. Integers wrap on overflow.
     ///

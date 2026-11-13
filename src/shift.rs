@@ -101,7 +101,17 @@ impl_shift!(
     ///     x << n
     /// }
     /// ```
-    VShl, Shl, shl, u8, i8, u16, i16, u32, i32, u64, i64
+    VShl,
+    Shl,
+    shl,
+    u8,
+    i8,
+    u16,
+    i16,
+    u32,
+    i32,
+    u64,
+    i64
 );
 impl_shift!(
     /// Elementwise `>>`: logical for unsigned lanes, arithmetic for signed
@@ -117,5 +127,15 @@ impl_shift!(
     ///     bits >> 23
     /// }
     /// ```
-    VShr, Shr, shr, u8, i8, u16, i16, u32, i32, u64, i64
+    VShr,
+    Shr,
+    shr,
+    u8,
+    i8,
+    u16,
+    i16,
+    u32,
+    i32,
+    u64,
+    i64
 );

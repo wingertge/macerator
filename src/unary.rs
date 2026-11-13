@@ -13,13 +13,15 @@ pub trait VRecip: Scalar {
 impl<S: Simd, T: VRecip> Vector<S, T> {
     /// Elementwise reciprocal (`1 / x`).
     ///
-    /// `f32`/`f64` are accurate within a few ULP using Newton-Raphson refinement.
-    /// Special values (`±0`, `±inf`, `NaN`) map accurately across all backends.
+    /// `f32`/`f64` are accurate within a few ULP using Newton-Raphson
+    /// refinement. Special values (`±0`, `±inf`, `NaN`) map accurately across
+    /// all backends.
     ///
-    /// Backends that flush subnormals (e.g. SSE/AVX2 `rcp_ps`) saturate subnormal inputs
-    /// or subnormal results to signed `±inf`/`±0`, preserving sign without returning NaN.
-    /// `f16` is within 1 ULP with native `f16` arithmetic (NEON FP16, AVX-512
-    /// FP16), and correctly rounded on other backends.
+    /// Backends that flush subnormals (e.g. SSE/AVX2 `rcp_ps`) saturate
+    /// subnormal inputs or subnormal results to signed `±inf`/`±0`, preserving
+    /// sign without returning NaN. `f16` is within 1 ULP with native `f16`
+    /// arithmetic (NEON FP16, AVX-512 FP16), and correctly rounded on other
+    /// backends.
     #[inline(always)]
     pub fn recip(self) -> Self {
         T::vrecip(self)

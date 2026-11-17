@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0](https://github.com/wingertge/macerator/compare/macerator-macros-v0.3.2...macerator-macros-v0.4.0) - 2026-11-13
+
+### Fixed
+
+- *(macros)* keep with_simd's arch outside its unsafe block, and match Rust's elision ([#115](https://github.com/wingertge/macerator/pull/115))
+- *(macros)* [**breaking**] accept more with_simd signatures and the arch option ([#114](https://github.com/wingertge/macerator/pull/114))
+- *(macros)* [**breaking**] keep the declared order of generics in with_simd ([#110](https://github.com/wingertge/macerator/pull/110))
+
+### Other
+
+- add the Apache-2.0 text, and ship both licenses in each crate ([#123](https://github.com/wingertge/macerator/pull/123))
+- Reformat with new rustfmt
+- show with_simd in the README, and document features and half loads ([#112](https://github.com/wingertge/macerator/pull/112))
+
 ## [0.3.2](https://github.com/wingertge/macerator/compare/macerator-macros-v0.3.1...macerator-macros-v0.3.2) - 2026-09-27
 
 ### Fixed
